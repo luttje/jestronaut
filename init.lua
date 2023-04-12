@@ -1,0 +1,1 @@
+require "jestronaut.tests.init"
