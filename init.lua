@@ -1,1 +1,1 @@
-require "jestronaut.tests.init"
+require "tests.init"

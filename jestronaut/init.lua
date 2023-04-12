@@ -1,65 +1,19 @@
+local expect = require "jestronaut.expect.init"
+local mock = require "jestronaut.mock.init"
+
 local M = {}
 
-local currentTest = nil
+local currentFile = nil
 local currentDescribe = nil
 
-local function printWithTabs(text, depthOffset, withNewline)
+local function printer(text, depthOffset, withNewline)
   local depth = (currentDescribe and currentDescribe.depth or 0) + (depthOffset or 0)
   local tabs = string.rep('\t', depth)
   print((withNewline and '\n' or '') .. tabs .. text)
 end
+expect.printer = printer
 
-function M.it(description, callback)
-  M.printFileIfChanged()
-
-  currentTest = description
-
-  printWithTabs('it: ' .. description, 1, true)
-
-  callback()
-
-  currentTest = nil
-end
-
-function M.describe(description, callback)
-  M.printFileIfChanged()
-
-  currentDescribe = {
-    description = description,
-    depth = currentDescribe and currentDescribe.depth + 1 or 0
-  }
-
-  printWithTabs('> ' .. description)
-
-  callback()
-
-  currentDescribe = nil
-end
-
-function M.expect(value)
-  local expect = {}
-
-  function expect.toBe(expected)
-    if value == expected then
-      printWithTabs('[v] PASS ' .. currentTest, 2)
-    else
-      printWithTabs('[×] FAIL ' .. currentTest, 2)
-    end
-  end
-  expect.toEqual = expect.toBe
-
-  function expect.toHaveProperty(expected)
-    if value[expected] ~= nil then
-      printWithTabs('[v] PASS ' .. currentTest, 2)
-    else
-      printWithTabs('[×] FAIL ' .. currentTest, 2)
-    end
-  end
-
-  return expect
-end
-
-function M.printFileIfChanged()
+local function printFileIfChanged()
   -- Get the current file name
   local info = debug.getinfo(2, "S")
   local fileName = info.source:sub(2)
@@ -73,10 +27,39 @@ function M.printFileIfChanged()
   end
 end
 
-function M.exportGlobals()
+function M.it(description, callback)
+  printFileIfChanged()
+
+  expect.currentTest = description
+
+  printer('it: ' .. description, 1, true)
+
+  callback()
+
+  expect.currentTest = nil
+end
+
+function M.describe(description, callback)
+  printFileIfChanged()
+
+  currentDescribe = {
+    description = description,
+    depth = currentDescribe and currentDescribe.depth + 1 or 0
+  }
+
+  printer('> ' .. description)
+
+  callback()
+
+  currentDescribe = nil
+end
+
+function M.withGlobals()
   _G.it = M.it
   _G.describe = M.describe
-  _G.expect = M.expect
+  _G.expect = expect.expect
+ 
+  return M
 end
 
 return M

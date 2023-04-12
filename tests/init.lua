@@ -1,6 +1,8 @@
-local jestronaut = require "jestronaut.init"
+require "jestronaut.init".withGlobals()
 
-jestronaut.exportGlobals()
+-- Other tests
+require "tests.expect"
+require "tests.mock"
 
 describe('basics', function()
   it('has a describe function', function()
