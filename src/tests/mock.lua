@@ -1,5 +1,5 @@
-require "jestronaut.init".withGlobals()
-local mock = require "jestronaut.mock.init"
+require "jestronaut".withGlobals()
+local mock = require "jestronaut.mock"
 
 describe('mocks', function()
   describe('function mocks', function()

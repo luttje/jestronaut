@@ -1,1 +1,3 @@
-require "tests.init"
+package.path = package.path .. ";./src/?.lua"
+
+require "tests"

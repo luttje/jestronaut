@@ -1,4 +1,4 @@
-require "jestronaut.init".withGlobals()
+require "jestronaut".withGlobals()
 
 -- Other tests
 require "tests.expect"

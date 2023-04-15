@@ -1,4 +1,4 @@
-require "jestronaut.init".withGlobals()
+require "jestronaut".withGlobals()
 
 describe('expect simple', function()
   it('has a toBe function', function()

@@ -1,5 +1,5 @@
-local expect = require "jestronaut.expect.init"
-local mock = require "jestronaut.mock.init"
+local expect = require "jestronaut.expect"
+local mock = require "jestronaut.mock"
 
 local M = {}
 
