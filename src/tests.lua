@@ -1,1 +1,1 @@
-return require "tests.all"
+require "tests.all"

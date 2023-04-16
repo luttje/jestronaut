@@ -1,0 +1,20 @@
+{
+  "name": "jestronaut",
+  "version": "0.1.0",
+  "description": "Meta scripts to help test Jestronaut. Jestronaut is a Lua testing library working similar to JestJS.",
+  "type": "module",
+  "scripts": {
+    "download-api": "node ./scripts/download-jest-api.js v29.5.0",
+    "extract-api": "node ./scripts/extract-jest-api.js",
+    "copy-api-tests": "rm -rf ./src/generated-tests && cp -r ./cache/tests ./src/generated-tests",
+    "generate-tests": "npm run download-api && npm run extract-api && npm run copy-api-tests"
+  },
+  "author": "Luttje",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.1"
+  },
+  "devDependencies": {
+    "typescript-to-lua": "^1.14.0"
+  }
+}

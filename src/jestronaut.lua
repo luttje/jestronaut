@@ -1,65 +1,56 @@
-local expect = require "jestronaut.expect"
-local mock = require "jestronaut.mock"
+local environmentLib = require "jestronaut.environment"
+local expectLib = require "jestronaut.expect"
+local mockLib = require "jestronaut.mock"
 
-local M = {}
+--- @class Jestronaut
+local JESTRONAUT = {}
 
-local currentFile = nil
-local currentDescribe = nil
-
-local function printer(text, depthOffset, withNewline)
-  local depth = (currentDescribe and currentDescribe.depth or 0) + (depthOffset or 0)
-  local tabs = string.rep('\t', depth)
-  print((withNewline and '\n' or '') .. tabs .. text)
+function JESTRONAUT:createMockFromModule(moduleName)
+  return {
+    fn = function()
+      --- @Not implemented
+    end,
+  }; --- @Not implemented
 end
-expect.printer = printer
 
-local function printFileIfChanged()
-  -- Get the current file name
-  local info = debug.getinfo(2, "S")
-  local fileName = info.source:sub(2)
+function JESTRONAUT:resetModules()
+  -- Hack: https://www.freelists.org/post/luajit/BUG-Assertion-failures-when-unloading-and-reloading-the-ffi-package,1
+  package.loaded = {}
+end
 
-  -- If the file name has changed, print it
-  if fileName ~= currentFile then
-    local title = 'Test Suite in ' .. fileName
-    print('\n' .. title)
-    print(string.rep('=', #title))
-    currentFile = fileName
+function JESTRONAUT:isolateModules(fn)
+  local originalPackagePreload = package.preload
+  package.preload = {}
+  fn()
+  package.preload = originalPackagePreload
+end
+
+function JESTRONAUT:isolateModulesAsync(fn)
+  --- @Not implemented (async)
+end
+
+function JESTRONAUT:getGlobals()
+  local globals = {}
+
+  expectLib.exposeTo(globals)
+  environmentLib.exposeTo(globals)
+
+  globals.jestronaut = self
+  mockLib.exposeTo(globals.jestronaut)
+
+  return globals
+end
+
+function JESTRONAUT:withGlobals()
+  local globals = self:getGlobals()
+
+  for key, value in pairs(globals) do
+    _G[key] = value
   end
 end
 
-function M.it(description, callback)
-  printFileIfChanged()
-
-  expect.currentTest = description
-
-  printer('it: ' .. description, 1, true)
-
-  callback()
-
-  expect.currentTest = nil
+package.preload['@jestronaut_globals'] = function()
+  return JESTRONAUT:getGlobals()
 end
 
-function M.describe(description, callback)
-  printFileIfChanged()
-
-  currentDescribe = {
-    description = description,
-    depth = currentDescribe and currentDescribe.depth + 1 or 0
-  }
-
-  printer('> ' .. description)
-
-  callback()
-
-  currentDescribe = nil
-end
-
-function M.withGlobals()
-  _G.it = M.it
-  _G.describe = M.describe
-  _G.expect = expect.expect
- 
-  return M
-end
-
-return M
+return JESTRONAUT
