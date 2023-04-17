@@ -1,27 +1,28 @@
 local ASYMETRIC_MATCHER_META = require "jestronaut.expect.asymetricmatchers.asymetricmatcher".ASYMETRIC_MATCHER_META
 local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 
---- @class StringMatching
-local STRING_MATCHING_META
-STRING_MATCHING_META = {
+--- @class StringContaining
+local STRING_CONTAINING_META
+STRING_CONTAINING_META = {
   new = function(sample, inverse)
     local instance = {
       sample = sample,
       inverse = inverse or false,
     }
 
-    setmetatable(instance, STRING_MATCHING_META)
+    setmetatable(instance, STRING_CONTAINING_META)
     return instance
   end,
 
+  -- matches the received value if it is a string that contains the exact expected string.
   asymmetricMatch = function(self, actual)
     local result = type(actual) == 'string' and string.find(actual, self.sample);
-
+    
     return self.inverse and not result or result;
   end,
 
   __tostring = function(self)
-    return 'String' .. (self.inverse and 'Not' or '') .. 'Matching'
+    return 'String' .. (self.inverse and 'Not' or '') .. 'Containing'
   end,
 
   getExpectedType = function(self)
@@ -29,11 +30,11 @@ STRING_MATCHING_META = {
   end,
 }
 
-extendMetaTableIndex(STRING_MATCHING_META, ASYMETRIC_MATCHER_META)
+extendMetaTableIndex(STRING_CONTAINING_META, ASYMETRIC_MATCHER_META)
 
 return {
-  STRING_MATCHING_META = STRING_MATCHING_META,
+  STRING_CONTAINING_META = STRING_CONTAINING_META,
   default = function(expect, sample)
-    return STRING_MATCHING_META.new(sample, expect.inverse)
+    return STRING_CONTAINING_META.new(sample, expect.inverse)
   end,
 }

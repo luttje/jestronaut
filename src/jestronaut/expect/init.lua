@@ -15,13 +15,18 @@ local function getMatcher(key)
     return customMatchers[key]
   end
 
-  local success, matcher = pcall(require, 'jestronaut.expect.matchers.' .. key)
+  local modulePath = 'jestronaut.expect.matchers.' .. key
+  local success, matcherOrError = pcall(require, modulePath)
 
-  if success then
-    return matcher
+  if not success then
+    if not (matcherOrError:find("^module '" .. modulePath .. "' not found")) then
+      error(matcherOrError)
+    end
+
+    return nil
   end
 
-  return nil
+  return matcherOrError
 end
 
 --- @class Expect
@@ -31,36 +36,48 @@ end
 local EXPECT_META = {
   value = nil,
 
-  __index = function(self, key)
-    -- If the value is the expect function, try that first
-    if(self.value and type(self.value) == 'table' and self.value.isExpect)then
-      local value = self.value[key]
-
-      if value ~= nil then
-        return value
-      end
+  checkEquals = function(self, expected, actual)
+    if(actual == nil)then
+      return self.inverse ~= false
     end
 
-    local modifier = modifiers[key]
-
-    if modifier then
-      return modifier(self)
-    end
-
-    local matcher = getMatcher(key)
-    if matcher then
-      if key == 'toEqual' then
-        return matcher.build(self, customEqualityTesters)
-      elseif matcher.build ~= nil then
-        return matcher.build(self)
-      end
-
-      return matcher.default
-    end
-
-    error('Unknown matcher or modifier: ' .. key)
-  end
+    return self.inverse ~= (actual == expected)
+  end,
 }
+
+EXPECT_META.__index = function(self, key)
+  if EXPECT_META[key] ~= nil then
+    return EXPECT_META[key]
+  end
+
+  -- If the value is the expect function, try that first
+  if(self.value and type(self.value) == 'table' and self.value.isExpect)then
+    local value = self.value[key]
+
+    if value ~= nil then
+      return value
+    end
+  end
+
+  local modifier = modifiers[key]
+
+  if modifier then
+    return modifier(self)
+  end
+
+  local matcher = getMatcher(key)
+  if matcher then
+    if key == 'toEqual' then
+      return matcher.build(self, customEqualityTesters)
+    elseif matcher.build ~= nil then
+      return matcher.build(self)
+    end
+
+    return matcher.default
+  end
+
+  error('Unknown matcher or modifier: ' .. key)
+end
 
 function expect(value)
   local expectInstance = {

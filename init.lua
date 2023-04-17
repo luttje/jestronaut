@@ -5,4 +5,8 @@ require "generated-tests"
 
 local runTests = require "jestronaut.environment.state".runTests
 local Printer = require "jestronaut.printer".Printer
-runTests(Printer, true)
+runTests(Printer, {
+  testPathIgnorePatterns = {
+    "^adding works sanely with decimals$", -- This test fails because of floating point errors (the example in Jest docs is meant to fail)
+  }
+})

@@ -21,7 +21,7 @@ function objectFromMarkdownFile(file) {
 
 function objectFromGlobalApiMarkdown(markdown) {
   const exampleRegex = /(?<description>.*?:\s*)?(?<example>```js(?<attributes>([^\n]*))?[\s\S]*?```)(?<descriptionAfter>\s*[\s\S\.\w]*?\.)?(?=\n\n|$)/g;
-  const functionRegex = /### `(?<functionName>\w+(?:[^`])*)\((?<parameters>[^)]*)\)`\s*(?<description>[\s\S]*?)\s*(?=###|$)/g;
+  const functionRegex = /### `(?<functionName>[\w\.]+(?:[^`])*)\((?<parameters>[^)]*)\)`\s*(?<description>[\s\S]*?)\s*(?=###|$)/g;
   const aliasRegex = /Also (under the alias|under the aliases): (?<aliases>[\s\S]*?)(?=\n|$)/g;
   const attributeRegex = /(?<key>(\S*))=(?<value>(("[^"]*"))|([^\s]*))/g;
   const matches = [...markdown.matchAll(functionRegex)];
@@ -180,13 +180,42 @@ function luaTestsFromMethod(method, testDirectory) {
     const luaTestBase = luaTestFromExample(example, testDirectory);
     let luaTest = luaTestBase;
 
-    // If the method is describe, workaround the fact of regex not being transpiled.
-    if (method.name === 'describe') {
-      // Original line: if not /^[01]+$/:test(binString) then
-      const incorrectLine = 'if not nil:test(binString) then';
-      const replacementLine = 'if not string.match(binString, "^[01]+$") then';
+    // Workarounds for specific methods.
+    // In most cases Regex fixes because TypescriptToLua doesn't transpile them for us.
+    const lineReplacements = [];
 
-      luaTest = luaTest.replace(incorrectLine, replacementLine);
+    if (method.name === 'describe') {
+      // Workaround the fact of regex not being transpiled.
+      // JS: if not /^[01]+$/:test(binString) then
+      lineReplacements.push({ 'if not nil:test(binString) then': 'if not string.match(binString, "^[01]+$") then' });
+    } else if (method.name === '.toMatch') {
+      // JS:
+      // expect(essayOnTheBestFlavor()).toMatch(/grapefruit/);
+      // expect(essayOnTheBestFlavor()).toMatch(new RegExp('grapefruit'));
+      lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(nil)': 'expect(essayOnTheBestFlavor()):toMatch("grapefruit")' });
+      lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(__TS__New(RegExp, "grapefruit"))': '' }); // This line is not needed. 
+    } else if (method.name === '.toHaveProperty') {
+      // JS: 
+      // - expect(houseForSale).toHaveProperty(['kitchen', 'amenities', 0], 'oven');
+      // - expect(houseForSale).toHaveProperty('livingroom.amenities[0].couch[0][1].dimensions[0]', 20 );
+      // - expect(houseForSale).toHaveProperty(['ceiling.height'], 'tall'); // mistake in the jest docs, should be 2
+      lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"kitchen", "amenities", 0}, "oven")': 'expect(houseForSale):toHaveProperty({"kitchen", "amenities", 1}, "oven")' });
+      lineReplacements.push({ 'expect(houseForSale):toHaveProperty("livingroom.amenities[0].couch[0][1].dimensions[0]", 20)': `expect(houseForSale):toHaveProperty("livingroom.amenities[1].couch[1][2].dimensions[1]", 20)` });
+      lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"ceiling.height"}, "tall")': 'expect(houseForSale):toHaveProperty({"ceiling.height"}, 2)' });
+    } else if (method.name === 'expect.stringMatching') {
+      // JS:
+      // - expect.stringMatching(/^Alic/)
+      // - expect.stringMatching(/^[BR]ob/)
+      lineReplacements.push({ 'expect:stringMatching(nil)': "expect:stringMatching('^Alic')" });
+      lineReplacements.push({ 'expect:stringMatching(nil)': "expect:stringMatching('^[BR]ob')" });
+    } else if (method.name === 'expect.not.stringMatching') {
+      // JS: const expected = /Hello world!/;
+      lineReplacements.push({ 'local expected = nil': 'local expected = "Hello world!"' });
+    }
+    
+    for (const lineReplacement of lineReplacements) {
+      const [ from, to ] = Object.entries(lineReplacement)[0];
+      luaTest = luaTest.replace(from, to);
     }
 
     // Find top-level returns (no indentation before them), wrap them in a function, along with related code (up until first 3 empty newlines before it).

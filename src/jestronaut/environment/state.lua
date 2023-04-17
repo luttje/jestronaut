@@ -1,3 +1,5 @@
+local optionsLib = require "jestronaut.environment.options"
+
 --- @type DescribeOrTest[]
 local isExecutingTests = false
 
@@ -41,19 +43,25 @@ end
 
 --- Runs all registered tests.
 --- @param printer Printer
---- @param failFast boolean
-local function runTests(printer, failFast)
+--- @param runnerOptions RunnerOptions
+local function runTests(printer, runnerOptions)
+  runnerOptions = optionsLib.merge(runnerOptions)
+
   local startTime = os.clock()
   setIsExecutingTests(true)
 
   printer:printStart(currentParent)
 
-  local success, errOrSuccesfullTestCount = pcall(currentParent.run, currentParent, printer, failFast)
+  local success, errOrFailedTestCount = pcall(currentParent.run, currentParent, printer, runnerOptions)
 
   if not success then
+    if not errOrFailedTestCount:find("^Bail after") then
+      error(errOrFailedTestCount)
+    end
+
     printer:printFailFast(currentParent)
   else
-    printer:printSuccess(currentParent, errOrSuccesfullTestCount)
+    printer:printSuccess(currentParent, errOrFailedTestCount)
   end
 
   local endTime = os.clock()

@@ -2,7 +2,7 @@
 local function toHaveBeenCalled(expect)
   local actual = expect.value
 
-  if not (actual:wasCalled()) then
+  if actual:wasCalled() == expect.inverse then
     error("Expected " .. tostring(actual) .. " to have been called")
   end
 

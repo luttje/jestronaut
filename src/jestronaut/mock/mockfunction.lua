@@ -4,13 +4,7 @@ local asymetricMatcherLib = require "jestronaut.expect.asymetricmatchers.asymetr
 local MOCK_FUNCTION_META = {
   callCount = 0,
   mockName = nil,
-  mock = {
-    calls = nil,
-    results = nil,
-    instances = nil,
-    contexts = nil,
-    lastCall = nil,
-  },
+  mock = nil,
   _mockImplementation = nil,
   _mockImplementationStack = nil,
   _mockReturnThis = nil,
@@ -58,7 +52,7 @@ local MOCK_FUNCTION_META = {
       return forcedReturn ~= nil and forcedReturn or self._mockReturnValue
     end
 
-    local result = self:mockImplementation(...)
+    local result = self._mockImplementation(...)
     table.insert(self.mock.results, result)
     return forcedReturn ~= nil and forcedReturn or result
   end,
@@ -293,27 +287,63 @@ function MOCK_FUNCTION_META:wasNthCalledWith(n, ...)
   return match
 end
 
+function MOCK_FUNCTION_META:hasReturned()
+  return #self.mock.results > 0
+end
+
+function MOCK_FUNCTION_META:hasReturnedTimes(times)
+  return #self.mock.results == times
+end
+
+function MOCK_FUNCTION_META:hasReturnedWith(...)
+  local args = {...}
+  local results = self.mock.results
+
+  for i, arg in ipairs(args) do
+    if arg ~= results[i] then
+      return false
+    end
+  end
+
+  return true
+end
+
+function MOCK_FUNCTION_META:hasLastReturnedWith(value)
+  local lastResult = self.mock.results[#self.mock.results]
+
+  return lastResult == value
+end
+
+function MOCK_FUNCTION_META:hasNthReturnedWith(n, value)
+  local results = self.mock.results
+
+  return results[n] == value
+end
+
 function MOCK_FUNCTION_META:getCallArgs(n)
   local calls = self.mock.calls
   n = n or #calls
 
   if calls[n] == nil then
-    return nil
+    return {}
   end
 
   return calls[n].args
+end
+
+function MOCK_FUNCTION_META:getLastReturn()
+  return self.mock.results[#self.mock.results]
 end
 
 --- Returns a new, unused mock function. Optionally takes a mock implementation.
 --- @param defaultImplementation function
 --- @return MockFunction
 local function fn(defaultImplementation)
-  local mockFunction = {
-    _mockImplementation = defaultImplementation,
-  }
+  defaultImplementation = defaultImplementation or function() end
 
-  local mockFn = setmetatable(mockFunction, MOCK_FUNCTION_META)
+  local mockFn = setmetatable({}, MOCK_FUNCTION_META)
   mockFn:mockReset()
+  mockFn:mockImplementation(defaultImplementation)
 
   return mockFn
 end

@@ -1,3 +1,5 @@
+local tableImplode = require "jestronaut.utils.tables".implode
+
 --- @param expect Expect
 --- @param ... any
 local function toHaveBeenCalledWith(expect, ...)
@@ -7,17 +9,9 @@ local function toHaveBeenCalledWith(expect, ...)
     local tbl = {...}
 
     if #tbl == 0 then
-      error("Expected " .. tostring(actual) .. " to have been called with no arguments but it was called with " .. table.concat(actual:getCallArgs(), ", "))
+      error("Expected " .. tostring(actual) .. " to have been called with no arguments but it was called with " .. tableImplode(actual:getCallArgs(), ", "))
     else
-      local expected = ""
-      for key, value in pairs(tbl) do
-        if key == #tbl then
-          expected = expected .. tostring(value)
-        else
-          expected = expected .. tostring(value) .. ", "
-        end
-      end
-      error("Expected " .. tostring(actual) .. " to have been called with " .. expected .. " but it was called with " .. table.concat(actual:getCallArgs(), ", "))
+      error("Expected " .. tostring(actual) .. " to have been called with " .. tableImplode(tbl, ", ") .. " but it was called with " .. tableImplode(actual:getCallArgs(), ", "))
     end
   end
 

@@ -58,12 +58,12 @@ end
 
 --- Prints the success message of the test.
 --- @param rootDescribe Describe
---- @param successfulTestCount number
-function Printer:printSuccess(rootDescribe, successfulTestCount)
+--- @param failedTestCount number
+function Printer:printSuccess(rootDescribe, failedTestCount)
   print("\n\n" .. (("="):rep(75)))
 
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
-  local relativeSuccess = successfulTestCount / totalTestCount
+  local relativeSuccess = 1 - (failedTestCount / totalTestCount)
 
   if(relativeSuccess == 1) then
     print("\n\n🎉 All tests passed. Great job!")
@@ -79,7 +79,7 @@ function Printer:printSuccess(rootDescribe, successfulTestCount)
   progressBar = progressBar .. string.rep(" ", progressBarFailLength)
   progressBar = progressBar .. "]"
 
-  print("🚨 " .. successfulTestCount .. " of " .. totalTestCount .. " tests passed.")
+  print("🚨 " .. (totalTestCount - failedTestCount) .. " of " .. totalTestCount .. " tests succeeded.")
   print(progressBar .. " " .. math.floor(relativeSuccess * 100) .. "% of tests succeeded")
 end
 

@@ -12,8 +12,55 @@ end
 --[[
   These functions and tables are used in the examples, but are not defined.
 ]]
+local luaLib = require("lualib_bundle")
+
+-- toHaveBeenCalled, etc ...
+function drinkSomeLaCroix() end
+function getErrors() end
+function drinkMoreLaCroix() end
+
+function thirstInfo() 
+  return "truthy"
+end
+
 function bestLaCroixFlavor()
   return "grapefruit"
+end
+
+function drinkEach(fn, flavors)
+  for _, flavor in ipairs(flavors) do
+    fn(flavor)
+  end
+end
+
+LaCroix = luaLib.__TS__Class()
+LaCroix.name = "LaCroix"
+function LaCroix.prototype.____constructor(self, entries) end
+
+local bevarages = {}
+function register(beverage)
+  table.insert(bevarages, beverage)
+end
+
+function applyToAll(fn)
+  for _, beverage in ipairs(bevarages) do
+    fn(beverage)
+  end
+end
+
+local flavors = {
+  "grapefruit",
+  "lemon",
+  "lime",
+  "mango",
+}
+
+function applyToAllFlavors(fn)
+  for _, beverage in ipairs(bevarages) do
+    for _, flavor in ipairs(flavors) do
+      fn(flavor)
+    end
+  end
 end
 
 -- generated-tests\JestObjectAPI\jest\mock.lua:64
@@ -102,7 +149,15 @@ function inchesOfSnow()
   return 0
 end
 
-local luaLib = require("lualib_bundle")
+-- generated-tests\ExpectAPI\expect\objectContaining.lua:14
+function simulatePresses(fn)
+  local fakeEvent = {
+    x = 0,
+    y = 0,
+  }
+  fn(fakeEvent)
+end
+
 CustomError = luaLib.__TS__Class()
 CustomError.name = "CustomError"
 

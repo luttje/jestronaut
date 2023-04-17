@@ -27,13 +27,13 @@ local DESCRIBE_OR_TEST_META = {
     end
   end,
 
-  --- Runs the test and returns the amount of successful tests.
+  --- Runs the test and returns the amount of failed tests.
   --- @param self DescribeOrTest
   --- @param printer Printer
-  --- @param failFast boolean
+  --- @param runnerOptions RunnerOptions
   --- @return number
-  run = function(self, printer, failFast)
-    local successfulTestCount = 0
+  run = function(self, printer, runnerOptions)
+    local failedTestCount = 0
 
     if self.isSkipping then
       printer:printSkip(self)
@@ -42,23 +42,39 @@ local DESCRIBE_OR_TEST_META = {
 
     if self.isTest then
       if stateLib.getIsExecutingTests() then
+        if runnerOptions.testPathIgnorePatterns then
+          for _, pattern in pairs(runnerOptions.testPathIgnorePatterns) do
+            if self.name:find(pattern) then
+              printer:printSkip(self)
+              return failedTestCount
+            end
+          end
+        elseif runnerOptions.testNamePattern then
+          if not self.name:find(runnerOptions.testNamePattern) then
+            printer:printSkip(self)
+            return failedTestCount
+          end
+        end
+
         local success = printer:printResult(self, xpcall(self.fn, function(err)
           return debug.traceback(err, 2)
         end))
 
-        if success then
-          successfulTestCount = successfulTestCount + 1
-        elseif failFast then
-          error("")
+        if not success then
+          failedTestCount = failedTestCount + 1
+
+          if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
+            error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests"))
+          end
         end
       else
         printer:printSkip(self)
-        return
+        return failedTestCount
       end
     elseif #self.children > 0 then
       for _, child in pairs(self.children) do
         printer:printName(child)
-        successfulTestCount = successfulTestCount + child:run(printer, failFast)
+        failedTestCount = failedTestCount + child:run(printer, runnerOptions)
       end
     end
 
@@ -66,7 +82,7 @@ local DESCRIBE_OR_TEST_META = {
       stateLib.setIsExecutingTests(false)
     end
 
-    return successfulTestCount
+    return failedTestCount
   end,
 }
 

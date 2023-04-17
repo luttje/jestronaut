@@ -9,7 +9,7 @@ local tests = {
 		describe(
 		    "not.stringMatching",
 		    function()
-		        local expected = nil
+		        local expected = "Hello world!"
 		        it(
 		            "matches if the received value does not match the expected regex",
 		            function()

@@ -10,8 +10,8 @@ local tests = {
 		    "stringMatching in arrayContaining",
 		    function()
 		        local expected = {
-		            expect:stringMatching(nil),
-		            expect:stringMatching(nil)
+		            expect:stringMatching('^Alic'),
+		            expect:stringMatching('^[BR]ob')
 		        }
 		        it(
 		            "matches even if received contains additional elements",

@@ -1,4 +1,4 @@
-local function tableEquals(o1, o2, ignore_mt)
+local function equals(o1, o2, ignore_mt)
   if o1 == o2 then return true end
   local o1Type = type(o1)
   local o2Type = type(o2)
@@ -29,6 +29,75 @@ local function tableEquals(o1, o2, ignore_mt)
   return true
 end
 
+local function implode(t, sep, withKeys)
+  withKeys = withKeys == nil and true or withKeys
+  sep = sep or ''
+  local s = ''
+  for k, v in pairs(t) do
+    local value = type(v) == 'table' and ('(table:' .. implode(v, sep) .. ')') or tostring(v)
+    s = s .. (withKeys and (tostring(k) .. '=') or '') .. value .. sep
+  end
+
+  return s:gsub(sep .. '$', '')
+end
+
+local function copy(t1)
+  local t = {}
+
+  for k, v in pairs(t1) do
+    if type(v) == 'table' then
+      print(k,v)
+      t[k] = copy(v)
+    else
+      t[k] = v
+    end
+  end
+
+  return t
+end
+
+--- Access a table by a path like 'livingroom.amenities[1].couch[1][2].dimensions[1]'
+--- @param tbl table
+--- @param propertyPath string|table
+--- @return any
+local function accessByPath(tbl, propertyPath)
+  if (type(propertyPath) == 'string') then
+    propertyPath = split(propertyPath, '.')
+  end
+
+  local newPropertyPath = {}
+  
+  for _, key in ipairs(propertyPath) do
+    if type(key) == 'string' then
+      local propertyBeforeIndex = key:match("([^%[]*)%[") or key
+      
+      table.insert(newPropertyPath, propertyBeforeIndex)
+
+      -- Handle double indexed properties
+      while key:find("%[%d+%]") do
+        local indexedKey = key:match("%[([^%[%]]+)%]")
+        table.insert(newPropertyPath, tonumber(indexedKey))
+        key = key:gsub("%[" .. indexedKey .. "%]", "")
+      end
+    else
+      table.insert(newPropertyPath, key)
+    end
+  end
+
+  propertyPath = newPropertyPath
+
+  local currentActual = tbl
+
+  for _, key in ipairs(propertyPath) do
+    currentActual = currentActual[key]
+  end
+
+  return currentActual
+end
+
 return {
-  tableEquals = tableEquals,
+  equals = equals,
+  implode = implode,
+  copy = copy,
+  accessByPath = accessByPath,
 }
