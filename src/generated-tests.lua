@@ -63,6 +63,8 @@ function applyToAllFlavors(fn)
   end
 end
 
+function fetchNewFlavorIdea() end
+
 -- generated-tests\JestObjectAPI\jest\mock.lua:64
 jestronaut:mock(
   "moduleName",

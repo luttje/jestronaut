@@ -51,8 +51,9 @@ EXPECT_META.__index = function(self, key)
   end
 
   -- If the value is the expect function, try that first
-  if(self.value and type(self.value) == 'table' and self.value.isExpect)then
-    local value = self.value[key]
+  local selfValue = rawget(self, 'value')
+  if(selfValue and type(selfValue) == 'table' and selfValue.isExpect)then
+    local value = selfValue[key]
 
     if value ~= nil then
       return value
