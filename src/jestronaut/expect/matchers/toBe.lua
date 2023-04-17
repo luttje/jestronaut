@@ -20,20 +20,20 @@ local function toBe(expect, value)
   local actual = expect.value
 
   if (type(actual) == 'table' and type(actual) == type(value)) then
-    return tableEquals(actual, value)
+    if not (tableEquals(actual, value)) then
+      error("Expected table " .. tostring(actual) .. " to be " .. tostring(value))
+    end
+
+    return true
   end
 
-  return actual == value
-end
-
---- @param expect Expect
-local function build(expect)
-  return function(value)
-    return toBe(expect, value)
+  if not (actual == value) then
+    error("Expected " .. tostring(actual) .. " to be " .. tostring(value))
   end
+
+  return true
 end
 
 return {
   toBe = toBe,
-  build = build,
 }

@@ -20,14 +20,6 @@ local function toHaveBeenCalled(expect)
   }
 end
 
---- @param expect Expect
-local function build(expect)
-  return function()
-    return toHaveBeenCalled(expect)
-  end
-end
-
 return {
   toHaveBeenCalled = toHaveBeenCalled,
-  build = build,
 }

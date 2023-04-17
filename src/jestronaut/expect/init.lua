@@ -45,9 +45,11 @@ local EXPECT_META = {
     if matcher then
       if key == 'toEqual' then
         return matcher.build(self, customEqualityTesters)
+      elseif matcher.build ~= nil then
+        return matcher.build(self)
       end
 
-      return matcher.build(self)
+      return matcher[key]
     end
 
     error('Unknown matcher or modifier: ' .. key)

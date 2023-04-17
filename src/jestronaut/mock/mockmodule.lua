@@ -35,6 +35,10 @@ local function mock(moduleName, factory, options)
   setmetatable(module, MOCK_FUNCTION_META)
 
   mockedModules[moduleName] = module
+
+  if not package.loaded[moduleName] then
+    package.loaded[moduleName] = module
+  end
 end
 
 return {
