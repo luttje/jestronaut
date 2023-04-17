@@ -1,35 +1,20 @@
 -- jest.mock
 
-package.preload['banana_js'] = function()
+generatedTestPreLoad('banana_js', function()
 	-- Mocks a module with an auto-mocked version when it is being required. `factory` and `options` are optional. For example:
 	-- -- ```js title="__tests__/test.js"
 	-- jest.mock('../banana');
 	-- 
 	-- const banana = require('../banana'); // banana will be explicitly mocked.
-	module.exports = function() return "banana" end
+	local exports = function() return "banana" end
 	
-end
-
-package.preload['banana'] = package.preload['banana_js']
+	return exports
+end)
 
 
 
 local tests = {
 
-	(function()
-		test("jest.mock 0", function()
-			-- Mocks a module with an auto-mocked version when it is being required. `factory` and `options` are optional. For example:
-			-- -- ```js title="__tests__/test.js"
-			-- jest.mock('../banana');
-			-- 
-			-- const banana = require('../banana'); // banana will be explicitly mocked.
-			module.exports = function() return "banana" end
-			
-		
-		end);
-		
-	
-	end)(),
 	
 	
 	(function()

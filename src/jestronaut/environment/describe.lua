@@ -21,7 +21,7 @@ local function describe(name, fn)
   local describe = {
     name = name,
     fn = fn,
-    
+
     children = {},
     childrenLookup = {},
   }

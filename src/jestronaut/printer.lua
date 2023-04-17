@@ -16,6 +16,8 @@ function Printer:printName(describeOrTest)
   else
     print(self:getIndentations(describeOrTest) .. "📦 " .. describeOrTest.name .. "...")
   end
+
+  print(self:getIndentations(describeOrTest) .. "(" .. describeOrTest.filePath .. ":" .. describeOrTest.lineNumber .. ")")
 end
 
 --- Prints the result of the test and returns whether it passed.

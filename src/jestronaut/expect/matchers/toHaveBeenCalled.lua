@@ -1,5 +1,6 @@
-local function toHaveBeenCalled(self)
-  local mockFunction = self.value
+--- @param expect Expect
+local function toHaveBeenCalled(expect)
+  local mockFunction = expect.value
 
   if not mockFunction then
     error('Expected a mock function, but received ' .. type(mockFunction))
@@ -19,9 +20,10 @@ local function toHaveBeenCalled(self)
   }
 end
 
-local function build(self)
+--- @param expect Expect
+local function build(expect)
   return function()
-    return toHaveBeenCalled(self)
+    return toHaveBeenCalled(expect)
   end
 end
 

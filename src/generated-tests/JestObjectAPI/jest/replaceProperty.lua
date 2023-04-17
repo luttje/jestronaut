@@ -11,7 +11,7 @@ local tests = {
 			local utils = {isLocalhost = function(self)
 			    return process.env.HOSTNAME == "localhost"
 			end}
-			module.exports = utils
+			local exports = utils
 			
 		
 		end);

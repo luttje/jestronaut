@@ -1,6 +1,9 @@
 local environmentLib = require "jestronaut.environment"
 local expectLib = require "jestronaut.expect"
 local mockLib = require "jestronaut.mock"
+local setupModuleMocking = mockLib.setupModuleMocking
+
+setupModuleMocking()
 
 --- @class Jestronaut
 local JESTRONAUT = {}
@@ -15,13 +18,16 @@ end
 
 function JESTRONAUT:resetModules()
   -- Hack: https://www.freelists.org/post/luajit/BUG-Assertion-failures-when-unloading-and-reloading-the-ffi-package,1
-  package.loaded = {}
+  -- package.loaded = {} -- Dont do this, breaks everything
 end
 
 function JESTRONAUT:isolateModules(fn)
   local originalPackagePreload = package.preload
+  local originalPackageLoaded = package.loaded
   package.preload = {}
+  package.loaded = {}
   fn()
+  package.loaded = originalPackageLoaded
   package.preload = originalPackagePreload
 end
 
@@ -57,8 +63,6 @@ function JESTRONAUT:withGlobals()
   end
 end
 
-package.preload['@jestronaut_globals'] = function()
-  return JESTRONAUT:getGlobals()
-end
+package.loaded['@jestronaut_globals'] = JESTRONAUT:getGlobals()
 
 return JESTRONAUT

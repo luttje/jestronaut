@@ -1,7 +1,6 @@
 --- @class MockFunction
 local MOCK_FUNCTION_META = {
   callCount = 0,
-  nonMockedFunction = nil,
   mockName = nil,
   mock = {
     calls = nil,
@@ -10,15 +9,15 @@ local MOCK_FUNCTION_META = {
     contexts = nil,
     lastCall = nil,
   },
-  mockImplementation = nil,
-  mockImplementationStack = nil,
-  mockReturnThis = nil,
-  mockReturnValue = nil,
-  mockReturnValueStack = nil,
-  mockResolvedValue = nil,
-  mockResolvedValueStack = nil,
-  mockRejectedValue = nil,
-  mockRejectedValueStack = nil,
+  _mockImplementation = nil,
+  _mockImplementationStack = nil,
+  _mockReturnThis = nil,
+  _mockReturnValue = nil,
+  _mockReturnValueStack = nil,
+  _mockResolvedValue = nil,
+  _mockResolvedValueStack = nil,
+  _mockRejectedValue = nil,
+  _mockRejectedValueStack = nil,
 
   __call = function(self, ...)
     local args = {...}
@@ -35,30 +34,31 @@ local MOCK_FUNCTION_META = {
 
     local forcedReturn
 
-    if #self.mockReturnValueStack > 0 then
-      forcedReturn = self.mockReturnValueStack[#self.mockReturnValueStack]
+    if #self._mockReturnValueStack > 0 then
+      forcedReturn = self._mockReturnValueStack[#self._mockReturnValueStack]
       table.insert(self.mock.results, forcedReturn)
     end
 
-    if #self.mockImplementationStack > 0 then
-      local result = self.mockImplementationStack[#self.mockImplementationStack](...)
+    if #self._mockImplementationStack > 0 then
+      local result = self._mockImplementationStack[#self._mockImplementationStack](...)
       table.insert(self.mock.results, result)
-      table.remove(self.mockImplementationStack, #self.mockImplementationStack)
+      table.remove(self._mockImplementationStack, #self._mockImplementationStack)
       return forcedReturn ~= nil and forcedReturn or result
     end
 
-    if self.mockImplementation then
-      local result = self:mockImplementation(...)
-      table.insert(self.mock.results, result)
-      return forcedReturn ~= nil and forcedReturn or result
-    end
-
-    if self.mockReturnThis then
+    if self._mockReturnThis then
       table.insert(self.mock.results, self)
       return forcedReturn ~= nil and forcedReturn or self
     end
 
-    return self.nonMockedFunction(...)
+    if self._mockReturnValue ~= nil then
+      table.insert(self.mock.results, self._mockReturnValue)
+      return forcedReturn ~= nil and forcedReturn or self._mockReturnValue
+    end
+
+    local result = self:mockImplementation(...)
+    table.insert(self.mock.results, result)
+    return forcedReturn ~= nil and forcedReturn or result
   end,
 }
 
@@ -89,15 +89,15 @@ end
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockReset()
   self:mockClear()
-  self.mockImplementation = nil
-  self.mockImplementationStack = {}
-  self.mockReturnThis = nil
-  self.mockReturnValue = nil
-  self.mockReturnValueStack = {}
-  self.mockResolvedValue = nil
-  self.mockResolvedValueStack = {}
-  self.mockRejectedValue = nil
-  self.mockRejectedValueStack = {}
+  self._mockImplementation = nil
+  self._mockImplementationStack = {}
+  self._mockReturnThis = nil
+  self._mockReturnValue = nil
+  self._mockReturnValueStack = {}
+  self._mockResolvedValue = nil
+  self._mockResolvedValueStack = {}
+  self._mockRejectedValue = nil
+  self._mockRejectedValueStack = {}
 
   return self
 end
@@ -114,7 +114,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockImplementation(fn)
-  self.mockImplementation = fn
+  self._mockImplementation = fn
 
   return self
 end
@@ -123,7 +123,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockImplementationOnce(fn)
-  table.insert(self.mockImplementationStack, fn)
+  table.insert(self._mockImplementationStack, fn)
 
   return self
 end
@@ -141,7 +141,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockReturnThis()
-  self.mockReturnThis = true
+  self._mockReturnThis = true
 
   return self
 end
@@ -150,7 +150,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockReturnValue(value)
-  self.mockReturnValue = value
+  self._mockReturnValue = value
 
   return self
 end
@@ -159,7 +159,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockReturnValueOnce(value)
-  table.insert(self.mockReturnValueStack, value)
+  table.insert(self._mockReturnValueStack, value)
 
   return self
 end
@@ -168,7 +168,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockResolvedValue(value)
-  self.mockResolvedValue = value
+  self._mockResolvedValue = value
 
   return self
 end
@@ -177,7 +177,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockResolvedValueOnce(value)
-  table.insert(self.mockResolvedValueStack, value)
+  table.insert(self._mockResolvedValueStack, value)
 
   return self
 end
@@ -186,7 +186,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockRejectedValue(value)
-  self.mockRejectedValue = value
+  self._mockRejectedValue = value
 
   return self
 end
@@ -195,7 +195,7 @@ end
 --- @param fn function
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockRejectedValueOnce(value)
-  table.insert(self.mockRejectedValueStack, value)
+  table.insert(self._mockRejectedValueStack, value)
 
   return self
 end
@@ -212,19 +212,18 @@ function MOCK_FUNCTION_META:withImplementation(fn, callback)
 end
 
 --- Returns a new, unused mock function. Optionally takes a mock implementation.
---- @param implementation function
+--- @param defaultImplementation function
 --- @return MockFunction
-local function fn(implementation)
+local function fn(defaultImplementation)
   local mockFunction = {
-    mockImplementation = implementation,
+    _mockImplementation = defaultImplementation,
   }
 
   local mockFn = setmetatable(mockFunction, MOCK_FUNCTION_META)
-  mockFn:mockClear()
+  mockFn:mockReset()
 
   return mockFn
 end
-
 
 return {
   MOCK_FUNCTION_META = MOCK_FUNCTION_META,

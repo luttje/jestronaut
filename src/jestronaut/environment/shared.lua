@@ -39,7 +39,9 @@ local DESCRIBE_OR_TEST_META = {
 
     if self.isTest then
       if stateLib.getIsExecutingTests() then
-        local success = printer:printResult(self, pcall(self.fn))
+        local success = printer:printResult(self, xpcall(self.fn, function(err)
+          return debug.traceback(err, 2)
+        end))
 
         if not success and failFast then
           error("")

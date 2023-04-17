@@ -1,65 +1,3 @@
--- Expect metatable for jestronaut, loads these modifiers, matchers and more from the jestronaut.expect.* modules:
--- Modifiers
---     .not
---     .resolves
---     .rejects
--- Matchers
---     .toBe(value)
---     .toHaveBeenCalled()
---     .toHaveBeenCalledTimes(number)
---     .toHaveBeenCalledWith(arg1, arg2, ...)
---     .toHaveBeenLastCalledWith(arg1, arg2, ...)
---     .toHaveBeenNthCalledWith(nthCall, arg1, arg2, ....)
---     .toHaveReturned()
---     .toHaveReturnedTimes(number)
---     .toHaveReturnedWith(value)
---     .toHaveLastReturnedWith(value)
---     .toHaveNthReturnedWith(nthCall, value)
---     .toHaveLength(number)
---     .toHaveProperty(keyPath, value?)
---     .toBeCloseTo(number, numDigits?)
---     .toBeDefined()
---     .toBeFalsy()
---     .toBeGreaterThan(number | bigint)
---     .toBeGreaterThanOrEqual(number | bigint)
---     .toBeLessThan(number | bigint)
---     .toBeLessThanOrEqual(number | bigint)
---     .toBeInstanceOf(Class)
---     .toBeNull()
---     .toBeTruthy()
---     .toBeUndefined()
---     .toBeNaN()
---     .toContain(item)
---     .toContainEqual(item)
---     .toEqual(value)
---     .toMatch(regexp | string)
---     .toMatchObject(object)
---     .toMatchSnapshot(propertyMatchers?, hint?)
---     .toMatchInlineSnapshot(propertyMatchers?, inlineSnapshot)
---     .toStrictEqual(value)
---     .toThrow(error?)
---     .toThrowErrorMatchingSnapshot(hint?)
---     .toThrowErrorMatchingInlineSnapshot(inlineSnapshot)
--- Asymmetric Matchers
---     expect.anything()
---     expect.any(constructor)
---     expect.arrayContaining(array)
---     expect.not.arrayContaining(array)
---     expect.closeTo(number, numDigits?)
---     expect.objectContaining(object)
---     expect.not.objectContaining(object)
---     expect.stringContaining(string)
---     expect.not.stringContaining(string)
---     expect.stringMatching(string | regexp)
---     expect.not.stringMatching(string | regexp)
--- Assertion Count
---     expect.assertions(number)
---     expect.hasAssertions()
--- Extend Utilities
---     expect.addEqualityTesters(testers)
---     expect.addSnapshotSerializer(serializer)
---     expect.extend(matchers)
-
 local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexableFunction
 local customEqualityTesters = {}
 local customMatchers = {}
@@ -90,36 +28,38 @@ local function getMatcher(key)
   return nil
 end
 
-local function getMetatable()
-  local metatable = {
-    __index = function(self, key)
-      local modifier = getModifier(key)
-      if modifier then
-        return modifier.build(self)
-      end
+--- @class Expect
+--- @field value any
+--- @field toBe fun(value: any): boolean
+--- @field toHaveBeenCalled fun(): boolean
+local EXPECT_META = {
+  value = nil,
 
-      local matcher = getMatcher(key)
-      if matcher then
-        if key == 'toEqual' then
-          return matcher.build(self, customEqualityTesters)
-        end
-
-        return matcher.build(self)
-      end
-
-      error('Unknown matcher or modifier: ' .. key)
+  __index = function(self, key)
+    local modifier = getModifier(key)
+    if modifier then
+      return modifier.build(self)
     end
-  }
 
-  return metatable
-end
+    local matcher = getMatcher(key)
+    if matcher then
+      if key == 'toEqual' then
+        return matcher.build(self, customEqualityTesters)
+      end
+
+      return matcher.build(self)
+    end
+
+    error('Unknown matcher or modifier: ' .. key)
+  end
+}
 
 local function expect(value)
   local expectInstance = {
     value = value
   }
 
-  setmetatable(expectInstance, getMetatable())
+  setmetatable(expectInstance, EXPECT_META)
 
   return expectInstance
 end
@@ -150,6 +90,7 @@ local function exposeTo(targetEnvironment)
 end
 
 return {
+  EXPECT_META = EXPECT_META,
   expect = expect,
   exposeTo = exposeTo,
 }

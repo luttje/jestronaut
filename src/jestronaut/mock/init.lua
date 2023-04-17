@@ -11,11 +11,12 @@ local function exposeTo(targetEnvironment)
   end
 
   targetEnvironment.requireActual = function(targetEnvironment, moduleName)
-    return mockModuleLib.requireActual(moduleName)
+    return require(moduleName)
   end
 end
 
 return {
   fn = mockFunctionLib.fn,
   exposeTo = exposeTo,
+  setupModuleMocking = mockModuleLib.setupModuleMocking,
 }

@@ -1,23 +1,24 @@
-local requireActual = require
+local MOCK_FUNCTION_META = require "jestronaut.mock.mockfunction".MOCK_FUNCTION_META
 local mockedModules = {}
 
---- Overrides the require function to return a mocked module.
---- @param moduleName string
---- @return any
-function require(moduleName)
-  local module = mockedModules[moduleName]
+local function setupModuleMocking()
+  --- Search for modules in the test mocking environment.
+  --- @param moduleName string
+  --- @return any
+  table.insert(package.loaders, function(moduleName)
+    if mockedModules[moduleName] ~= nil then
+      return mockedModules[moduleName]
+    end
 
-  if module then
-    return module
-  end
+    -- Trim ./ or .\ from the start of the module name.
+    moduleName = moduleName:gsub("^%.[/\\]", "")
 
-  local success, result = pcall(requireActual, moduleName)
+    if mockedModules[moduleName] ~= nil then
+      return mockedModules[moduleName]
+    end
 
-  if success then
-    return result
-  else
-    error(result, 2)
-  end
+    return package.loaded[moduleName]
+  end)
 end
 
 --- Mocks a module when it is required.
@@ -25,20 +26,18 @@ end
 --- @param factory function
 --- @param options table
 local function mock(moduleName, factory, options)
-  local module = factory ~= nil and factory() or function()
-    print("Not yet implemented for mock Module with name " .. moduleName)
-  end
+  -- Trim ./ or .\ from the start of the module name.
+  moduleName = moduleName:gsub("^%.[/\\]", "")
 
-  setmetatable(module, {
-    __call = function(self, ...)
-      return self
-    end,
-  })
+  local module = factory ~= nil and factory() 
+    or (package.loaded[moduleName] and package.loaded[moduleName] or {})
+
+  setmetatable(module, MOCK_FUNCTION_META)
 
   mockedModules[moduleName] = module
 end
 
 return {
   mock = mock,
-  requireActual = requireActual,
+  setupModuleMocking = setupModuleMocking,
 }

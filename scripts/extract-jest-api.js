@@ -191,6 +191,7 @@ function luaTestsFromMethod(method, testDirectory) {
 
     // Find top-level returns (no indentation before them), wrap them in a function, along with related code (up until first 3 empty newlines before it).
     const returnRegex = /(?<code>[\s\S]*?)(?<return>^return\s*[\s\S]*?)(?=\n\n\n|$)/gm;
+    const containsExportRegex = /____module_0|module/g;
     // Match both test and it (followed by .*( so it also matches test.only and it.failing.each, etc)
     const containsTestRegex = /(test|it)(\s|\.\*)?\(/;
     const allMatches = [ ...luaTest.matchAll(returnRegex) ];
@@ -221,9 +222,35 @@ function luaTestsFromMethod(method, testDirectory) {
     // Check the attributes to see if if we need to preload it
     if (example.attributes['title']) {
       const title = example.attributes['title'];
+      let luaTestWithExport = luaTestBase;
+      const match = luaTestWithExport.match(containsExportRegex)
+      
+      // If it has an export, add a return that returns that export
+      if (match) {
+        luaTestWithExport = luaTestWithExport.replaceAll(/local ____module_0 = module/g, 'local exports = {}');
+        luaTestWithExport = luaTestWithExport.replaceAll(/local ____module_0 =/g, 'local exports =');
+        luaTestWithExport = luaTestWithExport.replaceAll(/module\.exports =/g, 'local exports =');
+        luaTestWithExport = luaTestWithExport.replaceAll(/____module_0\.exports =/g, 'local exports =');
+        luaTestWithExport = luaTestWithExport.replaceAll(/module\.exports =/g, 'local exports =');
 
-      packagePreLoads += `package.preload['${title}'] = function()\n${prefixLines(luaTestBase, '\t')}\nend\n\n`;
-      packagePreLoads += `package.preload['${title.replace(/_js$/, '')}'] = package.preload['${title}']\n\n`;
+        // if it doesnt already have a return, add one
+        if (!luaTestWithExport.trimEnd().endsWith('return exports') && !luaTestWithExport.trimEnd().endsWith('return exports;')
+          && !luaTestWithExport.trimEnd().endsWith('return ____exports') && !luaTestWithExport.trimEnd().endsWith('return ____exports;'))
+          luaTestWithExport += `\nreturn exports`;
+      }
+
+      packagePreLoads += `generatedTestPreLoad('${title}', function()\n${prefixLines(luaTestWithExport, '\t')}\nend)\n\n`;
+
+      // Dont use exports as tests
+      luaTest = '';
+    }
+
+    if (luaTest.match(containsExportRegex)) {
+      luaTest = luaTest.replaceAll(/local ____module_0 = module/g, 'local exports = {}');
+      luaTest = luaTest.replaceAll(/local ____module_0 =/g, 'local exports =');
+      luaTest = luaTest.replaceAll(/module\.exports =/g, 'local exports =');
+      luaTest = luaTest.replaceAll(/____module_0\.exports =/g, 'local exports =');
+      luaTest = luaTest.replaceAll(/module\.exports =/g, 'local exports =');
     }
 
     return luaTest;

@@ -9,9 +9,9 @@ local tests = {
 			-- Example:
 			-- 
 			local video = {}
-			module.exports = video
+			local exports = video
 			local audio = {_volume = false}
-			module.exports = audio
+			local exports = audio
 			
 		
 		end);
