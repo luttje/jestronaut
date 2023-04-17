@@ -13,7 +13,7 @@ local function toHaveLength(expect, length)
     error("Expected " .. tostring(actual) .. " to be a table or string")
   end
 
-  if (#actual == length) == expect.inverse then
+  if not expect:checkEquals(true, #actual == length) then
     error("Expected " .. tostring(actual) .. " to have length " .. tostring(length) .. " but it has length " .. tostring(#actual))
   end
 

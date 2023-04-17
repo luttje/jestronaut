@@ -73,10 +73,8 @@ EXPECT_META.__index = function(self, key)
 
   local matcher = getMatcher(key)
   if matcher then
-    if key == 'toEqual' then
+    if matcher.build ~= nil then
       return matcher.build(self, customEqualityTesters)
-    elseif matcher.build ~= nil then
-      return matcher.build(self)
     end
 
     return matcher.default

@@ -202,6 +202,8 @@ function luaTestsFromMethod(method, testDirectory) {
       lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"kitchen", "amenities", 0}, "oven")': 'expect(houseForSale):toHaveProperty({"kitchen", "amenities", 1}, "oven")' });
       lineReplacements.push({ 'expect(houseForSale):toHaveProperty("livingroom.amenities[0].couch[0][1].dimensions[0]", 20)': `expect(houseForSale):toHaveProperty("livingroom.amenities[1].couch[1][2].dimensions[1]", 20)` });
       lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"ceiling.height"}, "tall")': 'expect(houseForSale):toHaveProperty({"ceiling.height"}, 2)' });
+    } else if (method.name === '.toBeInstanceOf') {
+      lineReplacements.push({ 'expect(__TS__New(A)):toBeInstanceOf(Function)': '' }); // Only Javascript objects are also Functions, this is not the case in Lua.
     } else if (method.name === 'expect.stringMatching') {
       // JS:
       // - expect.stringMatching(/^Alic/)

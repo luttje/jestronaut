@@ -3,7 +3,7 @@
 local function toHaveReturnedWith(expect, ...)
   local actual = expect.value
 
-  if actual:hasReturnedWith(...) == expect.inverse then
+  if not expect:checkEquals(true, actual:hasReturnedWith(...)) then
     error("Expected " .. tostring(actual) .. " to have returned with " .. tostring(...) .. " but it returned with " .. tostring(actual:getLastReturn()))
   end
 

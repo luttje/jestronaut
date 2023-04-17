@@ -9,7 +9,7 @@ local function toEqual(expect, expected)
   local actual = expect.value
 
   -- Try raw equality first
-  if (actual == expected) then
+  if expect:checkEquals(actual, expected) then
     return true
   end
 

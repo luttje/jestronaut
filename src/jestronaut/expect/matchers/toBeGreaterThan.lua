@@ -5,7 +5,7 @@
 local function toBeGreaterThan(expect, value)
   local actual = expect.value
 
-  if not (actual > value) then
+  if not expect:checkEquals(true, actual > value) then
     error("Expected " .. tostring(actual) .. " to be greater than " .. tostring(value))
   end
 

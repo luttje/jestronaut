@@ -2,7 +2,7 @@
 local function toHaveReturned(expect)
   local actual = expect.value
 
-  if actual:hasReturned() == expect.inverse then
+  if not expect:checkEquals(true, actual:hasReturned()) then
     error("Expected " .. tostring(actual) .. " to have returned something")
   end
 

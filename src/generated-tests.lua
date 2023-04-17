@@ -55,6 +55,10 @@ local flavors = {
   "mango",
 }
 
+function getAllFlavors()
+  return flavors
+end
+
 function applyToAllFlavors(fn)
   for _, beverage in ipairs(bevarages) do
     for _, flavor in ipairs(flavors) do
@@ -65,6 +69,13 @@ end
 
 function fetchNewFlavorIdea() 
   return "cool branch"
+end
+
+function ouncesPerCan() 
+  return 12
+end
+
+function bestDrinkForFlavor(flavor)
 end
 
 -- generated-tests\JestObjectAPI\jest\mock.lua:64
@@ -166,5 +177,7 @@ CustomError = luaLib.__TS__Class()
 CustomError.name = "CustomError"
 
 Number = 'number'
+
+Function = 'function'
 
 require "generated-tests.all"

@@ -2,7 +2,7 @@
 --- @param expect Expect
 --- @return boolean
 local function toBeTruthy(expect)
-  if not ((not expect.value) == false) then
+  if not expect:checkEquals(false, not expect.value) then
     error("Expected " .. tostring(expect.value) .. " to be truthy")
   end
 

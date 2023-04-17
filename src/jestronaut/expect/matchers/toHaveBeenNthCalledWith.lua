@@ -5,7 +5,7 @@ local tableImplode = require "jestronaut.utils.tables".implode
 local function toHaveBeenNthCalledWith(expect, nthCall, ...)
   local actual = expect.value
 
-  if not (actual:wasNthCalledWith(nthCall, ...)) then
+  if not expect:checkEquals(true, actual:wasNthCalledWith(nthCall, ...)) then
     local tbl = {...}
 
     if #tbl == 0 then

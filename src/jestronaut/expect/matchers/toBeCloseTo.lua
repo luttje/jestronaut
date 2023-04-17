@@ -7,7 +7,7 @@ local function toBeCloseTo(expect, value, numDigits)
   local actual = expect.value
   numDigits = numDigits or 2
 
-  if not (math.abs(actual - value) < 10 ^ (-numDigits / 2)) then
+  if not expect:checkEquals(true, math.abs(actual - value) < math.pow(10, -numDigits / 2)) then
     error("Expected " .. tostring(actual) .. " to be close to " .. tostring(value) .. " with " .. tostring(numDigits) .. " digits")
   end
 

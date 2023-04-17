@@ -5,11 +5,11 @@
 local function toThrow(expect, customErrorType)
   local success, err = pcall(expect.value)
 
-  if success then
+  if not expect:checkEquals(false, success) then
     error('Expected the function to throw an error.')
   end
 
-  if customErrorType and customErrorType ~= err then
+  if not expect:checkEquals(true, customErrorType and customErrorType == err) then
     error('Expected the function to throw an error of type ' .. customErrorType .. ' but it threw an error of type ' .. err)
   end
 

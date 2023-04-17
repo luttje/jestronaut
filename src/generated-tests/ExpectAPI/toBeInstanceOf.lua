@@ -17,7 +17,7 @@ local tests = {
 			expect(__TS__New(A)):toBeInstanceOf(A)
 			expect(function()
 			end):toBeInstanceOf(Function)
-			expect(__TS__New(A)):toBeInstanceOf(Function)
+			
 			
 		
 		end);
