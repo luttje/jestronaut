@@ -1,5 +1,6 @@
 --- @class AsymetricMatcher
-local ASYMETRIC_MATCHER_META = {
+local ASYMETRIC_MATCHER_META
+ASYMETRIC_MATCHER_META = {
   isAsymetricMatcher = true,
   inverse = false,
   sample = nil,
@@ -10,7 +11,7 @@ local ASYMETRIC_MATCHER_META = {
       inverse = inverse or false,
     }
 
-    setmetatable(instance, self)
+    setmetatable(instance, ASYMETRIC_MATCHER_META)
     return instance
   end,
 
@@ -33,6 +34,16 @@ local ASYMETRIC_MATCHER_META = {
 
 ASYMETRIC_MATCHER_META.__index = ASYMETRIC_MATCHER_META
 
+local function isMatcher(value)
+  return type(value) == 'table' and value.isAsymetricMatcher
+end
+
+local function matches(value, other)
+  return value:asymmetricMatch(other)
+end
+
 return {
   ASYMETRIC_MATCHER_META = ASYMETRIC_MATCHER_META,
+  isMatcher = isMatcher,
+  matches = matches,
 }

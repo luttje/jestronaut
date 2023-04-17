@@ -86,9 +86,20 @@ local function exposeTo(targetEnvironment)
         customMatchers[key] = matcher
       end
     end,
-
-    stringMatching = require "jestronaut.expect.asymetricmatchers.stringMatching".build(expect),
   })
+
+  local metaTable = getmetatable(targetEnvironment.expect)
+  metaTable.__index = function(tbl, key)
+    local success, asymetricMatcher = pcall(require, 'jestronaut.expect.asymetricmatchers.' .. key)
+
+    if success then
+      if asymetricMatcher.build ~= nil then
+        return asymetricMatcher.build(tbl, customEqualityTesters)
+      end
+
+      return asymetricMatcher[key]
+    end
+  end
 end
 
 return {

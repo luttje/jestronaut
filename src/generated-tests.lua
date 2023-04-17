@@ -102,8 +102,10 @@ function inchesOfSnow()
   return 0
 end
 
-local __TS__Class = require("lualib_bundle").__TS__Class
-CustomError = __TS__Class()
+local luaLib = require("lualib_bundle")
+CustomError = luaLib.__TS__Class()
 CustomError.name = "CustomError"
+
+Number = 'number'
 
 require "generated-tests.all"

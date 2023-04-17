@@ -1,3 +1,5 @@
+local asymetricMatcherLib = require "jestronaut.expect.asymetricmatchers.asymetricmatcher"
+
 --- @class MockFunction
 local MOCK_FUNCTION_META = {
   callCount = 0,
@@ -209,6 +211,97 @@ function MOCK_FUNCTION_META:withImplementation(fn, callback)
   self:mockImplementation(nil)
 
   return self
+end
+
+function MOCK_FUNCTION_META:wasCalled()
+  return self.callCount > 0
+end
+
+function MOCK_FUNCTION_META:wasCalledTimes(times)
+  return self.callCount == times
+end
+
+function MOCK_FUNCTION_META:wasCalledWith(...)
+  local args = {...}
+  local calls = self.mock.calls
+
+  for _, call in ipairs(calls) do
+    local callArgs = call.args
+    local match = true
+
+    for i, arg in ipairs(args) do
+      if(asymetricMatcherLib.isMatcher(arg))then
+        if not asymetricMatcherLib.matches(arg, callArgs[i]) then
+          match = false
+          break
+        end
+      else
+        if arg ~= callArgs[i] then
+          match = false
+          break
+        end
+      end
+    end
+
+    if match then
+      return true
+    end
+  end
+
+  return false
+end
+
+function MOCK_FUNCTION_META:wasLastCalledWith(...)
+  local args = {...}
+  local lastCall = self.mock.lastCall
+
+  if lastCall == nil then
+    return false
+  end
+
+  local callArgs = lastCall.args
+  local match = true
+
+  for i, arg in ipairs(args) do
+    if arg ~= callArgs[i] then
+      match = false
+      break
+    end
+  end
+
+  return match
+end
+
+function MOCK_FUNCTION_META:wasNthCalledWith(n, ...)
+  local args = {...}
+  local calls = self.mock.calls
+
+  if calls[n] == nil then
+    return false
+  end
+
+  local callArgs = calls[n].args
+  local match = true
+
+  for i, arg in ipairs(args) do
+    if arg ~= callArgs[i] then
+      match = false
+      break
+    end
+  end
+
+  return match
+end
+
+function MOCK_FUNCTION_META:getCallArgs(n)
+  local calls = self.mock.calls
+  n = n or #calls
+
+  if calls[n] == nil then
+    return nil
+  end
+
+  return calls[n].args
 end
 
 --- Returns a new, unused mock function. Optionally takes a mock implementation.

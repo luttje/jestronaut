@@ -2,14 +2,15 @@ local ASYMETRIC_MATCHER_META = require "jestronaut.expect.asymetricmatchers.asym
 local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 
 --- @class StringMatching
-local STRING_MATCHING_META = setmetatable({
+local STRING_MATCHING_META
+STRING_MATCHING_META = {
   new = function(sample, inverse)
     local instance = {
       sample = sample,
       inverse = inverse or false,
     }
 
-    setmetatable(instance, self)
+    setmetatable(instance, STRING_MATCHING_META)
     return instance
   end,
 
@@ -20,23 +21,19 @@ local STRING_MATCHING_META = setmetatable({
   end,
 
   __tostring = function(self)
-    return 'String' .. (this.inverse and 'Not' or '') .. 'Matching'
+    return 'String' .. (self.inverse and 'Not' or '') .. 'Matching'
   end,
 
   getExpectedType = function(self)
     return 'string'
   end,
-}, ASYMETRIC_MATCHER_META)
+}
 
 extendMetaTableIndex(STRING_MATCHING_META, ASYMETRIC_MATCHER_META)
 
-local function build(self)
-  return function(sample, inverse)
-    return STRING_MATCHING_META.new(self, sample, inverse)
-  end
-end
-
 return {
   STRING_MATCHING_META = STRING_MATCHING_META,
-  build = build,
+  stringMatching = function(expect, sample, inverse)
+    return STRING_MATCHING_META.new(sample, inverse)
+  end,
 }
