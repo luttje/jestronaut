@@ -11,4 +11,5 @@ end
 
 return {
   toHaveBeenCalled = toHaveBeenCalled,
+  default = toHaveBeenCalled,
 }

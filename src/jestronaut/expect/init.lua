@@ -1,6 +1,7 @@
 local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexableFunction
 local customEqualityTesters = {}
 local customMatchers = {}
+local expect
 
 local modifiers = {
   ["not"] = function(expect)
@@ -28,14 +29,16 @@ end
 --- @field toBe fun(value: any): boolean
 --- @field toHaveBeenCalled fun(): boolean
 local EXPECT_META = {
-  inverse = false,
   value = nil,
 
   __index = function(self, key)
-    local meta = getmetatable(self)
-    
-    if meta and meta[key] ~= nil then
-      return meta[key]
+    -- If the value is the expect function, try that first
+    if(self.value and type(self.value) == 'table' and self.value.isExpect)then
+      local value = self.value[key]
+
+      if value ~= nil then
+        return value
+      end
     end
 
     local modifier = modifiers[key]
@@ -52,16 +55,17 @@ local EXPECT_META = {
         return matcher.build(self)
       end
 
-      return matcher[key]
+      return matcher.default
     end
 
     error('Unknown matcher or modifier: ' .. key)
   end
 }
 
-local function expect(value)
+function expect(value)
   local expectInstance = {
-    value = value
+    value = value,
+    inverse = false,
   }
 
   setmetatable(expectInstance, EXPECT_META)
@@ -73,6 +77,8 @@ end
 --- @param targetEnvironment table
 local function exposeTo(targetEnvironment)
   targetEnvironment.expect = makeIndexableFunction(expect, {
+    isExpect = true,
+
     addEqualityTesters = function(self, testers)
       for _, tester in ipairs(testers) do
         table.insert(customEqualityTesters, tester)
@@ -92,15 +98,23 @@ local function exposeTo(targetEnvironment)
   })
 
   local metaTable = getmetatable(targetEnvironment.expect)
-  metaTable.__index = function(tbl, key)
+  metaTable.__index = function(self, key)
+    -- Create a new expect instance with the expect function as the value
+    local expectInstance = expect(self)
+    local modifier = modifiers[key]
+
+    if modifier then
+      return modifier(expectInstance)
+    end
+
     local success, asymetricMatcher = pcall(require, 'jestronaut.expect.asymetricmatchers.' .. key)
 
     if success then
       if asymetricMatcher.build ~= nil then
-        return asymetricMatcher.build(tbl, customEqualityTesters)
+        return asymetricMatcher.build(expectInstance, customEqualityTesters)
       end
 
-      return asymetricMatcher[key]
+      return asymetricMatcher.default
     end
   end
 end

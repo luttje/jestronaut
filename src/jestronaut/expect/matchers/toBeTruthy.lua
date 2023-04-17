@@ -11,4 +11,5 @@ end
 
 return {
   toBeTruthy = toBeTruthy,
+  default = toBeTruthy,
 }

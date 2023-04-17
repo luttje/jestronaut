@@ -14,4 +14,5 @@ end
 
 return {
   toBeGreaterThan = toBeGreaterThan,
+  default = toBeGreaterThan,
 }

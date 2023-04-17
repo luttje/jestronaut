@@ -33,7 +33,7 @@ extendMetaTableIndex(STRING_MATCHING_META, ASYMETRIC_MATCHER_META)
 
 return {
   STRING_MATCHING_META = STRING_MATCHING_META,
-  stringMatching = function(expect, sample, inverse)
-    return STRING_MATCHING_META.new(sample, inverse)
+  default = function(expect, sample)
+    return STRING_MATCHING_META.new(sample, expect.inverse)
   end,
 }

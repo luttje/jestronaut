@@ -11,4 +11,5 @@ end
 
 return {
   toBeFalsy = toBeFalsy,
+  default = toBeFalsy,
 }

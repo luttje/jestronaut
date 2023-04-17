@@ -16,4 +16,5 @@ end
 
 return {
   toBeCloseTo = toBeCloseTo,
+  default = toBeCloseTo,
 }

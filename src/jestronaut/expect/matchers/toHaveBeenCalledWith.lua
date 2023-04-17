@@ -26,4 +26,5 @@ end
 
 return {
   toHaveBeenCalledWith = toHaveBeenCalledWith,
+  default = toHaveBeenCalledWith,
 }

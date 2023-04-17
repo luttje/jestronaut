@@ -71,8 +71,8 @@ extendMetaTableIndex(ARRAY_CONTAINING_META, ASYMETRIC_MATCHER_META)
 return {
   ARRAY_CONTAINING_META = ARRAY_CONTAINING_META,
   build = function(expect, customEqualityTesters)
-    return function(expect, sample, inverse)
-      return ARRAY_CONTAINING_META.new(sample, inverse, customEqualityTesters)
+    return function(expect, sample)
+      return ARRAY_CONTAINING_META.new(sample, expect.inverse, customEqualityTesters)
     end
   end,
 }

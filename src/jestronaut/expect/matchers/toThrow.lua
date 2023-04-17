@@ -18,4 +18,5 @@ end
 
 return {
   toThrow = toThrow,
+  default = toThrow,
 }

@@ -4,7 +4,7 @@ local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTab
 --- @class Any
 local ANY_META
 ANY_META = {
-  new = function(sample)
+  new = function(sample, inverse)
     if sample == nil then
       error(
         'any() expects to be passed a constructor function. ' ..
@@ -14,6 +14,7 @@ ANY_META = {
 
     local instance = {
       sample = sample,
+      inverse = inverse or false,
     }
 
     setmetatable(instance, ANY_META)
@@ -86,7 +87,7 @@ extendMetaTableIndex(ANY_META, ASYMETRIC_MATCHER_META)
 
 return {
   ANY_META = ANY_META,
-  any = function(expect, sample)
-    return ANY_META.new(sample)
+  default = function(expect, sample)
+    return ANY_META.new(sample, expect.inverse)
   end,
 }

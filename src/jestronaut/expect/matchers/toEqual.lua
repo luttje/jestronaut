@@ -6,8 +6,8 @@ local asymetricMatcherLib = require "jestronaut.expect.asymetricmatchers.asymetr
 --- @return boolean
 local function toEqual(expect, expected)
   local actual = expect.value
-  
-   -- Try raw equality first
+
+  -- Try raw equality first
   if (actual == expected) then
     return true
   end
@@ -16,10 +16,6 @@ local function toEqual(expect, expected)
     if asymetricMatcherLib.matches(expected, actual) == expect.inverse then
       local actualValue = type(actual) == 'table' and ("table: '" .. table.concat(actual, ', ') .. "'") or tostring(actual)
 
-      print('toEqual', expected, actual)
-      print(expect.inverse)
-      print(asymetricMatcherLib.matches(expected, actual))
-
       error("Expected " .. actualValue ..( expect.inverse and " not" or "") ..  " to equal " .. tostring(expected))
     end
   end
@@ -27,15 +23,14 @@ local function toEqual(expect, expected)
   return true
 end
 
---- @param expect Expect
-local function build(expect, customEqualityTesters)
-  -- TODO: customEqualityTesters
-  return function(expect, expected)
-    return toEqual(expect, expected)
-  end
-end
-
 return {
   toEqual = toEqual,
-  build = build,
+
+  --- @param expect Expect
+  build = function(expect, customEqualityTesters)
+    -- TODO: customEqualityTesters
+    return function(expect, sample)
+      return toEqual(expect, sample)
+    end
+  end,
 }

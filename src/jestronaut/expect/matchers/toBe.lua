@@ -36,4 +36,5 @@ end
 
 return {
   toBe = toBe,
+  default = toBe,
 }
