@@ -37,7 +37,7 @@ local DESCRIBE_OR_TEST_META = {
 
     if self.isSkipping then
       printer:printSkip(self)
-      return
+      return failedTestCount
     end
 
     if self.isTest then
