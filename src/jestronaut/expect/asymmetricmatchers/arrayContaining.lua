@@ -1,4 +1,4 @@
-local ASYMMETRIC_MATCHER_META = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher".ASYMMETRIC_MATCHER_META
+local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
 local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 local tableImplode = require "jestronaut.utils.tables".implode
 
@@ -27,35 +27,28 @@ ARRAY_CONTAINING_META = {
       return false
     end
 
-    -- matches a received array which contains all of the elements in the expected array. That is, the expected array is a subset of the received array. Therefore, it matches a received array which contains elements that are not in the expected array.
-    local found = {}
+    local foundAll = true
 
-    for _, expectedElement in pairs(self.sample) do
-      found[expectedElement] = false
-    end
+    for key, value in pairs(self.sample) do
+      if not (actual[key] ~= nil) then
+        foundAll = false
+        break
+      end
 
-    for _, receivedElement in pairs(actual) do
-      for _, expectedElement in pairs(self.sample) do
-        for _, customEqualityTester in ipairs(self.customEqualityTesters) do
-          -- Try raw equality first
-          if expectedElement == receivedElement then
-            found[expectedElement] = true
-            break
-          elseif customEqualityTester(expectedElement, receivedElement) then
-            found[expectedElement] = true
-            break
-          end
+      if asymmetricMatcherLib.isMatcher(value) then
+        if not asymmetricMatcherLib.matches(value, actual[key]) then
+          foundAll = false
+          break
+        end
+      else
+        if not (actual[key] == value) then
+          foundAll = false
+          break
         end
       end
     end
 
-    for _, foundElement in pairs(found) do
-      if not foundElement then
-        return self.inverse and true or false
-      end
-    end
-
-    return self.inverse and false or true
+    return self.inverse and not foundAll or foundAll
   end,
 
   __tostring = function(self)
@@ -67,7 +60,7 @@ ARRAY_CONTAINING_META = {
   end,
 }
 
-extendMetaTableIndex(ARRAY_CONTAINING_META, ASYMMETRIC_MATCHER_META)
+extendMetaTableIndex(ARRAY_CONTAINING_META, asymmetricMatcherLib.ASYMMETRIC_MATCHER_META)
 
 return {
   ARRAY_CONTAINING_META = ARRAY_CONTAINING_META,
