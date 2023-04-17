@@ -93,6 +93,10 @@ function myBeverages()
   }
 end
 
+function essayOnTheBestFlavor()
+  return "grapefruit is the best flavor"
+end
+
 -- generated-tests\JestObjectAPI\jest\mock.lua:64
 jestronaut:mock(
   "moduleName",

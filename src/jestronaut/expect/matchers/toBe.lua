@@ -12,13 +12,13 @@
 ---     both NaN
 ---     or both non-zero, not NaN, and have the same value
 --- @param expect Expect
---- @param value any
+--- @param expected any
 --- @return boolean
-local function toBe(expect, value)
+local function toBe(expect, expected)
   local actual = expect.value
 
-  if not expect:checkEquals(actual, value) then
-    error("Expected " .. tostring(actual) .. (expect.inverse and "not " or "") .. "to be " .. tostring(value))
+  if not expect:checkEquals(actual, expected) then
+    error("Expected " .. tostring(actual) .. (expect.inverse and "not " or "") .. "to be " .. tostring(expected))
   end
 
   return true
