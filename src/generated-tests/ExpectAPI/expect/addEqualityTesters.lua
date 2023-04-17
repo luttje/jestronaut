@@ -29,6 +29,8 @@ package.preload['Volume_js'] = function()
 	
 end
 
+package.preload['Volume'] = package.preload['Volume_js']
+
 package.preload['areVolumesEqual_js'] = function()
 	
 	local ____lualib = require('lualib_bundle')
@@ -54,6 +56,8 @@ package.preload['areVolumesEqual_js'] = function()
 	
 end
 
+package.preload['areVolumesEqual'] = package.preload['areVolumesEqual_js']
+
 package.preload['__tests__/Volume_test_js'] = function()
 	
 	local ____lualib = require('lualib_bundle')
@@ -74,6 +78,8 @@ package.preload['__tests__/Volume_test_js'] = function()
 	return ____exports
 	
 end
+
+package.preload['__tests__/Volume_test'] = package.preload['__tests__/Volume_test_js']
 
 
 

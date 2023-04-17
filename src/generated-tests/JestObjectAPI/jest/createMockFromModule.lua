@@ -12,6 +12,8 @@ package.preload['utils_js'] = function()
 	
 end
 
+package.preload['utils'] = package.preload['utils_js']
+
 package.preload['__tests__/createMockFromModule_test_js'] = function()
 	
 	local utils = jestronaut:createMockFromModule("../utils")
@@ -26,19 +28,25 @@ package.preload['__tests__/createMockFromModule_test_js'] = function()
 	
 end
 
+package.preload['__tests__/createMockFromModule_test'] = package.preload['__tests__/createMockFromModule_test_js']
+
 
 
 local tests = {
 
 	(function()
-		-- This is useful when you want to create a [manual mock](ManualMocks.md) that extends the automatic mock's behavior:
-		-- 
-		module.exports = {
-		    authorize = function()
-		        return "token"
-		    end,
-		    isAuthorized = function(secret) return secret == "wizard" end
-		}
+		test("jest.createMockFromModule 0", function()
+			-- This is useful when you want to create a [manual mock](ManualMocks.md) that extends the automatic mock's behavior:
+			-- 
+			module.exports = {
+			    authorize = function()
+			        return "token"
+			    end,
+			    isAuthorized = function(secret) return secret == "wizard" end
+			}
+			
+		
+		end);
 		
 	
 	end)(),

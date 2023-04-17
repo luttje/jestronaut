@@ -142,6 +142,8 @@ package.preload['toBeWithinRange_js'] = function()
 	
 end
 
+package.preload['toBeWithinRange'] = package.preload['toBeWithinRange_js']
+
 
 
 local tests = {

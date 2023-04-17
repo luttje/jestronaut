@@ -1,47 +1,58 @@
 local DESCRIBE_OR_TEST_META = require "jestronaut.environment.shared".DESCRIBE_OR_TEST_META
+local registerDescribeOrTest = require "jestronaut.environment.state".registerDescribeOrTest
+local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 
 --- @class Describe
 local DESCRIBE_META = {
-  __index = DESCRIBE_OR_TEST_META,
+  isDescribe = true,
 }
+
+extendMetaTableIndex(DESCRIBE_META, DESCRIBE_OR_TEST_META)
 
 --- Creates a new describe.
 --- @param name string
 --- @param fn function
---- @param parent Describe
 --- @return Describe
-local function describe(name, fn, parent)
+local function describe(name, fn)
+  if(type(name) ~= "string") then
+    error("describe name must be a string")
+  end
+
   local describe = {
     name = name,
     fn = fn,
-    parent = parent,
+    
+    children = {},
+    childrenLookup = {},
   }
 
   setmetatable(describe, DESCRIBE_META)
+  
+  registerDescribeOrTest(describe)
 
   return describe
 end
 
 --- Creates a new describe that is the only one that will run.
+--- @param describe Describe
 --- @param name string
 --- @param fn function
---- @param parent Describe
 --- @return Describe
-local function describeOnly(name, fn, parent)
-  local describe = describe(name, fn, parent)
-  describe.only = true
+local function describeOnly(describe, name, fn)
+  describe.isOnly = true
+  describe(name, fn)
 
   return describe
 end
 
 --- Creates a new describe that will be skipped.
+--- @param describe Describe
 --- @param name string
 --- @param fn function
---- @param parent Describe
 --- @return Describe
-local function describeSkip(name, fn, parent)
-  local describe = describe(name, fn, parent)
-  describe.skip = true
+local function describeSkip(describe, name, fn)
+  describe.isSkipping = true
+  describe(name, fn)
 
   return describe
 end

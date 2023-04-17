@@ -26,6 +26,8 @@ package.preload['utils_js'] = function()
 	
 end
 
+package.preload['utils'] = package.preload['utils_js']
+
 
 
 local tests = {

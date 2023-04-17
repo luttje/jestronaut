@@ -11,7 +11,13 @@ function require(moduleName)
     return module
   end
 
-  return requireActual(moduleName)
+  local success, result = pcall(requireActual, moduleName)
+
+  if success then
+    return result
+  else
+    error(result, 2)
+  end
 end
 
 --- Mocks a module when it is required.

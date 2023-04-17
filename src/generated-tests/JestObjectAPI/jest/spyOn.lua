@@ -5,12 +5,16 @@
 local tests = {
 
 	(function()
-		-- Example:
-		-- 
-		local video = {}
-		module.exports = video
-		local audio = {_volume = false}
-		module.exports = audio
+		test("jest.spyOn 0", function()
+			-- Example:
+			-- 
+			local video = {}
+			module.exports = video
+			local audio = {_volume = false}
+			module.exports = audio
+			
+		
+		end);
 		
 	
 	end)(),

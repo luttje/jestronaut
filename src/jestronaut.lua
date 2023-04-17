@@ -29,6 +29,14 @@ function JESTRONAUT:isolateModulesAsync(fn)
   --- @Not implemented (async)
 end
 
+function JESTRONAUT:retryTimes(numRetries, options)
+  environmentLib.setRetryTimes(numRetries, options)
+end
+
+function JESTRONAUT:setTimeout(timeout)
+  environmentLib.setTimeout(timeout)
+end
+
 function JESTRONAUT:getGlobals()
   local globals = {}
 

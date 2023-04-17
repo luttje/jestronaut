@@ -5,11 +5,15 @@
 local tests = {
 
 	(function()
-		-- Shorthand for:
-		-- 
-		jestronaut:fn(function()
-		    return self
-		end)
+		test("mockFn.mockReturnThis 0", function()
+			-- Shorthand for:
+			-- 
+			jestronaut:fn(function()
+			    return self
+			end)
+			
+		
+		end);
 		
 	
 	end)(),

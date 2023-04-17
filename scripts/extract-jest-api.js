@@ -191,20 +191,30 @@ function luaTestsFromMethod(method, testDirectory) {
 
     // Find top-level returns (no indentation before them), wrap them in a function, along with related code (up until first 3 empty newlines before it).
     const returnRegex = /(?<code>[\s\S]*?)(?<return>^return\s*[\s\S]*?)(?=\n\n\n|$)/gm;
+    // Match both test and it (followed by .*( so it also matches test.only and it.failing.each, etc)
+    const containsTestRegex = /(test|it)(\s|\.\*)?\(/;
     const allMatches = [ ...luaTest.matchAll(returnRegex) ];
     
     for (const match of allMatches) {
       const { code, return: returnCode } = match.groups;
-      const fullCode = prefixLines(`${code}${returnCode}`, '\t');
+      let fullCode = prefixLines(`${code}${returnCode}`, '\t');
 
-      // Replace the code with the fullCode wrapped in a function that is immediately called.
+      // Replace the code with the fullCode wrapped in a test if it is not already wrapped in a test.
       luaTest = luaTest.replace(returnCode, '');
+
+      if (!fullCode.match(containsTestRegex))
+        fullCode = fullCode.replace(code, prefixLines(`test("${method.name} ${index}", function()\n${fullCode}\n\nend);\n`, '\t'));
+      
       luaTest = luaTest.replace(code, `(function()\n${fullCode}\n\nend)(),\n`);
     }
 
     // If there were no returns matches in allMatches, wrap the whole test in a function that is immediately called.
     if (allMatches.length === 0) {
       luaTest = prefixLines(luaTest, '\t');
+      
+      if (!luaTest.match(containsTestRegex))
+        luaTest = prefixLines(`test("${method.name} ${index}", function()\n${luaTest}\n\nend);\n`, '\t');
+      
       luaTest = `(function()\n${luaTest}\n\nend)(),\n`;
     }
 
@@ -213,6 +223,7 @@ function luaTestsFromMethod(method, testDirectory) {
       const title = example.attributes['title'];
 
       packagePreLoads += `package.preload['${title}'] = function()\n${prefixLines(luaTestBase, '\t')}\nend\n\n`;
+      packagePreLoads += `package.preload['${title.replace(/_js$/, '')}'] = package.preload['${title}']\n\n`;
     }
 
     return luaTest;

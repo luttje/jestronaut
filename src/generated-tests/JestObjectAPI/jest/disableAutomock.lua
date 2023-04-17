@@ -22,28 +22,34 @@ package.preload['utils_js'] = function()
 	
 end
 
+package.preload['utils'] = package.preload['utils_js']
+
 
 
 local tests = {
 
 	(function()
-		-- ```ts tab
-		-- import type {Config} from 'jest';
-		-- 
-		-- const config: Config = {
-		--   automock: true,
-		-- };
-		-- 
-		-- export default config;
-		-- ```
-		-- 
-		-- :::
-		-- 
-		-- After `disableAutomock()` is called, all `require()`s will return the real versions of each module (rather than a mocked version).
-		---
-		-- @type {import('jestronaut').Config}
-		local config = {automock = true}
-		module.exports = config
+		test("jest.disableAutomock 0", function()
+			-- ```ts tab
+			-- import type {Config} from 'jest';
+			-- 
+			-- const config: Config = {
+			--   automock: true,
+			-- };
+			-- 
+			-- export default config;
+			-- ```
+			-- 
+			-- :::
+			-- 
+			-- After `disableAutomock()` is called, all `require()`s will return the real versions of each module (rather than a mocked version).
+			---
+			-- @type {import('jestronaut').Config}
+			local config = {automock = true}
+			module.exports = config
+			
+		
+		end);
 		
 	
 	end)(),

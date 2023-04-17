@@ -5,12 +5,16 @@
 local tests = {
 
 	(function()
-		-- Example:
-		-- 
-		local utils = {isLocalhost = function(self)
-		    return process.env.HOSTNAME == "localhost"
-		end}
-		module.exports = utils
+		test("jest.replaceProperty 0", function()
+			-- Example:
+			-- 
+			local utils = {isLocalhost = function(self)
+			    return process.env.HOSTNAME == "localhost"
+			end}
+			module.exports = utils
+			
+		
+		end);
 		
 	
 	end)(),

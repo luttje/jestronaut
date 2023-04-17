@@ -4,21 +4,21 @@ local MOCK_FUNCTION_META = {
   nonMockedFunction = nil,
   mockName = nil,
   mock = {
-    calls = {},
-    results = {},
-    instances = {},
-    contexts = {},
+    calls = nil,
+    results = nil,
+    instances = nil,
+    contexts = nil,
     lastCall = nil,
   },
   mockImplementation = nil,
-  mockImplementationStack = {},
+  mockImplementationStack = nil,
   mockReturnThis = nil,
   mockReturnValue = nil,
-  mockReturnValueStack = {},
+  mockReturnValueStack = nil,
   mockResolvedValue = nil,
-  mockResolvedValueStack = {},
+  mockResolvedValueStack = nil,
   mockRejectedValue = nil,
-  mockRejectedValueStack = {},
+  mockRejectedValueStack = nil,
 
   __call = function(self, ...)
     local args = {...}
@@ -61,6 +61,7 @@ local MOCK_FUNCTION_META = {
     return self.nonMockedFunction(...)
   end,
 }
+
 MOCK_FUNCTION_META.__index = MOCK_FUNCTION_META
 
 --- Returns the mock name string set by calling .mockName().
@@ -218,7 +219,10 @@ local function fn(implementation)
     mockImplementation = implementation,
   }
 
-  return setmetatable(mockFunction, MOCK_FUNCTION_META)
+  local mockFn = setmetatable(mockFunction, MOCK_FUNCTION_META)
+  mockFn:mockClear()
+
+  return mockFn
 end
 
 

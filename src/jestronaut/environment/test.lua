@@ -1,11 +1,15 @@
 local DESCRIBE_OR_TEST_META = require "jestronaut.environment.shared".DESCRIBE_OR_TEST_META
+local registerDescribeOrTest = require "jestronaut.environment.state".registerDescribeOrTest
+local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 
 --- @class Test
 local TEST_META = {
-  __index = DESCRIBE_OR_TEST_META,
+  isTest = true,
 
   timeout = 5000,
 }
+
+extendMetaTableIndex(TEST_META, DESCRIBE_OR_TEST_META)
 
 --- Creates a new test.
 --- @param name string
@@ -21,29 +25,33 @@ local function test(name, fn, timeout)
 
   setmetatable(test, TEST_META)
 
+  registerDescribeOrTest(test)
+
   return test
 end
 
 --- Creates a new test that is the only one that will run.
+--- @param test Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
-local function testOnly(name, fn, timeout)
-  local test = test(name, fn, timeout)
-  test.only = true
+local function testOnly(test, name, fn, timeout)
+  test.isOnly = true
+  test(name, fn, timeout)
 
   return test
 end
 
 --- Creates a new test that will be skipped.
+--- @param test Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
-local function testSkip(name, fn, timeout)
-  local test = test(name, fn, timeout)
-  test.skip = true
+local function testSkip(test, name, fn, timeout)
+  test.isSkipping = true
+  test(name, fn, timeout)
 
   return test
 end
@@ -119,7 +127,6 @@ end
 
 return {
   test = test,
-  it = test,
 
   testOnly = testOnly,
   ftest = testOnly,
