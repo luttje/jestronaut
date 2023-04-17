@@ -2,17 +2,12 @@ local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexabl
 local customEqualityTesters = {}
 local customMatchers = {}
 
-local function getModifier(key)
-  -- local modifier = require('jestronaut.expect.modifiers.' .. key)
-  -- return modifier
-  local success, modifier = pcall(require, 'jestronaut.expect.modifiers.' .. key)
-
-  if success then
-    return modifier
-  end
-
-  return nil
-end
+local modifiers = {
+  ["not"] = function(expect)
+    expect.inverse = true
+    return expect
+  end,
+}
 
 local function getMatcher(key)
   if customMatchers[key] then
@@ -33,12 +28,20 @@ end
 --- @field toBe fun(value: any): boolean
 --- @field toHaveBeenCalled fun(): boolean
 local EXPECT_META = {
+  inverse = false,
   value = nil,
 
   __index = function(self, key)
-    local modifier = getModifier(key)
+    local meta = getmetatable(self)
+    
+    if meta and meta[key] ~= nil then
+      return meta[key]
+    end
+
+    local modifier = modifiers[key]
+
     if modifier then
-      return modifier.build(self)
+      return modifier(self)
     end
 
     local matcher = getMatcher(key)

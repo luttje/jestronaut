@@ -15,10 +15,10 @@ ASYMETRIC_MATCHER_META = {
     return instance
   end,
 
-  asymmetricMatch = function(self, other)
+  asymmetricMatch = function(self, actual)
     error('asymmetricMatch must be implemented in subclass')
     -- e.g:
-    -- local result = type(other) == 'string' and string.find(self.sample, other);
+    -- local result = type(actual) == 'string' and string.find(self.sample, actual);
 
     -- return self.inverse and not result or result;
   end,
@@ -34,12 +34,12 @@ ASYMETRIC_MATCHER_META = {
 
 ASYMETRIC_MATCHER_META.__index = ASYMETRIC_MATCHER_META
 
-local function isMatcher(value)
-  return type(value) == 'table' and value.isAsymetricMatcher
+local function isMatcher(expected)
+  return type(expected) == 'table' and expected.isAsymetricMatcher
 end
 
-local function matches(value, other)
-  return value:asymmetricMatch(other)
+local function matches(expected, actual)
+  return expected:asymmetricMatch(actual)
 end
 
 return {

@@ -13,8 +13,8 @@ ANYTHING_META = {
     return instance
   end,
 
-  asymmetricMatch = function(self, other)
-    return other ~= nil
+  asymmetricMatch = function(self, actual)
+    return actual ~= nil
   end,
 
   __tostring = function(self)

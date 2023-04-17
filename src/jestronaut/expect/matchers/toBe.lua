@@ -21,7 +21,7 @@ local function toBe(expect, value)
 
   if (type(actual) == 'table' and type(actual) == type(value)) then
     if not (tableEquals(actual, value)) then
-      error("Expected table " .. tostring(actual) .. " to be " .. tostring(value))
+      error("Expected table " .. table.concat(actual, ', ') .. " to be " .. tostring(value))
     end
 
     return true

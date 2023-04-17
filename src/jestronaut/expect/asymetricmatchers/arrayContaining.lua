@@ -17,50 +17,48 @@ ARRAY_CONTAINING_META = {
     return instance
   end,
 
-  asymmetricMatch = function(self, other)
-    print 'ArrayContaining'
+  asymmetricMatch = function(self, actual)
     if not (type(self.sample) == 'table') then
       error('ArrayContaining sample must be a table')
     end
 
-    if not (type(other) == 'table') then
+    if not (type(actual) == 'table') then
       return false
     end
 
     -- matches a received array which contains all of the elements in the expected array. That is, the expected array is a subset of the received array. Therefore, it matches a received array which contains elements that are not in the expected array.
-    local result = true
+    local found = {}
 
     for _, expectedElement in ipairs(self.sample) do
-      local found = false
+      found[expectedElement] = false
+    end
 
-      for _, receivedElement in ipairs(other) do
+    for _, receivedElement in ipairs(actual) do
+      for _, expectedElement in ipairs(self.sample) do
         for _, customEqualityTester in ipairs(self.customEqualityTesters) do
           -- Try raw equality first
           if expectedElement == receivedElement then
-            found = true
+            found[expectedElement] = true
             break
           elseif customEqualityTester(expectedElement, receivedElement) then
-            found = true
+            found[expectedElement] = true
             break
           end
         end
-
-        if found then
-          break
-        end
-      end
-
-      if not found then
-        result = false
-        break
       end
     end
 
-    return self.inverse and not result or result
+    for _, foundElement in pairs(found) do
+      if not foundElement then
+        return self.inverse and true or false
+      end
+    end
+
+    return self.inverse and false or true
   end,
 
   __tostring = function(self)
-    return 'Array' .. (self.inverse and 'Not' or '') .. 'Containing'
+    return 'Array' .. (self.inverse and 'Not' or '') .. 'Containing: \'' .. table.concat(self.sample, ', ') .. "'"
   end,
 
   getExpectedType = function(self)

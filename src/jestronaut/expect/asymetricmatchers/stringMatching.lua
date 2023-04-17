@@ -14,8 +14,8 @@ STRING_MATCHING_META = {
     return instance
   end,
 
-  asymmetricMatch = function(self, other)
-    local result = type(other) == 'string' and string.find(self.sample, other);
+  asymmetricMatch = function(self, actual)
+    local result = type(actual) == 'string' and string.find(self.sample, actual);
 
     return self.inverse and not result or result;
   end,

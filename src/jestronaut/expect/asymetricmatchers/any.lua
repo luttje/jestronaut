@@ -21,32 +21,32 @@ ANY_META = {
   end,
 
   --- Matches anything that was created with the given constructor or if it's a primitive that is of the passed type
-  asymmetricMatch = function(self, other)
+  asymmetricMatch = function(self, actual)
     if self.sample == 'string' then
-      return type(other) == 'string'
+      return type(actual) == 'string'
     end
 
     if self.sample == 'number' then
-      return type(other) == 'number'
+      return type(actual) == 'number'
     end
 
     if self.sample == 'function' then
-      return type(other) == 'function'
+      return type(actual) == 'function'
     end
 
     if self.sample == 'table' then
-      return type(other) == 'table'
+      return type(actual) == 'table'
     end
 
     if self.sample == 'boolean' then
-      return type(other) == 'boolean'
+      return type(actual) == 'boolean'
     end
 
-    if type(self.sample) == 'table' and type(other) == 'table' and other.constructor then
-      return self.sample == other.constructor
+    if type(self.sample) == 'table' and type(actual) == 'table' and actual.constructor then
+      return self.sample == actual.constructor
     end
 
-    return type(other) == self.sample
+    return type(actual) == self.sample
   end,
 
   __tostring = function(self)
