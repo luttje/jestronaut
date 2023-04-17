@@ -48,10 +48,12 @@ local function runTests(printer, failFast)
 
   printer:printStart(currentParent)
 
-  local success, err = pcall(currentParent.run, currentParent, printer, failFast)
+  local success, errOrSuccesfullTestCount = pcall(currentParent.run, currentParent, printer, failFast)
 
   if not success then
     printer:printFailFast(currentParent)
+  else
+    printer:printSuccess(currentParent, errOrSuccesfullTestCount)
   end
 
   local endTime = os.clock()

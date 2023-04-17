@@ -56,6 +56,33 @@ function Printer:printEnd(duration)
   print("\n\n🏁 Finished tests at " .. endTime .. " in " .. duration .. " seconds.")
 end
 
+--- Prints the success message of the test.
+--- @param rootDescribe Describe
+--- @param successfulTestCount number
+function Printer:printSuccess(rootDescribe, successfulTestCount)
+  print("\n\n" .. (("="):rep(75)))
+
+  local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
+  local relativeSuccess = successfulTestCount / totalTestCount
+
+  if(relativeSuccess == 1) then
+    print("\n\n🎉 All tests passed. Great job!")
+    return
+  end
+
+  local progressBar = "["
+  local progressBarLength = 50
+  local progressBarSuccessLength = math.floor(progressBarLength * relativeSuccess)
+  local progressBarFailLength = progressBarLength - progressBarSuccessLength
+
+  progressBar = progressBar .. string.rep("#", progressBarSuccessLength)
+  progressBar = progressBar .. string.rep(" ", progressBarFailLength)
+  progressBar = progressBar .. "]"
+
+  print("🚨 " .. successfulTestCount .. " of " .. totalTestCount .. " tests passed.")
+  print(progressBar .. " " .. math.floor(relativeSuccess * 100) .. "% of tests succeeded")
+end
+
 --- Prints the fail fast message of the test.
 --- @param describeOrTest DescribeOrTest
 function Printer:printFailFast(describeOrTest)

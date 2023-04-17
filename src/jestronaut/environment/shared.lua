@@ -27,11 +27,14 @@ local DESCRIBE_OR_TEST_META = {
     end
   end,
 
-  --- Runs the test.
+  --- Runs the test and returns the amount of successful tests.
   --- @param self DescribeOrTest
   --- @param printer Printer
   --- @param failFast boolean
+  --- @return number
   run = function(self, printer, failFast)
+    local successfulTestCount = 0
+
     if self.isSkipping then
       printer:printSkip(self)
       return
@@ -43,7 +46,9 @@ local DESCRIBE_OR_TEST_META = {
           return debug.traceback(err, 2)
         end))
 
-        if not success and failFast then
+        if success then
+          successfulTestCount = successfulTestCount + 1
+        elseif failFast then
           error("")
         end
       else
@@ -53,13 +58,15 @@ local DESCRIBE_OR_TEST_META = {
     elseif #self.children > 0 then
       for _, child in pairs(self.children) do
         printer:printName(child)
-        child:run(printer, failFast)
+        successfulTestCount = successfulTestCount + child:run(printer, failFast)
       end
     end
 
     if self.isOnly then
       stateLib.setIsExecutingTests(false)
     end
+
+    return successfulTestCount
   end,
 }
 
