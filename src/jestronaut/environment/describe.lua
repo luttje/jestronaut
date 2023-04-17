@@ -34,27 +34,27 @@ local function describe(name, fn)
 end
 
 --- Creates a new describe that is the only one that will run.
---- @param describe Describe
+--- @param self Describe
 --- @param name string
 --- @param fn function
 --- @return Describe
-local function describeOnly(describe, name, fn)
-  describe.isOnly = true
-  describe(name, fn)
+local function describeOnly(self, name, fn)
+  local _describe = describe(name, fn)
+  _describe.isOnly = true
 
-  return describe
+  return _describe
 end
 
 --- Creates a new describe that will be skipped.
---- @param describe Describe
+--- @param self Describe
 --- @param name string
 --- @param fn function
 --- @return Describe
-local function describeSkip(describe, name, fn)
-  describe.isSkipping = true
-  describe(name, fn)
+local function describeSkip(self, name, fn)
+  local _describe = describe(name, fn)
+  _describe.isSkipping = true
 
-  return describe
+  return _describe
 end
 
 return {

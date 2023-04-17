@@ -1,4 +1,4 @@
-local buildArrayContaining = require "jestronaut.expect.asymetricmatchers.arrayContaining".build
+local buildArrayContaining = require "jestronaut.expect.asymmetricmatchers.arrayContaining".build
 
 return {
   --- @param expect Expect

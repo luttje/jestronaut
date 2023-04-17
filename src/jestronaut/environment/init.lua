@@ -48,8 +48,8 @@ local function exposeTo(targetEnvironment)
 
   targetEnvironment.describe = makeIndexableFunction(function(blockName, blockFn) return describeLib.describe(blockName, blockFn) end)
 
-  targetEnvironment.describe.only = makeIndexableFunction(function(blockName, blockFn) return describeLib.describeOnly(blockName, blockFn) end)
-  targetEnvironment.describe.skip = makeIndexableFunction(function(blockName, blockFn) return describeLib.describeSkip(blockName, blockFn) end)
+  targetEnvironment.describe.only = makeIndexableFunction(function(mainDescribe, blockName, blockFn) return describeLib.describeOnly(mainDescribe, blockName, blockFn) end)
+  targetEnvironment.describe.skip = makeIndexableFunction(function(mainDescribe, blockName, blockFn) return describeLib.describeSkip(mainDescribe, blockName, blockFn) end)
 
   eachLib.bindTo(targetEnvironment.describe)
   eachLib.bindTo(targetEnvironment.describe.only)

@@ -128,14 +128,14 @@ local function exposeTo(targetEnvironment)
       return modifier(expectInstance)
     end
 
-    local success, asymetricMatcher = pcall(require, 'jestronaut.expect.asymetricmatchers.' .. key)
+    local success, asymmetricMatcher = pcall(require, 'jestronaut.expect.asymmetricmatchers.' .. key)
 
     if success then
-      if asymetricMatcher.build ~= nil then
-        return asymetricMatcher.build(expectInstance, customEqualityTesters)
+      if asymmetricMatcher.build ~= nil then
+        return asymmetricMatcher.build(expectInstance, customEqualityTesters)
       end
 
-      return asymetricMatcher.default
+      return asymmetricMatcher.default
     end
   end
 end

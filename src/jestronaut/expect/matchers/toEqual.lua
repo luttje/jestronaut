@@ -1,4 +1,4 @@
-local asymetricMatcherLib = require "jestronaut.expect.asymetricmatchers.asymetricmatcher"
+local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
 local tableImplode = require "jestronaut.utils.tables".implode
 
 --- Determines whether two values are the same.
@@ -13,8 +13,9 @@ local function toEqual(expect, expected)
     return true
   end
 
-  if(asymetricMatcherLib.isMatcher(expected))then
-    if not expect:checkEquals(true, asymetricMatcherLib.matches(expected, actual)) then
+  if(asymmetricMatcherLib.isMatcher(expected))then
+    print(asymmetricMatcherLib.matches(expected, actual))
+    if not expect:checkEquals(true, asymmetricMatcherLib.matches(expected, actual)) then
       local actualValue = type(actual) == 'table' and ("table: '" .. tableImplode(actual, ', ') .. "'") or tostring(actual)
 
       error("Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(expected))

@@ -1,4 +1,4 @@
-local asymetricMatcherLib = require "jestronaut.expect.asymetricmatchers.asymetricmatcher"
+local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
 
 --- @class MockFunction
 local MOCK_FUNCTION_META = {
@@ -224,8 +224,8 @@ function MOCK_FUNCTION_META:wasCalledWith(...)
     local match = true
 
     for i, arg in ipairs(args) do
-      if(asymetricMatcherLib.isMatcher(arg))then
-        if not asymetricMatcherLib.matches(arg, callArgs[i]) then
+      if(asymmetricMatcherLib.isMatcher(arg))then
+        if not asymmetricMatcherLib.matches(arg, callArgs[i]) then
           match = false
           break
         end

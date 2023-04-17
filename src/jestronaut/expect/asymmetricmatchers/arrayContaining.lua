@@ -1,10 +1,10 @@
-local ASYMETRIC_MATCHER_META = require "jestronaut.expect.asymetricmatchers.asymetricmatcher".ASYMETRIC_MATCHER_META
+local ASYMMETRIC_MATCHER_META = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher".ASYMMETRIC_MATCHER_META
 local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 local tableImplode = require "jestronaut.utils.tables".implode
 
---- @class ObjectContaining
-local OBJECT_CONTAINING_META
-OBJECT_CONTAINING_META = {
+--- @class ArrayContaining
+local ARRAY_CONTAINING_META
+ARRAY_CONTAINING_META = {
   customEqualityTesters = nil,
 
   new = function(sample, inverse, customEqualityTesters)
@@ -14,28 +14,28 @@ OBJECT_CONTAINING_META = {
       customEqualityTesters = customEqualityTesters or {},
     }
 
-    setmetatable(instance, OBJECT_CONTAINING_META)
+    setmetatable(instance, ARRAY_CONTAINING_META)
     return instance
   end,
 
   asymmetricMatch = function(self, actual)
     if not (type(self.sample) == 'table') then
-      error('ObjectContaining sample must be a table')
+      error('ArrayContaining sample must be a table')
     end
 
     if not (type(actual) == 'table') then
       return false
     end
 
-    -- matches any received object that recursively matches the expected properties. That is, the expected object is a subset of the received object. Therefore, it matches a received object which contains properties that are present in the expected object.
+    -- matches a received array which contains all of the elements in the expected array. That is, the expected array is a subset of the received array. Therefore, it matches a received array which contains elements that are not in the expected array.
     local found = {}
 
-    for _, expectedElement in ipairs(self.sample) do
+    for _, expectedElement in pairs(self.sample) do
       found[expectedElement] = false
     end
 
-    for _, receivedElement in ipairs(actual) do
-      for _, expectedElement in ipairs(self.sample) do
+    for _, receivedElement in pairs(actual) do
+      for _, expectedElement in pairs(self.sample) do
         for _, customEqualityTester in ipairs(self.customEqualityTesters) do
           -- Try raw equality first
           if expectedElement == receivedElement then
@@ -59,7 +59,7 @@ OBJECT_CONTAINING_META = {
   end,
 
   __tostring = function(self)
-    return 'Object' .. (self.inverse and 'Not' or '') .. 'Containing: \'' .. tableImplode(self.sample, ', ') .. "'"
+    return 'Array' .. (self.inverse and 'Not' or '') .. 'Containing: \'' .. tableImplode(self.sample, ', ') .. "'"
   end,
 
   getExpectedType = function(self)
@@ -67,13 +67,13 @@ OBJECT_CONTAINING_META = {
   end,
 }
 
-extendMetaTableIndex(OBJECT_CONTAINING_META, ASYMETRIC_MATCHER_META)
+extendMetaTableIndex(ARRAY_CONTAINING_META, ASYMMETRIC_MATCHER_META)
 
 return {
-  OBJECT_CONTAINING_META = OBJECT_CONTAINING_META,
+  ARRAY_CONTAINING_META = ARRAY_CONTAINING_META,
   build = function(expect, customEqualityTesters)
     return function(expect, sample)
-      return OBJECT_CONTAINING_META.new(sample, expect.inverse, customEqualityTesters)
+      return ARRAY_CONTAINING_META.new(sample, expect.inverse, customEqualityTesters)
     end
   end,
 }

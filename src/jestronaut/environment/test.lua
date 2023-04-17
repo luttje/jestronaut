@@ -31,29 +31,29 @@ local function test(name, fn, timeout)
 end
 
 --- Creates a new test that is the only one that will run.
---- @param test Test
+--- @param self Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
-local function testOnly(test, name, fn, timeout)
-  test.isOnly = true
-  test(name, fn, timeout)
+local function testOnly(self, name, fn, timeout)
+  local _test = test(name, fn, timeout)
+  _test.isOnly = true
 
-  return test
+  return _test
 end
 
 --- Creates a new test that will be skipped.
---- @param test Test
+--- @param self Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
-local function testSkip(test, name, fn, timeout)
-  test.isSkipping = true
-  test(name, fn, timeout)
+local function testSkip(self, name, fn, timeout)
+  local _test = test(name, fn, timeout)
+  _test.isSkipping = true
 
-  return test
+  return _test
 end
 
 --- Creates a new test that will run concurrently.

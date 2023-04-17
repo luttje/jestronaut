@@ -1,7 +1,7 @@
---- @class AsymetricMatcher
-local ASYMETRIC_MATCHER_META
-ASYMETRIC_MATCHER_META = {
-  isAsymetricMatcher = true,
+--- @class AsymmetricMatcher
+local ASYMMETRIC_MATCHER_META
+ASYMMETRIC_MATCHER_META = {
+  isAsymmetricMatcher = true,
   inverse = false,
   sample = nil,
 
@@ -11,7 +11,7 @@ ASYMETRIC_MATCHER_META = {
       inverse = inverse or false,
     }
 
-    setmetatable(instance, ASYMETRIC_MATCHER_META)
+    setmetatable(instance, ASYMMETRIC_MATCHER_META)
     return instance
   end,
 
@@ -32,10 +32,10 @@ ASYMETRIC_MATCHER_META = {
   end
 }
 
-ASYMETRIC_MATCHER_META.__index = ASYMETRIC_MATCHER_META
+ASYMMETRIC_MATCHER_META.__index = ASYMMETRIC_MATCHER_META
 
 local function isMatcher(expected)
-  return type(expected) == 'table' and expected.isAsymetricMatcher
+  return type(expected) == 'table' and expected.isAsymmetricMatcher
 end
 
 local function matches(expected, actual)
@@ -43,7 +43,7 @@ local function matches(expected, actual)
 end
 
 return {
-  ASYMETRIC_MATCHER_META = ASYMETRIC_MATCHER_META,
+  ASYMMETRIC_MATCHER_META = ASYMMETRIC_MATCHER_META,
   isMatcher = isMatcher,
   matches = matches,
 }

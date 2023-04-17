@@ -1,4 +1,4 @@
-local ASYMETRIC_MATCHER_META = require "jestronaut.expect.asymetricmatchers.asymetricmatcher".ASYMETRIC_MATCHER_META
+local ASYMMETRIC_MATCHER_META = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher".ASYMMETRIC_MATCHER_META
 local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 
 --- @class StringContaining
@@ -30,7 +30,7 @@ STRING_CONTAINING_META = {
   end,
 }
 
-extendMetaTableIndex(STRING_CONTAINING_META, ASYMETRIC_MATCHER_META)
+extendMetaTableIndex(STRING_CONTAINING_META, ASYMMETRIC_MATCHER_META)
 
 return {
   STRING_CONTAINING_META = STRING_CONTAINING_META,

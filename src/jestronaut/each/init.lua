@@ -3,10 +3,10 @@
 local function bindTo(target)
   --- Runs a function for each item in a table.
   --- @param table table
-  local function each(table)
-    return function(name, fn, timeout)
-      for _, item in ipairs(table) do
-        target(name:format(item), fn, timeout)
+  local function each(target, table)
+    return function(name, fn, timeout, x)
+      for index, item in pairs(table) do
+        target(target, name:format(unpack(item)), fn, timeout)
       end
     end
   end

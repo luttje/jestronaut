@@ -29,6 +29,18 @@ local function equals(o1, o2, ignore_mt)
   return true
 end
 
+local function count(tbl)
+  local count = 0
+  for _ in pairs(tbl) do count = count + 1 end
+  return count
+end
+
+local function keys(tbl)
+  local keys = {}
+  for k, _ in pairs(tbl) do table.insert(keys, k) end
+  return keys
+end
+
 local function implode(t, sep, withKeys)
   withKeys = withKeys == nil and true or withKeys
   sep = sep or ''
@@ -97,6 +109,8 @@ end
 
 return {
   equals = equals,
+  count = count,
+  keys = keys,
   implode = implode,
   copy = copy,
   accessByPath = accessByPath,

@@ -78,6 +78,21 @@ end
 function bestDrinkForFlavor(flavor)
 end
 
+function myBeverages()
+  return {
+    {
+      name = "LaCroix",
+      delicious = true,
+      sour = false,
+    },
+    {
+      name = "Energizer",
+      delicious = false,
+      sour = true,
+    },
+  }
+end
+
 -- generated-tests\JestObjectAPI\jest\mock.lua:64
 jestronaut:mock(
   "moduleName",

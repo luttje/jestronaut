@@ -1,4 +1,4 @@
-local ASYMETRIC_MATCHER_META = require "jestronaut.expect.asymetricmatchers.asymetricmatcher".ASYMETRIC_MATCHER_META
+local ASYMMETRIC_MATCHER_META = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher".ASYMMETRIC_MATCHER_META
 local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 
 --- @class CloseTo
@@ -53,7 +53,7 @@ CLOSE_TO_MATCHING_META = {
   end,
 }
 
-extendMetaTableIndex(CLOSE_TO_MATCHING_META, ASYMETRIC_MATCHER_META)
+extendMetaTableIndex(CLOSE_TO_MATCHING_META, ASYMMETRIC_MATCHER_META)
 
 return {
   CLOSE_TO_MATCHING_META = CLOSE_TO_MATCHING_META,
