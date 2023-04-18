@@ -120,18 +120,18 @@ local function exposeTo(targetEnvironment)
 
   local metaTable = getmetatable(targetEnvironment.expect)
   metaTable.__index = function(self, key)
-    -- Create a new expect instance with the expect function as the value
-    local expectInstance = expect(self)
     local modifier = modifiers[key]
 
     if modifier then
-      return modifier(expectInstance)
+      return modifier(self)
     end
 
     local success, asymmetricMatcher = pcall(require, 'jestronaut.expect.asymmetricmatchers.' .. key)
 
     if success then
       if asymmetricMatcher.build ~= nil then
+        -- Create a new expect instance with the expect function as the value
+        local expectInstance = expect(self)
         return asymmetricMatcher.build(expectInstance, customEqualityTesters)
       end
 
