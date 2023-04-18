@@ -29,6 +29,22 @@ local function getMatcher(key)
   return matcherOrError
 end
 
+
+local function getAsymmetricMatcher(key)
+  local modulePath = 'jestronaut.expect.asymmetricmatchers.' .. key
+  local success, matcherOrError = pcall(require, modulePath)
+
+  if not success then
+    if not (matcherOrError:find("^module '" .. modulePath .. "' not found")) then
+      error(matcherOrError)
+    end
+
+    return nil
+  end
+
+  return matcherOrError
+end
+
 --- @class Expect
 --- @field value any
 --- @field toBe fun(value: any): boolean
@@ -80,7 +96,16 @@ EXPECT_META.__index = function(self, key)
     return matcher.default
   end
 
-  error('Unknown matcher or modifier: ' .. key)
+  local asymmetricMatcher = getAsymmetricMatcher(key)
+  if asymmetricMatcher then
+    if asymmetricMatcher.build ~= nil then
+      return asymmetricMatcher.build(self, customEqualityTesters)
+    end
+
+    return asymmetricMatcher.default
+  end
+
+  error('Unknown (asymmetric) matcher or modifier: ' .. key)
 end
 
 function expect(value)
@@ -120,23 +145,8 @@ local function exposeTo(targetEnvironment)
 
   local metaTable = getmetatable(targetEnvironment.expect)
   metaTable.__index = function(self, key)
-    local modifier = modifiers[key]
-
-    if modifier then
-      return modifier(self)
-    end
-
-    local success, asymmetricMatcher = pcall(require, 'jestronaut.expect.asymmetricmatchers.' .. key)
-
-    if success then
-      if asymmetricMatcher.build ~= nil then
-        -- Create a new expect instance with the expect function as the value
-        local expectInstance = expect(self)
-        return asymmetricMatcher.build(expectInstance, customEqualityTesters)
-      end
-
-      return asymmetricMatcher.default
-    end
+    -- Create a new expect instance with the expect function as the value (so not the same expect instance is constantly modified)
+    return expect(self)[key]
   end
 end
 
