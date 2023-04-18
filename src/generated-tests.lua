@@ -97,6 +97,22 @@ function essayOnTheBestFlavor()
   return "grapefruit is the best flavor"
 end
 
+DisgustingFlavorError = luaLib.__TS__Class()
+DisgustingFlavorError.name = "DisgustingFlavorError"
+luaLib.__TS__ClassExtends(DisgustingFlavorError, luaLib.Error)
+
+function DisgustingFlavorError.prototype.____constructor(self, ...)
+  DisgustingFlavorError.____super.prototype.____constructor(self, ...)
+  self.name = "DisgustingFlavorError"
+end
+
+function drinkFlavor(flavor)
+  if (flavor == 'octopus') then
+    -- throw new DisgustingFlavorError('yuck, octopus flavor');
+    error(luaLib.__TS__New(DisgustingFlavorError, 'yuck, octopus flavor'))
+  end
+end
+
 -- generated-tests\JestObjectAPI\jest\mock.lua:64
 jestronaut:mock(
   "moduleName",

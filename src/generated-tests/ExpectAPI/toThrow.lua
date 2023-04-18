@@ -61,9 +61,9 @@ local tests = {
 		        local function drinkOctopus()
 		            drinkFlavor("octopus")
 		        end
-		        expect(drinkOctopus):toThrow(nil)
 		        expect(drinkOctopus):toThrow("yuck")
-		        expect(drinkOctopus):toThrow(nil)
+		        expect(drinkOctopus):toThrow("yuck")
+		        expect(drinkOctopus):toThrow("^yuck, octopus flavor$")
 		        expect(drinkOctopus):toThrow(__TS__New(Error, "yuck, octopus flavor"))
 		        expect(drinkOctopus):toThrow(DisgustingFlavorError)
 		    end

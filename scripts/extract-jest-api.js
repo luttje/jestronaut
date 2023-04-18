@@ -207,6 +207,12 @@ function luaTestsFromMethod(method, testDirectory) {
       lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"ceiling.height"}, "tall")': 'expect(houseForSale):toHaveProperty({"ceiling.height"}, 2)' });
     } else if (method.name === '.toBeInstanceOf') {
       lineReplacements.push({ 'expect(__TS__New(A)):toBeInstanceOf(Function)': '' }); // Only Javascript objects are also Functions, this is not the case in Lua.
+    } else if (method.name === '.toThrow') {
+      // JS: 
+      // - expect(drinkOctopus).toThrow(/yuck/);
+      // - expect(drinkOctopus).toThrow(/^yuck, octopus flavor$/);
+      lineReplacements.push({ 'expect(drinkOctopus):toThrow(nil)': 'expect(drinkOctopus):toThrow("yuck")' });
+      lineReplacements.push({ 'expect(drinkOctopus):toThrow(nil)': 'expect(drinkOctopus):toThrow("^yuck, octopus flavor$")' });
     } else if (method.name === 'expect.stringMatching') {
       // JS:
       // - expect.stringMatching(/^Alic/)
