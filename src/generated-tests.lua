@@ -78,6 +78,8 @@ end
 function bestDrinkForFlavor(flavor)
 end
 
+myBeverage = {delicious = true, sour = false}
+
 function myBeverages()
   return {
     {
@@ -246,6 +248,12 @@ end
 
 CustomError = luaLib.__TS__Class()
 CustomError.name = "CustomError"
+luaLib.__TS__ClassExtends(CustomError, luaLib.Error)
+
+function CustomError.prototype.____constructor(self, ...)
+  CustomError.____super.prototype.____constructor(self, ...)
+  self.name = "CustomError"
+end
 
 Number = 'number'
 

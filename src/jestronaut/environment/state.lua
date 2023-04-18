@@ -107,17 +107,19 @@ local DESCRIBE_OR_TEST_META = {
     end
   end,
 
-  --- Runs the test and returns the amount of failed tests.
+  --- Runs the test and returns the amount of failed and skippewd tests.
   --- @param self DescribeOrTest
   --- @param printer Printer
   --- @param runnerOptions RunnerOptions
   --- @return number
   run = function(self, printer, runnerOptions)
     local failedTestCount = 0
+    local skippedTestCount = 0
 
     if self.isSkipping then
       printer:printSkip(self)
-      return failedTestCount
+
+      return failedTestCount, skippedTestCount + 1
     end
 
     if self.isTest then
@@ -126,13 +128,13 @@ local DESCRIBE_OR_TEST_META = {
           for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
             if self.name:find(pattern) then
               printer:printSkip(self)
-              return failedTestCount
+              return failedTestCount, skippedTestCount + 1
             end
           end
         elseif runnerOptions.testNamePattern then
           if not self.name:find(runnerOptions.testNamePattern) then
             printer:printSkip(self)
-            return failedTestCount
+            return failedTestCount, skippedTestCount + 1
           end
         end
 
@@ -153,12 +155,15 @@ local DESCRIBE_OR_TEST_META = {
         end
       else
         printer:printSkip(self)
-        return failedTestCount
+        return failedTestCount, skippedTestCount + 1
       end
     elseif #self.children > 0 then
       for _, child in pairs(self.children) do
         printer:printName(child)
-        failedTestCount = failedTestCount + child:run(printer, runnerOptions)
+        local childFailedCount, childSkippedCount = child:run(printer, runnerOptions)
+
+        failedTestCount = failedTestCount + childFailedCount
+        skippedTestCount = skippedTestCount + childSkippedCount
       end
     end
 
@@ -166,7 +171,7 @@ local DESCRIBE_OR_TEST_META = {
       setIsExecutingTests(false)
     end
 
-    return failedTestCount
+    return failedTestCount, skippedTestCount
   end,
 }
 
@@ -210,7 +215,10 @@ local function runTests(printer, runnerOptions)
 
   printer:printStart(currentParent)
 
-  local success, errOrFailedTestCount = pcall(currentParent.run, currentParent, printer, runnerOptions)
+  local success, errOrFailedTestCount, skippedTestCount = pcall(currentParent.run, currentParent, printer, runnerOptions)
+
+  local endTime = os.clock()
+  printer:printEnd(endTime - startTime)
 
   if not success then
     if not errOrFailedTestCount:find("^Bail after") then
@@ -219,11 +227,8 @@ local function runTests(printer, runnerOptions)
 
     printer:printFailFast(currentParent)
   else
-    printer:printSuccess(currentParent, errOrFailedTestCount)
+    printer:printSuccess(currentParent, errOrFailedTestCount, skippedTestCount)
   end
-
-  local endTime = os.clock()
-  printer:printEnd(endTime - startTime)
 
   setIsExecutingTests(false)
 end
