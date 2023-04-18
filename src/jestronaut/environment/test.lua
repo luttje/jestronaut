@@ -1,4 +1,4 @@
-local DESCRIBE_OR_TEST_META = require "jestronaut.environment.shared".DESCRIBE_OR_TEST_META
+local DESCRIBE_OR_TEST_META = require "jestronaut.environment.state".DESCRIBE_OR_TEST_META
 local registerDescribeOrTest = require "jestronaut.environment.state".registerDescribeOrTest
 local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 

@@ -97,6 +97,30 @@ function essayOnTheBestFlavor()
   return "grapefruit is the best flavor"
 end
 
+function doAsync(callback1, callback2)
+  local data = {}
+  coroutine.wrap(function()
+    callback1(data)
+    callback2(data)
+  end)()
+end
+
+function prepareState(callback)
+  local state = {}
+  coroutine.wrap(function()
+    callback(state)
+  end)()
+end
+
+function validateState(state)
+  return true
+end
+
+function waitOnState()
+  local state = {}
+  return state
+end
+
 DisgustingFlavorError = luaLib.__TS__Class()
 DisgustingFlavorError.name = "DisgustingFlavorError"
 luaLib.__TS__ClassExtends(DisgustingFlavorError, luaLib.Error)
@@ -168,7 +192,19 @@ package.loaded['toBeWithinRange'] = {
 -- generated-tests\GlobalAPI\afterAll.lua:7
 function makeGlobalDatabase()
   return {
-    insert = jestronaut:fn(),
+    find = function(self, collection, query, callback)
+      callback({length = 1})
+    end,
+    insert = function(self, collection, data, callback)
+      callback({success = true})
+    end
+  }
+end
+
+function makeThing()
+  return {
+    name = "thing",
+    value = 42
   }
 end
 

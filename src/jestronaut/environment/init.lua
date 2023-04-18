@@ -1,7 +1,7 @@
-local eachLib = require "jestronaut.each"
+local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexableFunction
 local describeLib = require "jestronaut.environment.describe"
 local testLib = require "jestronaut.environment.test"
-local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexableFunction
+local eachLib = require "jestronaut.each"
 
 local environmentOptions = {}
 local fileTestTimeouts = {}
@@ -40,11 +40,11 @@ end
 --- Exposes the environment functions to the global environment.
 --- @param targetEnvironment table
 local function exposeTo(targetEnvironment)
-  targetEnvironment.afterAll = function(fn, timeout) return afterAll(fn, timeout) end
-  targetEnvironment.afterEach = function(fn, timeout) return afterEach(fn, timeout) end
+  targetEnvironment.afterAll = afterAll
+  targetEnvironment.afterEach = afterEach
 
-  targetEnvironment.beforeAll = function(fn, timeout) return beforeAll(fn, timeout) end
-  targetEnvironment.beforeEach = function(fn, timeout) return beforeEach(fn, timeout) end
+  targetEnvironment.beforeAll = beforeAll
+  targetEnvironment.beforeEach = beforeEach
 
   targetEnvironment.describe = makeIndexableFunction(function(blockName, blockFn) return describeLib.describe(blockName, blockFn) end)
 
@@ -92,4 +92,6 @@ return {
   setTimeout = setTimeout,
   setRetryTimes = setRetryTimes,
   exposeTo = exposeTo,
+
+  assertions = assertions,
 }

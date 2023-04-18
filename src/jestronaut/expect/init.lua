@@ -1,4 +1,7 @@
 local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexableFunction
+local makeFunctionShim = require "jestronaut.utils.functions".makeFunctionShim
+local stateLib = require "jestronaut.environment.state"
+
 local customEqualityTesters = {}
 local customMatchers = {}
 local expect
@@ -57,6 +60,14 @@ local EXPECT_META = {
       return self.inverse ~= false
     end
 
+    for _, tester in ipairs(customEqualityTesters) do
+      local result = tester(expected, actual)
+
+      if result ~= nil then
+        return self.inverse ~= result
+      end
+    end
+
     return self.inverse ~= (actual == expected)
   end,
 }
@@ -89,11 +100,16 @@ EXPECT_META.__index = function(self, key)
 
   local matcher = getMatcher(key)
   if matcher then
+    local matcherFunc
     if matcher.build ~= nil then
-      return matcher.build(self, customEqualityTesters)
+      matcherFunc = matcher.build(self, customEqualityTesters)
+    else
+      matcherFunc = matcher.default
     end
-
-    return matcher.default
+    
+    return makeFunctionShim(matcherFunc, function(success, ...)
+      stateLib.incrementAssertionCount()
+    end)
   end
 
   local asymmetricMatcher = getAsymmetricMatcher(key)
@@ -134,6 +150,14 @@ local function exposeTo(targetEnvironment)
     addSnapshotSerializer = function(self, serializer)
       --- @Not implemented
       -- TODO: You can call expect.addSnapshotSerializer to add a module that formats application-specific data structures.
+    end,
+
+    assertions = function(self, count)
+      stateLib.setExpectedAssertionCount(count)
+    end,
+
+    hasAssertions = function(self)
+      stateLib.setExpectAssertion()
     end,
 
     extend = function(self, matchers)
