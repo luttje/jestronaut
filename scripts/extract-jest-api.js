@@ -194,6 +194,9 @@ function luaTestsFromMethod(method, testDirectory) {
       // expect(essayOnTheBestFlavor()).toMatch(new RegExp('grapefruit'));
       lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(nil)': 'expect(essayOnTheBestFlavor()):toMatch("grapefruit")' });
       lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(__TS__New(RegExp, "grapefruit"))': '' }); // This line is not needed. 
+    } else if (method.name === '.toMatchObject') {
+      // JS: wallColor: expect.stringMatching(/white|yellow/)
+      lineReplacements.push({ 'wallColor = expect:stringMatching(nil)': 'wallColor = expect:stringMatching("white")' }); // There is no OR in Lua Patterns.
     } else if (method.name === '.toHaveProperty') {
       // JS: 
       // - expect(houseForSale).toHaveProperty(['kitchen', 'amenities', 0], 'oven');

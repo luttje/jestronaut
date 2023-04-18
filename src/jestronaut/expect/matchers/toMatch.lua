@@ -6,7 +6,7 @@ local function toMatch(expect, expected)
   local actual = expect.value
 
   if not expect:checkEquals(true, string.find(actual, expected) > 0) then
-    error("Expected '" .. tostring(actual) .. "'" .. (expect.inverse and "not " or "") .. " to match " .. tostring(expected))
+    error("Expected '" .. tostring(actual) .. "'" .. (expect.inverse and " not " or "") .. " to match " .. tostring(expected))
   end
 
   return true

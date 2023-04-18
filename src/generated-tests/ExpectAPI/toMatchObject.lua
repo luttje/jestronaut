@@ -11,7 +11,7 @@ local tests = {
 		    bath = true,
 		    kitchen = {
 		        amenities = {"oven", "stove", "washer"},
-		        wallColor = expect:stringMatching(nil)
+		        wallColor = expect:stringMatching("white")
 		    }
 		}
 		test(

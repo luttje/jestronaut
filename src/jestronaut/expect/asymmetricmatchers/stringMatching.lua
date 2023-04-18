@@ -5,11 +5,14 @@ local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTab
 local STRING_MATCHING_META
 STRING_MATCHING_META = {
   new = function(sample, inverse)
+    if(sample == nil) then
+      error("StringMatching: sample cannot be nil")
+    end
+
     local instance = {
       sample = sample,
       inverse = inverse or false,
     }
-
     setmetatable(instance, STRING_MATCHING_META)
     return instance
   end,
