@@ -1,33 +1,42 @@
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
 
-local function equals(o1, o2, ignore_mt)
-  if o1 == o2 then return true end
-  local o1Type = type(o1)
-  local o2Type = type(o2)
-  if o1Type ~= o2Type then return false end
-  if o1Type ~= 'table' then return false end
+local function equals(objectA, objectB, ignoreMetatable)
+  if asymmetricMatcherLib.isMatcher(objectA) then
+    return asymmetricMatcherLib.matches(objectA, objectB)
+  elseif asymmetricMatcherLib.isMatcher(objectB) then
+    return asymmetricMatcherLib.matches(objectB, objectA)
+  elseif objectA == objectB then
+    return true
+  end
 
-  if not ignore_mt then
-      local mt1 = getmetatable(o1)
+  local typeOfObjectA = type(objectA)
+  local typeOfObjectB = type(objectB)
+
+  if typeOfObjectA ~= typeOfObjectB then return false end
+  if typeOfObjectA ~= 'table' then return false end
+
+  if not ignoreMetatable then
+      local mt1 = getmetatable(objectA)
       if mt1 and mt1.__eq then
           --compare using built in method
-          return o1 == o2
+          return objectA == objectB
       end
   end
 
   local keySet = {}
 
-  for key1, value1 in pairs(o1) do
-      local value2 = o2[key1]
-      if value2 == nil or equals(value1, value2, ignore_mt) == false then
+  for key1, value1 in pairs(objectA) do
+      local value2 = objectB[key1]
+      if value2 == nil or equals(value1, value2, ignoreMetatable) == false then
           return false
       end
       keySet[key1] = true
   end
 
-  for key2, _ in pairs(o2) do
+  for key2, _ in pairs(objectB) do
       if not keySet[key2] then return false end
   end
+
   return true
 end
 
