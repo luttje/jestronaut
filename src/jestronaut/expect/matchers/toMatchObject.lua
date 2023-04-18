@@ -1,4 +1,3 @@
-local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
 local tableLib = require "jestronaut.utils.tables"
 
 --- Checks that a JavaScript object matches a subset of the properties of an object. It will match received objects with properties that are not in the expected object.
@@ -9,33 +8,7 @@ local tableLib = require "jestronaut.utils.tables"
 local function toMatchObject(expect, expected)
   local actual = expect.value
 
-  local function isSubset(subset, superset)
-    for key, value in pairs(subset) do
-      if not (superset[key] ~= nil) then
-        return false
-      end
-
-      if asymmetricMatcherLib.isMatcher(value) then
-        if not asymmetricMatcherLib.matches(value, superset[key]) then
-          return false
-        end
-      else
-        if type(value) == 'table' then
-          if not isSubset(value, superset[key]) then
-            return false
-          end
-        else
-          if not (superset[key] == value) then
-            return false
-          end
-        end
-      end
-    end
-
-    return true
-  end
-  
-  if not expect:checkEquals(true, isSubset(expected, actual)) then
+  if not expect:checkEquals(true, tableLib.isSubset(expected, actual)) then
     error("Expected '" .. tostring(actual) .. "'" .. (expect.inverse and " not " or "") .. " to match object " .. tostring(expected))
   end
 

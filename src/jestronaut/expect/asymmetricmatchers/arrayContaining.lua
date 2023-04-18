@@ -1,6 +1,6 @@
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
 local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
-local tableImplode = require "jestronaut.utils.tables".implode
+local tableLib = require "jestronaut.utils.tables"
 
 --- @class ArrayContaining
 local ARRAY_CONTAINING_META
@@ -27,32 +27,11 @@ ARRAY_CONTAINING_META = {
       return false
     end
 
-    local foundAll = true
-
-    for key, value in pairs(self.sample) do
-      if not (actual[key] ~= nil) then
-        foundAll = false
-        break
-      end
-
-      if asymmetricMatcherLib.isMatcher(value) then
-        if not asymmetricMatcherLib.matches(value, actual[key]) then
-          foundAll = false
-          break
-        end
-      else
-        if not (actual[key] == value) then
-          foundAll = false
-          break
-        end
-      end
-    end
-
-    return self.inverse and not foundAll or foundAll
+    return self.inverse and not tableLib.contains(actual, self.sample) or tableLib.contains(actual, self.sample)
   end,
 
   __tostring = function(self)
-    return 'Array' .. (self.inverse and 'Not' or '') .. 'Containing: \'' .. tableImplode(self.sample, ', ') .. "'"
+    return 'Array' .. (self.inverse and 'Not' or '') .. 'Containing: \'' .. tableLib.implode(self.sample, ', ') .. "'"
   end,
 
   getExpectedType = function(self)

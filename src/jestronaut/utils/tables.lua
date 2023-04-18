@@ -1,3 +1,5 @@
+local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
+
 local function equals(o1, o2, ignore_mt)
   if o1 == o2 then return true end
   local o1Type = type(o1)
@@ -50,7 +52,7 @@ local function implode(t, sep, withKeys)
     s = s .. (withKeys and (tostring(k) .. '=') or '') .. value .. sep
   end
 
-  return s:gsub(sep .. '$', '')
+  return tostring(s:gsub(sep .. '$', ''))
 end
 
 local function copy(t1)
@@ -107,6 +109,51 @@ local function accessByPath(tbl, propertyPath)
   return currentActual
 end
 
+local function isSubset(subset, superset)
+  for key, value in pairs(subset) do
+    if not (superset[key] ~= nil) then
+      return false
+    end
+
+    if asymmetricMatcherLib.isMatcher(value) then
+      if not asymmetricMatcherLib.matches(value, superset[key]) then
+        return false
+      end
+    else
+      if type(value) == 'table' then
+        if not isSubset(value, superset[key]) then
+          return false
+        end
+      else
+        if not (superset[key] == value) then
+          return false
+        end
+      end
+    end
+  end
+
+  return true
+end
+
+local function contains(tbl, values)
+  for _, value in ipairs(values) do
+    local found = false
+
+    for _, tblValue in ipairs(tbl) do
+      if equals(tblValue, value) then
+        found = true
+        break
+      end
+    end
+
+    if not found then
+      return false
+    end
+  end
+
+  return true
+end
+
 return {
   equals = equals,
   count = count,
@@ -114,4 +161,6 @@ return {
   implode = implode,
   copy = copy,
   accessByPath = accessByPath,
+  isSubset = isSubset,
+  contains = contains,
 }

@@ -13,21 +13,18 @@ local tableLib = require "jestronaut.utils.tables"
 local function toStrictEqual(expect, expected)
   local actual = expect.value
 
-  if (type(actual) == 'table' and type(actual) == type(expected)) then
-    if not expect:checkEquals(true, tableLib.equals(actual, expected) and getmetatable(actual) == getmetatable(expected)) then
-      error("Expected table " .. tableLib.implode(actual, ', ') .. (expect.inverse and " not " or "") .. "to equal " .. tableLib.implode(expected, ', '))
-    end
-
-    return true
-  end
-
   if(asymmetricMatcherLib.isMatcher(expected))then
-    print(asymmetricMatcherLib.matches(expected, actual))
     if not expect:checkEquals(true, asymmetricMatcherLib.matches(expected, actual)) then
       local actualValue = type(actual) == 'table' and ("table: '" .. tableLib.implode(actual, ', ') .. "'") or tostring(actual)
 
       error("Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(expected))
     end
+  elseif (type(actual) == 'table' and type(actual) == type(expected)) then
+    if not expect:checkEquals(true, tableLib.equals(actual, expected) and getmetatable(actual) == getmetatable(expected)) then
+      error("Expected table " .. tableLib.implode(actual, ', ') .. (expect.inverse and " not " or "") .. "to equal " .. tableLib.implode(expected, ', '))
+    end
+
+    return true
   end
 
   return true
