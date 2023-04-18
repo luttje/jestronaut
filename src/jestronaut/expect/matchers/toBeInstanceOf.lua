@@ -1,3 +1,5 @@
+local metatableLib = require "jestronaut.utils.metatables"
+
 --- 
 --- @param expect Expect
 --- @param value any
@@ -6,7 +8,7 @@ local function toBeInstanceOf(expect, value)
   local actual = expect.value
 
   if type(value) == 'table' then
-    if not expect:checkEquals(true, actual.____constructor and actual.____constructor == value.prototype.____constructor) then
+    if not expect:checkEquals(true, value.constructor and metatableLib.instanceOf(actual, value.constructor) or metatableLib.instanceOf(actual, value)) then
       error("Expected " .. tostring(actual) .. " to be an instance of " .. tostring(value))
     end
   elseif not expect:checkEquals(type(actual), value) then
