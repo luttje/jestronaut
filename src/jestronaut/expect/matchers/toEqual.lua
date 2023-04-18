@@ -15,8 +15,30 @@ local function toEqual(expect, expected)
       error("Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(expected))
     end
   elseif (type(actual) == 'table' and type(actual) == type(expected)) then
-    if not expect:checkEquals(true, tableLib.equals(actual, expected)) then
-      error("Expected table " .. tableLib.implode(actual, ', ') .. (expect.inverse and " not " or "") .. " to equal " .. tableLib.implode(expected, ', '))
+    for key, value in pairs(expected) do
+      if(asymmetricMatcherLib.isMatcher(value))then
+        if not expect:checkEquals(true, asymmetricMatcherLib.matches(value, actual[key])) then
+          local actualValue = type(actual[key]) == 'table' and ("table: '" .. tableLib.implode(actual[key], ', ') .. "'") or tostring(actual[key])
+
+          error("Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(value))
+        end
+      elseif (type(actual[key]) == 'table' and type(actual[key]) == type(value)) then
+        if not expect:checkEquals(true, tableLib.equals(actual[key], value)) then
+          error("Expected table '" .. tableLib.implode(actual[key], ', ') .. "'" .. (expect.inverse and " not " or "") .. " to equal '" .. tableLib.implode(value, ', ') .. "'")
+        end
+      else
+        if not expect:checkEquals(value, actual[key]) then
+          local actualValue = type(actual[key]) == 'table' and ("table: '" .. tableLib.implode(actual[key], ', ') .. "'") or tostring(actual[key])
+
+          error("Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(value))
+        end
+      end
+    end
+  else
+    if not expect:checkEquals(expected, actual) then
+      local actualValue = type(actual) == 'table' and ("table: '" .. tableLib.implode(actual, ', ') .. "'") or tostring(actual)
+
+      error("Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(expected))
     end
   end
 

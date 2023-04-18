@@ -39,8 +39,6 @@ CLOSE_TO_MATCHING_META = {
       result = math.abs(self.sample - actual) < math.pow(10, -self.precision) / 2
     end
 
-    print('CloseTo', self.sample, actual, self.precision, result)
-
     return self.inverse and not result or result
   end,
 
