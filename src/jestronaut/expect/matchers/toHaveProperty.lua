@@ -8,7 +8,7 @@ local stringLib = require "jestronaut.utils.strings"
 --- @param value any
 --- @return boolean
 local function toHaveProperty(expect, propertyPath, value)
-  local actual = expect.value
+  local actual = expect.actual
 
   if (type(actual) ~= 'table') then
     error("Expected " .. tostring(actual) .. " to be a table")

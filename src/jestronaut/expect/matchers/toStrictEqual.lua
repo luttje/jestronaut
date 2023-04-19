@@ -11,7 +11,7 @@ local tableLib = require "jestronaut.utils.tables"
 --- @param expected any
 --- @return boolean
 local function toStrictEqual(expect, expected)
-  local actual = expect.value
+  local actual = expect.actual
 
   if(asymmetricMatcherLib.isMatcher(expected))then
     if not expect:checkEquals(true, asymmetricMatcherLib.matches(expected, actual)) then

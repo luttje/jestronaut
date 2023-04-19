@@ -3,7 +3,7 @@
 --- @param value any
 --- @return boolean
 local function toBeGreaterThanOrEqual(expect, value)
-  local actual = expect.value
+  local actual = expect.actual
 
   if not expect:checkEquals(true, actual >= value) then
     error("Expected " .. tostring(actual) .. " to be greater than or equal to " .. tostring(value))

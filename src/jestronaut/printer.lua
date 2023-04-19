@@ -1,18 +1,18 @@
 --- @class Printer
-local Printer = {
+local DefaultPrinter = {
   width = 75,
 }
 
 --- Gets the indentations.
 --- @param describeOrTest DescribeOrTest
 --- @return string
-function Printer:getIndentations(describeOrTest)
+function DefaultPrinter:getIndentations(describeOrTest)
   return string.rep("  ", describeOrTest.indentationLevel)
 end
 
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
-function Printer:printName(describeOrTest)
+function DefaultPrinter:printName(describeOrTest)
   if describeOrTest.isTest then
     print(self:getIndentations(describeOrTest) .. "🧪 " .. describeOrTest.name .. "...")
   else
@@ -27,7 +27,7 @@ end
 --- @param success boolean
 --- @param ... any
 --- @return boolean
-function Printer:printTestResult(describeOrTest, success, ...)
+function DefaultPrinter:printTestResult(describeOrTest, success, ...)
   if not success then
     print(self:getIndentations(describeOrTest) .. "❌ Failed with error: " .. tostring(...) .. "\n")
     return false
@@ -39,20 +39,20 @@ end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
-function Printer:printSkip(describeOrTest)
+function DefaultPrinter:printSkip(describeOrTest)
   print(self:getIndentations(describeOrTest) .. "🚫 Skipped\n")
 end
 
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
-function Printer:printRetry(describeOrTest, retryCount)
+function DefaultPrinter:printRetry(describeOrTest, retryCount)
   print(self:getIndentations(describeOrTest) .. "🔁 Retrying (" .. retryCount .. ")...\n")
 end
 
 --- Prints text centered, using the printer width.
 --- @param text string
-function Printer:printCentered(text)
+function DefaultPrinter:printCentered(text)
   local textLength = text:len()
   local leftPadding = math.floor((self.width - textLength) * .5)
   local rightPadding = self.width - textLength - leftPadding
@@ -62,7 +62,7 @@ end
 
 --- Creates a horizontal line using the printer width.
 --- @param char string
-function Printer:printHorizontalLine(char)
+function DefaultPrinter:printHorizontalLine(char)
   char = char or "─"
 
   print(char:rep(self.width))
@@ -70,7 +70,7 @@ end
 
 --- Creates some space by printing a new line.
 --- @param count number
-function Printer:printNewline(count)
+function DefaultPrinter:printNewline(count)
   count = count or 1
 
   for i = 1, count do
@@ -80,7 +80,7 @@ end
 
 --- Prints the start message of the test.
 --- @param rootDescribe Describe
-function Printer:printStart(rootDescribe)
+function DefaultPrinter:printStart(rootDescribe)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local startTime = os.date("%X")
 
@@ -93,7 +93,7 @@ end
 
 --- Prints the end message of the test.
 --- @param duration number
-function Printer:printEnd(duration)
+function DefaultPrinter:printEnd(duration)
   local endTime = os.date("%X")
   self:printNewline()
   self:printCentered("🏁 Finished tests at " .. endTime .. " in " .. duration .. " seconds.")
@@ -104,7 +104,7 @@ end
 --- @param rootDescribe Describe
 --- @param failedTestCount number
 --- @param skippedTestCount number
-function Printer:printSuccess(rootDescribe, failedTestCount, skippedTestCount)
+function DefaultPrinter:printSuccess(rootDescribe, failedTestCount, skippedTestCount)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local notRunCount = failedTestCount + skippedTestCount
   local relativeSuccess = 1 - (notRunCount / totalTestCount)
@@ -128,7 +128,7 @@ end
 
 --- Prints the progress of the test.
 --- @param relativeSuccess number
-function Printer:printProgress(relativeSuccess)
+function DefaultPrinter:printProgress(relativeSuccess)
   local suffix = math.floor(relativeSuccess * 100) .. "% of tests succeeded"
   
   local progressBar = "["
@@ -147,10 +147,10 @@ end
 
 --- Prints the fail fast message of the test.
 --- @param describeOrTest DescribeOrTest
-function Printer:printFailFast(describeOrTest)
+function DefaultPrinter:printFailFast(describeOrTest)
   self:printCentered("🚨 Fail fast triggered by " .. describeOrTest.name .. ".")
 end
 
 return {
-  Printer = Printer,
+  DefaultPrinter = DefaultPrinter,
 }

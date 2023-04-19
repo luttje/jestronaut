@@ -33,7 +33,7 @@ describe('expect simple', function()
     expect(false):toBeFalsy();
   end)
 
-  it('has a toBeUndefined function', function()
+  it('has a toBeNil function', function()
     expect(nil):toBeNil();
   end)
 

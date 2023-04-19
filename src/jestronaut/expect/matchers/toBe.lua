@@ -15,7 +15,7 @@
 --- @param expected any
 --- @return boolean
 local function toBe(expect, expected)
-  local actual = expect.value
+  local actual = expect.actual
 
   if not expect:checkEquals(actual, expected) then
     error("Expected " .. tostring(actual) .. (expect.inverse and " not " or "") .. " to be " .. tostring(expected))

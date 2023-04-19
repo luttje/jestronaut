@@ -1,8 +1,8 @@
 --- @param expect Expect
 --- @return boolean
 local function toBeDefined(expect)
-  if not expect:checkEquals(true, expect.value ~= nil) then
-    error("Expected " .. tostring(expect.value) .. " to be defined")
+  if not expect:checkEquals(true, expect.actual ~= nil) then
+    error("Expected " .. tostring(expect.actual) .. " to be defined")
   end
 
   return true

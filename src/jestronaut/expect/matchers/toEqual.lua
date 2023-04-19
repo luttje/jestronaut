@@ -46,7 +46,7 @@ end
 --- @param expected any
 --- @return boolean
 local function toEqual(expect, expected, customEqualityTesters)
-  compareValues(expect, expect.value, expected, customEqualityTesters)
+  compareValues(expect, expect.actual, expected, customEqualityTesters)
   return true
 end
 

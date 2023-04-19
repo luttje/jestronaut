@@ -1,6 +1,64 @@
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
+local tableLib = require "jestronaut.utils.tables"
 local allPropertyReplacements = {}
 local allMocks = {}
+
+--- Wrap varargs in a table and tag them. That way we can identify them later and unpack them.
+--- @vararg any
+--- @return table
+local function wrapAndTagVarargsOrReturn(...)
+  local args = {...}
+
+  if #args < 2 then
+    return args[1] or nil
+  end
+
+  local varargs = {
+    __jestronaut_varargs = true,
+    args = args
+  }
+
+  return varargs
+end
+
+--- Compares varargs or values with the expected values or value
+--- @param varargsOrValue table|any
+--- @param expectedVarargsOrValue table|any
+--- @return boolean
+local function compareVarargsOrValue(varargsOrValue, expectedVarargsOrValue)
+  if varargsOrValue == nil or expectedVarargsOrValue == nil then
+    return expectedVarargsOrValue == varargsOrValue
+  end
+
+  if type(varargsOrValue) == "table" then
+    if type(expectedVarargsOrValue) == "table" then
+      if varargsOrValue.__jestronaut_varargs and expectedVarargsOrValue.__jestronaut_varargs then
+        return tableLib.equals(varargsOrValue.args, expectedVarargsOrValue.args)
+      end
+
+      return tableLib.equals(varargsOrValue, expectedVarargsOrValue)
+    end
+  end
+
+  if asymmetricMatcherLib.isMatcher(varargsOrValue) then
+    return asymmetricMatcherLib.matches(varargsOrValue, expectedVarargsOrValue)
+  elseif asymmetricMatcherLib.isMatcher(expectedVarargsOrValue) then
+    return asymmetricMatcherLib.matches(expectedVarargsOrValue, varargsOrValue)
+  end
+
+  return varargsOrValue == expectedVarargsOrValue
+end
+
+--- Unpack varargs if they are wrapped in a table and tagged.
+--- @param varargsTableOrValue table|any
+--- @return any
+local function unwrapVarargsOrReturn(varargsTableOrValue)
+  if type(varargsTableOrValue) == "table" and varargsTableOrValue.__jestronaut_varargs then
+    return unpack(varargsTableOrValue.args)
+  end
+
+  return varargsTableOrValue
+end
 
 --- @class MockFunction
 local MOCK_FUNCTION_META = {
@@ -18,7 +76,7 @@ local MOCK_FUNCTION_META = {
   _mockRejectedValueStack = nil,
 
   __call = function(self, ...)
-    local args = {...}
+    local args = wrapAndTagVarargsOrReturn(...)
     local call = {
       args = args,
       context = self,
@@ -32,31 +90,35 @@ local MOCK_FUNCTION_META = {
 
     local forcedReturn
 
+    local storeReturn = function(...)
+      local returns = wrapAndTagVarargsOrReturn(...)
+      table.insert(self.mock.results, returns)
+      return returns
+    end
+
     if #self._mockReturnValueStack > 0 then
       forcedReturn = self._mockReturnValueStack[#self._mockReturnValueStack]
-      table.insert(self.mock.results, forcedReturn)
+      storeReturn(forcedReturn)
     end
 
     if #self._mockImplementationStack > 0 then
-      local result = self._mockImplementationStack[#self._mockImplementationStack](...)
-      table.insert(self.mock.results, result)
+      local results = storeReturn(self._mockImplementationStack[#self._mockImplementationStack](...))
       table.remove(self._mockImplementationStack, #self._mockImplementationStack)
-      return forcedReturn ~= nil and forcedReturn or result
+      return unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
     end
 
     if self._mockReturnThis then
-      table.insert(self.mock.results, self)
-      return forcedReturn ~= nil and forcedReturn or self
+      local results = storeReturn(self)
+      return unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
     end
 
     if self._mockReturnValue ~= nil then
-      table.insert(self.mock.results, self._mockReturnValue)
-      return forcedReturn ~= nil and forcedReturn or self._mockReturnValue
+      local results = storeReturn(self._mockReturnValue)
+      return unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
     end
 
-    local result = self._mockImplementation(...)
-    table.insert(self.mock.results, result)
-    return forcedReturn ~= nil and forcedReturn or result
+    local results = storeReturn(self._mockImplementation(...))
+    return unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
   end,
 }
 
@@ -147,8 +209,8 @@ end
 --- 
 --- @param fn function
 --- @return MockFunction
-function MOCK_FUNCTION_META:mockReturnValue(value)
-  self._mockReturnValue = value
+function MOCK_FUNCTION_META:mockReturnValue(...)
+  self._mockReturnValue = wrapAndTagVarargsOrReturn(...)
 
   return self
 end
@@ -156,8 +218,8 @@ end
 --- 
 --- @param fn function
 --- @return MockFunction
-function MOCK_FUNCTION_META:mockReturnValueOnce(value)
-  table.insert(self._mockReturnValueStack, value)
+function MOCK_FUNCTION_META:mockReturnValueOnce(...)
+  table.insert(self._mockReturnValueStack, wrapAndTagVarargsOrReturn(...))
 
   return self
 end
@@ -165,8 +227,8 @@ end
 --- 
 --- @param fn function
 --- @return MockFunction
-function MOCK_FUNCTION_META:mockResolvedValue(value)
-  self._mockResolvedValue = value
+function MOCK_FUNCTION_META:mockResolvedValue(...)
+  self._mockResolvedValue = wrapAndTagVarargsOrReturn(...)
 
   return self
 end
@@ -174,8 +236,8 @@ end
 --- 
 --- @param fn function
 --- @return MockFunction
-function MOCK_FUNCTION_META:mockResolvedValueOnce(value)
-  table.insert(self._mockResolvedValueStack, value)
+function MOCK_FUNCTION_META:mockResolvedValueOnce(...)
+  table.insert(self._mockResolvedValueStack, wrapAndTagVarargsOrReturn(...))
 
   return self
 end
@@ -183,8 +245,8 @@ end
 --- 
 --- @param fn function
 --- @return MockFunction
-function MOCK_FUNCTION_META:mockRejectedValue(value)
-  self._mockRejectedValue = value
+function MOCK_FUNCTION_META:mockRejectedValue(...)
+  self._mockRejectedValue = wrapAndTagVarargsOrReturn(...)
 
   return self
 end
@@ -192,8 +254,8 @@ end
 --- 
 --- @param fn function
 --- @return MockFunction
-function MOCK_FUNCTION_META:mockRejectedValueOnce(value)
-  table.insert(self._mockRejectedValueStack, value)
+function MOCK_FUNCTION_META:mockRejectedValueOnce(...)
+  table.insert(self._mockRejectedValueStack, ...)
 
   return self
 end
@@ -218,28 +280,11 @@ function MOCK_FUNCTION_META:wasCalledTimes(times)
 end
 
 function MOCK_FUNCTION_META:wasCalledWith(...)
-  local args = {...}
+  local args = wrapAndTagVarargsOrReturn(...)
   local calls = self.mock.calls
 
   for _, call in ipairs(calls) do
-    local callArgs = call.args
-    local match = true
-
-    for i, arg in ipairs(args) do
-      if(asymmetricMatcherLib.isMatcher(arg))then
-        if not asymmetricMatcherLib.matches(arg, callArgs[i]) then
-          match = false
-          break
-        end
-      else
-        if arg ~= callArgs[i] then
-          match = false
-          break
-        end
-      end
-    end
-
-    if match then
+    if compareVarargsOrValue(args, call.args) then
       return true
     end
   end
@@ -248,45 +293,25 @@ function MOCK_FUNCTION_META:wasCalledWith(...)
 end
 
 function MOCK_FUNCTION_META:wasLastCalledWith(...)
-  local args = {...}
+  local args = wrapAndTagVarargsOrReturn(...)
   local lastCall = self.mock.lastCall
 
   if lastCall == nil then
     return false
   end
 
-  local callArgs = lastCall.args
-  local match = true
-
-  for i, arg in ipairs(args) do
-    if arg ~= callArgs[i] then
-      match = false
-      break
-    end
-  end
-
-  return match
+  return compareVarargsOrValue(args, lastCall.args)
 end
 
 function MOCK_FUNCTION_META:wasNthCalledWith(n, ...)
-  local args = {...}
+  local args = wrapAndTagVarargsOrReturn(...)
   local calls = self.mock.calls
 
   if calls[n] == nil then
     return false
   end
 
-  local callArgs = calls[n].args
-  local match = true
-
-  for i, arg in ipairs(args) do
-    if arg ~= callArgs[i] then
-      match = false
-      break
-    end
-  end
-
-  return match
+  return compareVarargsOrValue(args, calls[n].args)
 end
 
 function MOCK_FUNCTION_META:hasReturned()
@@ -298,28 +323,28 @@ function MOCK_FUNCTION_META:hasReturnedTimes(times)
 end
 
 function MOCK_FUNCTION_META:hasReturnedWith(...)
-  local args = {...}
   local results = self.mock.results
+  local args = wrapAndTagVarargsOrReturn(...)
 
-  for i, arg in ipairs(args) do
-    if arg ~= results[i] then
-      return false
+  for _, result in ipairs(results) do
+    if compareVarargsOrValue(result, args) then
+      return true
     end
   end
 
-  return true
+  return false
 end
 
-function MOCK_FUNCTION_META:hasLastReturnedWith(value)
+function MOCK_FUNCTION_META:hasLastReturnedWith(...)
   local lastResult = self.mock.results[#self.mock.results]
 
-  return lastResult == value
+  return compareVarargsOrValue(lastResult, wrapAndTagVarargsOrReturn(...))
 end
 
-function MOCK_FUNCTION_META:hasNthReturnedWith(n, value)
-  local results = self.mock.results
+function MOCK_FUNCTION_META:hasNthReturnedWith(n, ...)
+  local nthResult = self.mock.results[n]
 
-  return results[n] == value
+  return compareVarargsOrValue(nthResult, wrapAndTagVarargsOrReturn(...))
 end
 
 function MOCK_FUNCTION_META:getCallArgs(n)
@@ -327,14 +352,14 @@ function MOCK_FUNCTION_META:getCallArgs(n)
   n = n or #calls
 
   if calls[n] == nil then
-    return {}
+    return nil
   end
 
-  return calls[n].args
+  return unwrapVarargsOrReturn(calls[n].args)
 end
 
 function MOCK_FUNCTION_META:getLastReturn()
-  return self.mock.results[#self.mock.results]
+  return unwrapVarargsOrReturn(self.mock.results[#self.mock.results])
 end
 
 --- Returns a new, unused mock function. Optionally takes a mock implementation.

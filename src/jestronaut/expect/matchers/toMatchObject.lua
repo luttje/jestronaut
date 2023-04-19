@@ -6,7 +6,7 @@ local tableLib = require "jestronaut.utils.tables"
 --- @param expected any
 --- @return boolean
 local function toMatchObject(expect, expected)
-  local actual = expect.value
+  local actual = expect.actual
 
   if not expect:checkEquals(true, tableLib.isSubset(expected, actual)) then
     error("Expected '" .. tostring(actual) .. "'" .. (expect.inverse and " not " or "") .. " to match object " .. tostring(expected))

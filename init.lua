@@ -1,21 +1,13 @@
 package.path = package.path .. ";./src/?.lua"
 require "jestronaut":withGlobals()
 
--- Required so Jestronaut can figure out what may be test files (TODO: Should be more stable and less easy to forget):
-jestronaut:setTestRoot("./src/tests/")
-
--- Setup and start the tests:
--- require "tests"
-
--- Required so Jestronaut can figure out what may be test files (TODO: Should be more stable and less easy to forget):
-jestronaut:setTestRoot("./src/generated-tests/")
-
--- Setup and start the tests:
-require "generated-tests"
-
-local runTests = require "jestronaut.environment.state".runTests
-local Printer = require "jestronaut.printer".Printer
-runTests(Printer, {
+jestronaut:configure({
+  -- First make sure all your tests have registered (describe and it/test blocks have been called). Afterwards set the 
+  -- roots below, so Jestronaut knows how to recognize test files.
+  roots = {
+    "./src/tests/",
+    "./src/generated-tests/",
+  },
   testPathIgnorePatterns = {
     "/generated%-tests/ExpectAPI/toBeCloseTo.lua$/", -- This test fails because of floating point errors (the example in Jest docs is meant to fail)
     "/generated%-tests/GlobalAPI/test.lua$/", -- This test fails because of async not being supported
@@ -28,4 +20,8 @@ runTests(Printer, {
 
     "generated-tests/MockFunctionAPI/mockFn/mockName.lua", -- The docs have mockFn commented, causing this test to fail.
   }
-})
+}):registerTests(function()
+  -- Setup and register the tests:
+  require "tests"
+  require "generated-tests"
+end):runTests()

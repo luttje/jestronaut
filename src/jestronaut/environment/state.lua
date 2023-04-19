@@ -1,8 +1,7 @@
 local functionLib = require "jestronaut.utils.functions"
-local optionsLib = require "jestronaut.environment.options"
 local stringsLib = require "jestronaut.utils.strings"
 
-local rootFilePath
+local rootFilePaths
 
 --- @class DescribeOrTest
 local currentDescribeOrTest = nil
@@ -29,10 +28,14 @@ local function getCurrentDescribeOrTest()
   return currentDescribeOrTest
 end
 
---- Sets the root test file path. This is used to determine the file path of a test.
---- @param rootFilePath string
-local function setTestRoot(filePath)
-  rootFilePath = stringsLib.normalizePath(filePath)
+--- Sets where Jestronaut should look for tests. This is used to determine the test file path.
+--- @param roots string[]
+local function setRoots(roots)
+  for i, root in ipairs(roots) do
+    roots[i] = stringsLib.normalizePath(root)
+  end
+
+  rootFilePaths = roots
 end
 
 --- Gets the file path and line number of the test by checking the stack trace until it reaches beyond the root of this package.
@@ -46,13 +49,29 @@ local function getTestFilePath(test)
     local info = debug.getinfo(i, "Sl")
 
     if not info then
+      error("Could not find the test file path. Please make sure options.roots is set to the directories where your tests are located.")
       break
     end
 
     local path = stringsLib.normalizePath(info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source)
 
-    -- Check if the file path contains the root file path. If it does, then we've found the test
-    if rootFilePath == nil or path:sub(1, rootFilePath:len()) == rootFilePath then
+    if rootFilePaths ~= nil then
+      local found = false
+
+      -- Check if the file path contains the root file path. If it does, then we've found the test
+      for _, rootFilePath in ipairs(rootFilePaths) do
+        if path:sub(1, rootFilePath:len()) == rootFilePath then
+          filePath = path
+          lineNumber = info.currentline
+          found = true
+          break
+        end
+      end
+
+      if found then
+        break
+      end
+    else
       filePath = path
       lineNumber = info.currentline
       break
@@ -370,11 +389,20 @@ local function registerDescribeOrTest(describeOrTest)
   return describeOrTest
 end
 
+--- Registers the tests
+--- @param testRegistrar function
+local function registerTests(testRegistrar)
+  if not rootFilePaths then
+    error("No root directory paths have been set. Configure options.roots using jestronaut:config(options) before registering tests.")
+  end
+  
+  testRegistrar()
+end
+
 --- Runs all registered tests.
---- @param printer Printer
 --- @param runnerOptions RunnerOptions
-local function runTests(printer, runnerOptions)
-  runnerOptions = optionsLib.merge(runnerOptions)
+local function runTests(runnerOptions)
+  local printer = runnerOptions.printer or (require "jestronaut.printer".DefaultPrinter)
 
   local startTime = os.clock()
   setIsExecutingTests(true)
@@ -405,6 +433,8 @@ return {
   getCurrentDescribeOrTest = getCurrentDescribeOrTest,
 
   registerDescribeOrTest = registerDescribeOrTest,
+  setRoots = setRoots,
+  registerTests = registerTests,
   runTests = runTests,
 
   getIsExecutingTests = getIsExecutingTests,
@@ -422,6 +452,4 @@ return {
   afterEach = afterEach,
   beforeAll = beforeAll,
   beforeEach = beforeEach,
-
-  setTestRoot = setTestRoot,
 }

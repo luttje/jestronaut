@@ -3,7 +3,7 @@
 --- @param length any
 --- @return boolean
 local function toHaveLength(expect, length)
-  local actual = expect.value
+  local actual = expect.actual
 
   if (type(length) ~= 'number') then
     error("Expected " .. tostring(length) .. " to be a number")

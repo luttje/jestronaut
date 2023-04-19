@@ -1,3 +1,5 @@
+local optionsLib = require "jestronaut.environment.options"
+local describeLib = require "jestronaut.environment.describe"
 local environmentLib = require "jestronaut.environment"
 local expectLib = require "jestronaut.expect"
 local mockLib = require "jestronaut.mock"
@@ -5,11 +7,53 @@ local setupModuleMocking = mockLib.setupModuleMocking
 
 setupModuleMocking()
 
---- @class Jestronaut
-local JESTRONAUT = {}
+-- Setup the root describe
+describeLib.describe("root", function() end)
 
-function JESTRONAUT:setTestRoot(testRootPath)
-  environmentLib.setTestRoot(testRootPath)
+--- @class Jestronaut
+local JESTRONAUT = {
+  runnerOptions = {},
+}
+
+--- @param runnerOptions RunnerOptions
+--- @return Jestronaut
+function JESTRONAUT:configure(runnerOptions)
+  runnerOptions = optionsLib.merge(runnerOptions)
+
+  self.runnerOptions = runnerOptions
+
+  if not runnerOptions.roots then
+    error("No roots found in config. Provide at least one root that points to a directory where tests will be run from.")
+  end
+
+  environmentLib.setRoots(runnerOptions.roots)
+
+  return self
+end
+
+--- Registers the tests. This is done by calling the given function.
+--- @param testRegistrar function
+--- @return Jestronaut
+function JESTRONAUT:registerTests(testRegistrar)
+  if not self.runnerOptions then
+    error("No options found. You must setup jestronaut (with jestronaut:configure(options)) before registering tests.")
+  end
+
+  environmentLib.registerTests(testRegistrar)
+
+  return self
+end
+
+--- Runs the tests.
+--- @return Jestronaut
+function JESTRONAUT:runTests()
+  if not self.runnerOptions then
+    error("No options found. You must setup jestronaut (with jestronaut:configure(options)) before running tests.")
+  end
+
+  environmentLib.runTests(self.runnerOptions)
+
+  return self
 end
 
 function JESTRONAUT:retryTimes(numRetries, options)

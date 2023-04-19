@@ -49,11 +49,9 @@ local function getAsymmetricMatcher(key)
 end
 
 --- @class Expect
---- @field value any
---- @field toBe fun(value: any): boolean
---- @field toHaveBeenCalled fun(): boolean
+--- @field actual any
 local EXPECT_META = {
-  value = nil,
+  actual = nil,
 
   checkEquals = function(self, expected, actual)
     if(actual == nil)then
@@ -77,19 +75,18 @@ EXPECT_META.__index = function(self, key)
     return EXPECT_META[key]
   end
 
-  -- If the value is the expect function, try that first
-  if key == 'value' then
-    local selfValue = rawget(self, 'value')
+  if key == 'actual' then
+    local selfActual = rawget(self, 'actual')
 
-    if(selfValue and type(selfValue) == 'table' and selfValue.isExpect)then
-      local value = selfValue[key]
+    if(selfActual and type(selfActual) == 'table' and selfActual.isExpect)then
+      local actual = selfActual[key]
 
-      if value ~= nil then
-        return value
+      if actual ~= nil then
+        return actual
       end
     end
 
-    return selfValue
+    return selfActual
   end
 
   local modifier = modifiers[key]
@@ -124,9 +121,9 @@ EXPECT_META.__index = function(self, key)
   error('Unknown (asymmetric) matcher or modifier: ' .. key)
 end
 
-function expect(value)
+function expect(actual)
   local expectInstance = {
-    value = value,
+    actual = actual,
     inverse = false,
   }
 

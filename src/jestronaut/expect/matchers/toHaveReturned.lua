@@ -1,6 +1,6 @@
 --- @param expect Expect
 local function toHaveReturned(expect)
-  local actual = expect.value
+  local actual = expect.actual
 
   if not expect:checkEquals(true, actual:hasReturned()) then
     error("Expected " .. tostring(actual) .. " to have returned something")
