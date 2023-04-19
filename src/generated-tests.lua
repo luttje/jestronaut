@@ -4,11 +4,8 @@ package.path = package.path .. ";./src/generated-tests/?.lua"
 
 -- Preloads the provided module into the package.loaded table
 function generatedTestPreLoad(moduleName, moduleBuilder)
-  local oldJESTRONAUT_OFFSET_TRACE_LEVEL = JESTRONAUT_OFFSET_TRACE_LEVEL
-  JESTRONAUT_OFFSET_TRACE_LEVEL = (JESTRONAUT_OFFSET_TRACE_LEVEL or 0) + 1
   local module = moduleBuilder(moduleName)
   package.loaded[moduleName] = module
-  JESTRONAUT_OFFSET_TRACE_LEVEL = oldJESTRONAUT_OFFSET_TRACE_LEVEL
 end
 
 --[[

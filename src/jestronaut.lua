@@ -8,6 +8,10 @@ setupModuleMocking()
 --- @class Jestronaut
 local JESTRONAUT = {}
 
+function JESTRONAUT:setTestRoot(testRootPath)
+  environmentLib.setTestRoot(testRootPath)
+end
+
 function JESTRONAUT:retryTimes(numRetries, options)
   environmentLib.retryTimes(numRetries, options)
 end

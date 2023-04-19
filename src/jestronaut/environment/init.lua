@@ -65,4 +65,5 @@ return {
   exposeTo = exposeTo,
 
   retryTimes = stateLib.retryTimes,
+  setTestRoot = stateLib.setTestRoot,
 }

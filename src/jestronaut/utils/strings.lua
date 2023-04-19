@@ -22,7 +22,19 @@ local function implodePath(path)
   return s:gsub('^.', '')
 end
 
+--- Converts any backward slashes to forward slashes, removing duplicates, trailing slashes. Starts the string with ./ if it doesn't already.
+local function normalizePath(path)
+  local normalizedPath = path:gsub('\\', '/'):gsub('/+', '/'):gsub('/$', '')
+
+  if normalizedPath:sub(1, 2) ~= './' then
+    normalizedPath = './' .. normalizedPath
+  end
+
+  return normalizedPath
+end
+
 return {
   split = split,
   implodePath = implodePath,
+  normalizePath = normalizePath,
 }

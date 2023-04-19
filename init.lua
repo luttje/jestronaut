@@ -1,6 +1,16 @@
 package.path = package.path .. ";./src/?.lua"
+require "jestronaut":withGlobals()
 
+-- Required so Jestronaut can figure out what may be test files (TODO: Should be more stable and less easy to forget):
+jestronaut:setTestRoot("./src/tests/")
+
+-- Setup and start the tests:
 -- require "tests"
+
+-- Required so Jestronaut can figure out what may be test files (TODO: Should be more stable and less easy to forget):
+jestronaut:setTestRoot("./src/generated-tests/")
+
+-- Setup and start the tests:
 require "generated-tests"
 
 local runTests = require "jestronaut.environment.state".runTests
@@ -15,5 +25,7 @@ runTests(Printer, {
     "generated-tests/JestObjectAPI/jest/useRealTimers.lua",
 
     "generated-tests/JestObjectAPI/jest/retryTimes.lua", -- These tests are intended to fail
+
+    "generated-tests/MockFunctionAPI/mockFn/mockName.lua", -- The docs have mockFn commented, causing this test to fail.
   }
 })

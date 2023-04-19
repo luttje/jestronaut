@@ -1,5 +1,8 @@
 local functionLib = require "jestronaut.utils.functions"
 local optionsLib = require "jestronaut.environment.options"
+local stringsLib = require "jestronaut.utils.strings"
+
+local rootFilePath
 
 --- @class DescribeOrTest
 local currentDescribeOrTest = nil
@@ -26,16 +29,37 @@ local function getCurrentDescribeOrTest()
   return currentDescribeOrTest
 end
 
---- Gets the file path and line number of the test
---- @param offset number
---- @return string, number
-local function getTestFilePathAndLineNumber(offset)
-  offset = (JESTRONAUT_OFFSET_TRACE_LEVEL or 0) + offset
-  local filePath = debug.getinfo(offset, "S").source:sub(2)
-  local lineNumber = debug.getinfo(offset, "l").currentline
+--- Sets the root test file path. This is used to determine the file path of a test.
+--- @param rootFilePath string
+local function setTestRoot(filePath)
+  rootFilePath = stringsLib.normalizePath(filePath)
+end
 
-  -- Normalize the file path so all slashes are single forward slashes.
-  filePath = filePath:gsub("\\+", "/")
+--- Gets the file path and line number of the test by checking the stack trace until it reaches beyond the root of this package.
+--- @param test DescribeOrTest
+--- @return string, number
+local function getTestFilePath(test)
+  local filePath, lineNumber
+  local i = 5 -- Start at ./src/jestronaut/environment/init.lua
+
+  while true do
+    local info = debug.getinfo(i, "Sl")
+
+    if not info then
+      break
+    end
+
+    local path = stringsLib.normalizePath(info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source)
+
+    -- Check if the file path contains the root file path. If it does, then we've found the test
+    if rootFilePath == nil or path:sub(1, rootFilePath:len()) == rootFilePath then
+      filePath = path
+      lineNumber = info.currentline
+      break
+    end
+
+    i = i + 1
+  end
 
   return filePath, lineNumber
 end
@@ -78,7 +102,7 @@ end
 --- @param numRetries number
 --- @param options table
 local function retryTimes(numRetries, options)
-  local filePath, lineNumber = getTestFilePathAndLineNumber(4)
+  local filePath, lineNumber = getTestFilePath(currentDescribeOrTest)
   local testLocalState = getTestLocalState(filePath)
 
   if currentDescribeOrTest and currentDescribeOrTest.isTest then
@@ -172,25 +196,25 @@ local function afterDescribeOrTest(describeOrTest, success)
 end
 
 local function afterAll(fn, timeout)
-  local filePath = getTestFilePathAndLineNumber(3)
+  local filePath = getTestFilePath(currentDescribeOrTest)
   local fileLocalState = getTestLocalState(filePath)
   fileLocalState.afterAll = fn
 end
 
 local function afterEach(fn, timeout)
-  local filePath = getTestFilePathAndLineNumber(3)
+  local filePath = getTestFilePath(currentDescribeOrTest)
   local fileLocalState = getTestLocalState(filePath)
   fileLocalState.afterEach = fn
 end
 
 local function beforeAll(fn, timeout)
-  local filePath = getTestFilePathAndLineNumber(3)
+  local filePath = getTestFilePath(currentDescribeOrTest)
   local fileLocalState = getTestLocalState(filePath)
   fileLocalState.beforeAll = fn
 end
 
 local function beforeEach(fn, timeout)
-  local filePath = getTestFilePathAndLineNumber(3)
+  local filePath = getTestFilePath(currentDescribeOrTest)
   local fileLocalState = getTestLocalState(filePath)
   fileLocalState.beforeEach = fn
 end
@@ -317,11 +341,11 @@ DESCRIBE_OR_TEST_META.__index = DESCRIBE_OR_TEST_META
 --- Must be called once befrore all others with a Describe to set as root.
 --- @param describeOrTest DescribeOrTest
 local function registerDescribeOrTest(describeOrTest)
-  local filePath, lineNumber = getTestFilePathAndLineNumber(6)
+  local filePath, lineNumber = getTestFilePath(describeOrTest)
   
   describeOrTest.filePath = filePath
   describeOrTest.lineNumber = lineNumber
-  
+
   if not currentParent then
     currentParent = describeOrTest
   else
@@ -394,4 +418,6 @@ return {
   afterEach = afterEach,
   beforeAll = beforeAll,
   beforeEach = beforeEach,
+
+  setTestRoot = setTestRoot,
 }
