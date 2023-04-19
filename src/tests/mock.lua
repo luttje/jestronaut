@@ -37,10 +37,16 @@ describe('mocks', function()
       expect(mockFn(1, 2, 3)):toEqual(expect:varargsmatching(4, 5, 6))
     end)
     
-    it:failing('can be match only matching variable arguments and return values', function()
+    it:failing('can match only matching variable arguments and return values', function()
       local mockFn = jestronaut:fn()
       mockFn:mockReturnValueOnce(4, 5, 8)
       expect(mockFn(1, 2, 3)):toEqual(4, 5, 3)
+    end)
+
+    it:failing('can match only when variable arguments and return values match exactly (prevent table confusion)', function()
+      local mockFn = jestronaut:fn()
+      mockFn:mockReturnValueOnce({4, 5, 6}) -- Should not match varargs!
+      expect(mockFn(1, 2, 3)):toEqual(expect:varargsmatching(4, 5, 6))
     end)
   end)
 end)

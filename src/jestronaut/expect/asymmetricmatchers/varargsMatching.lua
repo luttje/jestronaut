@@ -29,8 +29,6 @@ VARARGS_MATCHING_META = {
 
     if functionLib.isWrappedVarargsTable(actual) then
       actualArgs = actual.args
-    elseif functionLib.isWrappedVarargsTable(actual) then
-      actualArgs = actual.sample.args
     elseif type(actual) == "table" then
       actualArgs = actual
     end
@@ -64,6 +62,4 @@ return {
 
     return VARARGS_MATCHING_META.new(sample, expect.inverse)
   end,
-
-  isWrappedVarargsEqual = isWrappedVarargsEqual,
 }
