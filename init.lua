@@ -19,6 +19,8 @@ jestronaut:configure({
     "generated-tests/JestObjectAPI/jest/retryTimes.lua", -- These tests are intended to fail
 
     "generated-tests/MockFunctionAPI/mockFn/mockName.lua", -- The docs have mockFn commented, causing this test to fail.
+    "generated-tests/GlobalAPI/test/failing.lua", -- This test succeeds, but it's supposed to fail
+    "generated-tests/GlobalAPI/test/failing/each.lua", -- This test succeeds, but it's supposed to fail
   }
 }):registerTests(function()
   -- Setup and register the tests:
