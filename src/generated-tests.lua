@@ -227,9 +227,12 @@ package.loaded['video'] = {
   play = function() return true end
 }
 
--- generated-tests\GlobalAPI\test.lua:13
+-- generated-tests\GlobalAPI\test.lua:13 and \generated-tests\GlobalAPI\test\only.lua:13
+local called = false
 function inchesOfRain()
-  return 0
+  local value = called and 1 or 0
+  called = true
+  return value
 end
 
 -- generated-tests\GlobalAPI\test\only.lua:19
