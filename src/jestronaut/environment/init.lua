@@ -4,7 +4,6 @@ local stateLib = require "jestronaut.environment.state"
 local testLib = require "jestronaut.environment.test"
 local eachLib = require "jestronaut.each"
 
-local environmentOptions = {}
 local fileTestTimeouts = {}
 
 -- Setup the root describe
@@ -14,11 +13,6 @@ describeLib.describe("root", function() end)
 local function setTimeout(timeout)
   local file = debug.getinfo(2, "S").source:sub(2)
   fileTestTimeouts[file] = timeout
-end
-
-local function setRetryTimes(numRetries, options)
-  environmentOptions = options or {}
-  environmentOptions.numRetries = numRetries
 end
 
 --- Exposes the environment functions to the global environment.
@@ -67,15 +61,8 @@ local function exposeTo(targetEnvironment)
 end
 
 return {
-  afterAll = afterAll,
-  afterEach = afterEach,
-
-  beforeAll = beforeAll,
-  beforeEach = beforeEach,
-
   setTimeout = setTimeout,
-  setRetryTimes = setRetryTimes,
   exposeTo = exposeTo,
 
-  assertions = assertions,
+  retryTimes = stateLib.retryTimes,
 }

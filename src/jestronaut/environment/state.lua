@@ -1,3 +1,4 @@
+local functionLib = require "jestronaut.utils.functions"
 local optionsLib = require "jestronaut.environment.options"
 
 --- @class DescribeOrTest
@@ -5,6 +6,7 @@ local currentDescribeOrTest = nil
 
 --- @class LocalState
 --- @field notExecuting DescribeOrTest
+--- @field retrySettings table
 --- @field beforeAll fun(): void
 --- @field beforeEach fun(): void
 --- @field afterAll fun(): void
@@ -31,6 +33,9 @@ local function getTestFilePathAndLineNumber(offset)
   offset = (JESTRONAUT_OFFSET_TRACE_LEVEL or 0) + offset
   local filePath = debug.getinfo(offset, "S").source:sub(2)
   local lineNumber = debug.getinfo(offset, "l").currentline
+
+  -- Normalize the file path so all slashes are single forward slashes.
+  filePath = filePath:gsub("\\+", "/")
 
   return filePath, lineNumber
 end
@@ -67,6 +72,23 @@ end
 local function setNotExecuteTestsOtherThan(test)
   local fileLocalState = getTestLocalState(test.filePath)
   fileLocalState.notExecuting = test
+end
+
+--- Sets the amount of times tests will be retried. Must be called at the top of a file or describe block.
+--- @param numRetries number
+--- @param options table
+local function retryTimes(numRetries, options)
+  local filePath, lineNumber = getTestFilePathAndLineNumber(4)
+  local testLocalState = getTestLocalState(filePath)
+
+  if currentDescribeOrTest and currentDescribeOrTest.isTest then
+    error("Cannot set the test retries outside of a file or describe block", 2)
+  end
+
+  testLocalState.retrySettings = {
+    timesRemaining = numRetries,
+    options = options or {},
+  }
 end
 
 local function incrementAssertionCount()
@@ -224,7 +246,7 @@ local DESCRIBE_OR_TEST_META = {
     if self.isTest then
       if runnerOptions.testPathIgnorePatterns then
         for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
-          if self.name:find(pattern) then
+          if self.filePath:find(pattern) then
             printer:printSkip(self)
             return failedTestCount, skippedTestCount + 1
           end
@@ -236,19 +258,36 @@ local DESCRIBE_OR_TEST_META = {
         end
       end
 
+      local testLocalState = getTestLocalState(self.filePath)
+      local retrySettings = testLocalState.retrySettings
+
       beforeDescribeOrTest(self)
 
-      local success = printer:printResult(self, xpcall(self.fn, function(err)
+      local success, results = functionLib.captureSafeCallInTable(xpcall(self.fn, function(err)
         return debug.traceback(err, 2)
       end))
 
       afterDescribeOrTest(self, success)
 
+      if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
+        printer:printTestResult(self, success, unpack(results))
+      end
+
       if not success then
         failedTestCount = failedTestCount + 1
 
+        if retrySettings and retrySettings.timesRemaining then
+          if retrySettings.timesRemaining > 0 then
+            retrySettings.timesRemaining = retrySettings.timesRemaining - 1
+
+            printer:printRetry(self, retrySettings.timesRemaining + 1)
+
+            return self:run(printer, runnerOptions)
+          end
+        end
+
         if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
-          error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests"))
+          error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
         end
       end
     elseif #self.children > 0 then
@@ -345,6 +384,8 @@ return {
   setExpectAssertion = setExpectAssertion,
   getExpectedAssertionCount = getExpectedAssertionCount,
   setExpectedAssertionCount = setExpectedAssertionCount,
+
+  retryTimes = retryTimes,
 
   afterAll = afterAll,
   afterEach = afterEach,

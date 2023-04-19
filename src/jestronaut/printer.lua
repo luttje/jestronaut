@@ -27,7 +27,7 @@ end
 --- @param success boolean
 --- @param ... any
 --- @return boolean
-function Printer:printResult(describeOrTest, success, ...)
+function Printer:printTestResult(describeOrTest, success, ...)
   if not success then
     print(self:getIndentations(describeOrTest) .. "❌ Failed with error: " .. tostring(...) .. "\n")
     return false
@@ -41,6 +41,13 @@ end
 --- @param describeOrTest DescribeOrTest
 function Printer:printSkip(describeOrTest)
   print(self:getIndentations(describeOrTest) .. "🚫 Skipped\n")
+end
+
+--- Prints the retry message of the test.
+--- @param describeOrTest DescribeOrTest
+--- @param retryCount number
+function Printer:printRetry(describeOrTest, retryCount)
+  print(self:getIndentations(describeOrTest) .. "🔁 Retrying (" .. retryCount .. ")...\n")
 end
 
 --- Prints text centered, using the printer width.

@@ -47,7 +47,6 @@ local tests = {
 		            end
 		        )
 		        local moduleName = require("../moduleName")
-            print(moduleName, getmetatable(moduleName))
 		        expect(moduleName()):toBe(1)
 		    end
 		)

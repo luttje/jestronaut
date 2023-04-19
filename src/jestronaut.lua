@@ -9,7 +9,7 @@ setupModuleMocking()
 local JESTRONAUT = {}
 
 function JESTRONAUT:retryTimes(numRetries, options)
-  environmentLib.setRetryTimes(numRetries, options)
+  environmentLib.retryTimes(numRetries, options)
 end
 
 function JESTRONAUT:setTimeout(timeout)
