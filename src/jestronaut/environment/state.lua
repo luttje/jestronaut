@@ -40,7 +40,7 @@ end
 --- @return string, number
 local function getTestFilePath(test)
   local filePath, lineNumber
-  local i = 5 -- Start at ./src/jestronaut/environment/init.lua
+  local i = 1
 
   while true do
     local info = debug.getinfo(i, "Sl")
