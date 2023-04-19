@@ -25,7 +25,7 @@ local tests = {
 		-- ```
 		-- 
 		-- Check out [React Tree Snapshot Testing](/blog/2016/07/27/jest-14) for more information on snapshot testing.
-		local ____lualib = require('lualib_bundle')
+		local ____lualib = require("lualib_bundle")
 		local __TS__New = ____lualib.__TS__New
 		local function drinkFlavor(flavor)
 		    if flavor == "octopus" then

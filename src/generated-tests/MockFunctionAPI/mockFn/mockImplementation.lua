@@ -3,7 +3,7 @@
 generatedTestPreLoad('SomeClass_js', function()
 	-- `.mockImplementation()` can also be used to mock class constructors:
 	-- 
-	local ____lualib = require('lualib_bundle')
+	local ____lualib = require("lualib_bundle")
 	local __TS__Class = ____lualib.__TS__Class
 	local exports = {}
 	local SomeClass = __TS__Class()
@@ -19,9 +19,9 @@ end)
 
 generatedTestPreLoad('SomeClass_test_js', function()
 	
-	local ____lualib = require('lualib_bundle')
+	local ____lualib = require("lualib_bundle")
 	local __TS__New = ____lualib.__TS__New
-	local SomeClass = require('SomeClass')
+	local SomeClass = require("SomeClass")
 	jestronaut:mock("./SomeClass")
 	local mockMethod = jestronaut:fn()
 	SomeClass:mockImplementation(function()

@@ -9,9 +9,9 @@ local tests = {
 			
 			local myModule
 			jestronaut:isolateModules(function()
-			    myModule = require('myModule')
+			    myModule = require("myModule")
 			end)
-			local otherCopyOfMyModule = require('myModule')
+			local otherCopyOfMyModule = require("myModule")
 			
 		
 		end);

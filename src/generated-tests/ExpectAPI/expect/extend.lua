@@ -106,7 +106,7 @@ generatedTestPreLoad('toBeWithinRange_js', function()
 	-- :::tip
 	-- 
 	-- The type declaration of the matcher can live in a `.d.ts` file or in an imported `.ts` module (see JS and TS examples above respectively). If you keep the declaration in a `.d.ts` file, make sure that it is included in the program and that it is a valid module, i.e. it has at least an empty `export {}`.
-	local ____lualib = require('lualib_bundle')
+	local ____lualib = require("lualib_bundle")
 	local Error = ____lualib.Error
 	local RangeError = ____lualib.RangeError
 	local ReferenceError = ____lualib.ReferenceError
@@ -115,7 +115,7 @@ generatedTestPreLoad('toBeWithinRange_js', function()
 	local URIError = ____lualib.URIError
 	local __TS__New = ____lualib.__TS__New
 	local ____exports = {}
-	local ____globals = require('@jestronaut_globals')
+	local ____globals = require("@jestronaut_globals")
 	local expect = ____globals.expect
 	local function toBeWithinRange(actual, floor, ceiling)
 	    if type(actual) ~= "number" or type(floor) ~= "number" or type(ceiling) ~= "number" then
@@ -152,9 +152,9 @@ local tests = {
 		-- Instead of importing `toBeWithinRange` module to the test file, you can enable the matcher for all tests by moving the `expect.extend` call to a [`setupFilesAfterEnv`](Configuration.md/#setupfilesafterenv-array) script:
 		-- 
 		local ____exports = {}
-		local ____globals = require('@jestronaut_globals')
+		local ____globals = require("@jestronaut_globals")
 		local expect = ____globals.expect
-		local ____toBeWithinRange = require('toBeWithinRange')
+		local ____toBeWithinRange = require("toBeWithinRange")
 		local toBeWithinRange = ____toBeWithinRange.toBeWithinRange
 		expect:extend({toBeWithinRange = toBeWithinRange})
 		return ____exports

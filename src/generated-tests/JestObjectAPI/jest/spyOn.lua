@@ -23,8 +23,8 @@ local tests = {
 	(function()
 		-- Example test:
 		-- 
-		local audio = require('audio')
-		local video = require('video')
+		local audio = require("audio")
+		local video = require("video")
 		afterEach(function()
 		    jestronaut:restoreAllMocks()
 		end)

@@ -117,6 +117,10 @@ function transpileString(main) {
     noHeader: true,
     noImplicitGlobalVariables: true,
     noImplicitSelf: true,
+    noResolvePaths: [
+      "../moduleName",
+      "../myModule"
+    ]
   });
 
   let file;
@@ -158,8 +162,10 @@ function luaTestFromExample(example, testDirectory) {
   // Match jest as a whole word and replace it with jestronaut
   let luaCode = lua.replace(/(?<!\w)jest(?!\w)/g, 'jestronaut');
 
-  luaCode = luaCode.replaceAll(/require\(['"]([^'"]*)['"]\)/g, (match, p1) => {
-    return `require('${p1.replace(/\.\/|\.+/g, '_')}')`;
+  // Replace . with _ in the require path, but only after the last / so it doesnt replace ./ or ../
+  luaCode = luaCode.replaceAll(/require\(['"]((?:\.?\.?\/)*)([^'"]*)['"]\)/g, (match, relativePath, moduleName) => {
+    const modulePath = moduleName.replace(/\./g, '_');
+    return `require("${relativePath}${modulePath}")`;
   });
 
   return `${comments}\n${luaCode}`;

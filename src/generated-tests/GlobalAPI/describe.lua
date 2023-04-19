@@ -33,7 +33,7 @@ local tests = {
 	(function()
 		-- You can also nest `describe` blocks if you have a hierarchy of tests:
 		-- 
-		local ____lualib = require('lualib_bundle')
+		local ____lualib = require("lualib_bundle")
 		local __TS__New = ____lualib.__TS__New
 		local __TS__ParseInt = ____lualib.__TS__ParseInt
 		local function binaryStringToNumber(binString)

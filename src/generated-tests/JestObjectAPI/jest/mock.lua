@@ -72,7 +72,7 @@ local tests = {
 			        return jestronaut:fn(function() return 42 end)
 			    end
 			)
-			local moduleName = require('moduleName')
+			local moduleName = require("../moduleName")
 			moduleName()
 			
 		

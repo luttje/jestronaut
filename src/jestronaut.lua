@@ -8,25 +8,6 @@ setupModuleMocking()
 --- @class Jestronaut
 local JESTRONAUT = {}
 
-function JESTRONAUT:resetModules()
-  -- Hack: https://www.freelists.org/post/luajit/BUG-Assertion-failures-when-unloading-and-reloading-the-ffi-package,1
-  -- package.loaded = {} -- Dont do this, breaks everything
-end
-
-function JESTRONAUT:isolateModules(fn)
-  local originalPackagePreload = package.preload
-  local originalPackageLoaded = package.loaded
-  package.preload = {}
-  package.loaded = {}
-  fn()
-  package.loaded = originalPackageLoaded
-  package.preload = originalPackagePreload
-end
-
-function JESTRONAUT:isolateModulesAsync(fn)
-  --- @Not implemented (async)
-end
-
 function JESTRONAUT:retryTimes(numRetries, options)
   environmentLib.setRetryTimes(numRetries, options)
 end

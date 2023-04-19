@@ -1,10 +1,18 @@
 local optionsLib = require "jestronaut.environment.options"
-local currentDescribeOrTest = nil
-local notExecutingTestsIn = {}
 
-local function getCurrentDescribeOrTest()
-  return currentDescribeOrTest
-end
+--- @class DescribeOrTest
+local currentDescribeOrTest = nil
+
+--- @class LocalState
+--- @field notExecuting DescribeOrTest
+--- @field beforeAll fun(): void
+--- @field beforeEach fun(): void
+--- @field afterAll fun(): void
+--- @field afterEach fun(): void
+local LOCAL_STATE_META = {}
+
+--- @type LocalState[]
+local testLocalStates = {}
 
 --- @type DescribeOrTest[]
 local isExecutingTests = false
@@ -12,9 +20,39 @@ local isExecutingTests = false
 --- @type DescribeOrTest
 local currentParent = nil
 
+local function getCurrentDescribeOrTest()
+  return currentDescribeOrTest
+end
+
+--- Gets the file path and line number of the test
+--- @param offset number
+--- @return string, number
+local function getTestFilePathAndLineNumber(offset)
+  offset = (JESTRONAUT_OFFSET_TRACE_LEVEL or 0) + offset
+  local filePath = debug.getinfo(offset, "S").source:sub(2)
+  local lineNumber = debug.getinfo(offset, "l").currentline
+
+  return filePath, lineNumber
+end
+
+--- Returns the state local to the test file.
+--- @param test DescribeOrTest
+--- @return LocalState
+local function getTestLocalState(testFilePath)
+  local testLocalState = testLocalStates[testFilePath]
+
+  if not testLocalState then
+    testLocalState = {}
+    testLocalStates[testFilePath] = testLocalState
+  end
+
+  return testLocalState
+end
+
 --- @param test DescribeOrTest
 local function getIsExecutingTests(test)
-  if test and notExecutingTestsIn[test.filePath] and notExecutingTestsIn[test.filePath] ~= test and notExecutingTestsIn[test.filePath] ~= test.parent then
+  local fileLocalState = getTestLocalState(test.filePath)
+  if test and fileLocalState.notExecuting and fileLocalState.notExecuting ~= test and fileLocalState.notExecuting ~= test.parent then
     return false
   end
 
@@ -27,7 +65,8 @@ end
 
 --- @param test DescribeOrTest
 local function setNotExecuteTestsOtherThan(test)
-  notExecutingTestsIn[test.filePath] = test
+  local fileLocalState = getTestLocalState(test.filePath)
+  fileLocalState.notExecuting = test
 end
 
 local function incrementAssertionCount()
@@ -72,9 +111,29 @@ end
 
 local function beforeDescribeOrTest(describeOrTest)
   currentDescribeOrTest = describeOrTest
+
+  local fileLocalState = getTestLocalState(describeOrTest.filePath)
+
+  if fileLocalState.beforeAll then
+    fileLocalState.beforeAll()
+  end
+
+  if fileLocalState.beforeEach then
+    fileLocalState.beforeEach()
+  end
 end
 
 local function afterDescribeOrTest(describeOrTest, success)
+  local fileLocalState = getTestLocalState(describeOrTest.filePath)
+
+  if fileLocalState.afterEach then
+    fileLocalState.afterEach()
+  end
+
+  if fileLocalState.afterAll then
+    fileLocalState.afterAll()
+  end
+
   currentDescribeOrTest = nil
 
   if not success then
@@ -88,6 +147,30 @@ local function afterDescribeOrTest(describeOrTest, success)
   if describeOrTest.expectAssertion and describeOrTest.assertionCount == 0 then
     error("Expected at least one assertion to be run, but none were run")
   end
+end
+
+local function afterAll(fn, timeout)
+  local filePath = getTestFilePathAndLineNumber(3)
+  local fileLocalState = getTestLocalState(filePath)
+  fileLocalState.afterAll = fn
+end
+
+local function afterEach(fn, timeout)
+  local filePath = getTestFilePathAndLineNumber(3)
+  local fileLocalState = getTestLocalState(filePath)
+  fileLocalState.afterEach = fn
+end
+
+local function beforeAll(fn, timeout)
+  local filePath = getTestFilePathAndLineNumber(3)
+  local fileLocalState = getTestLocalState(filePath)
+  fileLocalState.beforeAll = fn
+end
+
+local function beforeEach(fn, timeout)
+  local filePath = getTestFilePathAndLineNumber(3)
+  local fileLocalState = getTestLocalState(filePath)
+  fileLocalState.beforeEach = fn
 end
 
 --- @class DescribeOrTest
@@ -192,9 +275,10 @@ DESCRIBE_OR_TEST_META.__index = DESCRIBE_OR_TEST_META
 --- Must be called once befrore all others with a Describe to set as root.
 --- @param describeOrTest DescribeOrTest
 local function registerDescribeOrTest(describeOrTest)
-  local offset = (JESTRONAUT_OFFSET_TRACE_LEVEL or 0) + 6
-  describeOrTest.filePath = debug.getinfo(offset, "S").source:sub(2)
-  describeOrTest.lineNumber = debug.getinfo(offset, "l").currentline
+  local filePath, lineNumber = getTestFilePathAndLineNumber(6)
+  
+  describeOrTest.filePath = filePath
+  describeOrTest.lineNumber = lineNumber
   
   if not currentParent then
     currentParent = describeOrTest
@@ -234,6 +318,7 @@ local function runTests(printer, runnerOptions)
 
   if not success then
     if not errOrFailedTestCount:find("^Bail after") then
+      -- TODO: Use xpcall as to not lose the stack trace
       error(errOrFailedTestCount)
     end
 
@@ -260,4 +345,9 @@ return {
   setExpectAssertion = setExpectAssertion,
   getExpectedAssertionCount = getExpectedAssertionCount,
   setExpectedAssertionCount = setExpectedAssertionCount,
+
+  afterAll = afterAll,
+  afterEach = afterEach,
+  beforeAll = beforeAll,
+  beforeEach = beforeEach,
 }

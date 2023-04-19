@@ -1,5 +1,6 @@
 local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexableFunction
 local describeLib = require "jestronaut.environment.describe"
+local stateLib = require "jestronaut.environment.state"
 local testLib = require "jestronaut.environment.test"
 local eachLib = require "jestronaut.each"
 
@@ -8,23 +9,6 @@ local fileTestTimeouts = {}
 
 -- Setup the root describe
 describeLib.describe("root", function() end)
-
--- Runs a function after all the tests in this file have completed. If the function returns a promise or is a generator, Jest waits for that promise to resolve before continuing.
-local function afterAll(fn, timeout)
-  --- @Not yet implemented
-end
-
-local function afterEach(fn, timeout)
-  --- @Not yet implemented
-end
-
-local function beforeAll(fn, timeout)
-  --- @Not yet implemented
-end
-
-local function beforeEach(fn, timeout)
-  --- @Not yet implemented
-end
 
 -- Set the default timeout interval (in milliseconds) for all tests and before/after hooks in the test file. This only affects the test file from which this function is called. The default timeout interval is 5 seconds if this method is not called.
 local function setTimeout(timeout)
@@ -40,11 +24,11 @@ end
 --- Exposes the environment functions to the global environment.
 --- @param targetEnvironment table
 local function exposeTo(targetEnvironment)
-  targetEnvironment.afterAll = afterAll
-  targetEnvironment.afterEach = afterEach
+  targetEnvironment.afterAll = stateLib.afterAll
+  targetEnvironment.afterEach = stateLib.afterEach
 
-  targetEnvironment.beforeAll = beforeAll
-  targetEnvironment.beforeEach = beforeEach
+  targetEnvironment.beforeAll = stateLib.beforeAll
+  targetEnvironment.beforeEach = stateLib.beforeEach
 
   targetEnvironment.describe = makeIndexableFunction(function(blockName, blockFn) return describeLib.describe(blockName, blockFn) end)
 

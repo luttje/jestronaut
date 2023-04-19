@@ -23,7 +23,7 @@ local tests = {
 	(function()
 		-- Example test:
 		-- 
-		local utils = require('utils')
+		local utils = require("utils")
 		afterEach(function()
 		    jestronaut:restoreAllMocks()
 		end)

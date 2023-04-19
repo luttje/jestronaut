@@ -46,7 +46,8 @@ local tests = {
 		                return jestronaut:fn(function() return 1 end)
 		            end
 		        )
-		        local moduleName = require('moduleName')
+		        local moduleName = require("../moduleName")
+            print(moduleName, getmetatable(moduleName))
 		        expect(moduleName()):toBe(1)
 		    end
 		)
@@ -59,7 +60,7 @@ local tests = {
 		                return jestronaut:fn(function() return 2 end)
 		            end
 		        )
-		        local moduleName = require('moduleName')
+		        local moduleName = require("../moduleName")
 		        expect(moduleName()):toBe(2)
 		    end
 		)
@@ -70,7 +71,7 @@ local tests = {
 	
 	(function()
 		-- Returns the `jest` object for chaining.
-		local ____lualib = require('lualib_bundle')
+		local ____lualib = require("lualib_bundle")
 		local __TS__Promise = ____lualib.__TS__Promise
 		beforeEach(function()
 		    jestronaut:resetModules()
@@ -84,7 +85,7 @@ local tests = {
 		                return {__esModule = true, default = "default1", foo = "foo1"}
 		            end
 		        )
-		        local ____self_0 = __TS__Promise.resolve(require('moduleName'))
+		        local ____self_0 = __TS__Promise.resolve(require("../moduleName"))
 		        return ____self_0["then"](
 		            ____self_0,
 		            function(____, moduleName)
@@ -103,7 +104,7 @@ local tests = {
 		                return {__esModule = true, default = "default2", foo = "foo2"}
 		            end
 		        )
-		        local ____self_1 = __TS__Promise.resolve(require('moduleName'))
+		        local ____self_1 = __TS__Promise.resolve(require("../moduleName"))
 		        return ____self_1["then"](
 		            ____self_1,
 		            function(____, moduleName)

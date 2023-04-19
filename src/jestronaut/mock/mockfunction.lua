@@ -1,4 +1,5 @@
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
+local allMocks = {}
 
 --- @class MockFunction
 local MOCK_FUNCTION_META = {
@@ -353,8 +354,15 @@ local function isMockFunction(fn)
   return getmetatable(fn) == MOCK_FUNCTION_META
 end
 
+local function restoreAllMocks()
+  for _, mockFn in ipairs(allMocks) do
+    mockFn:mockRestore()
+  end
+end
+
 return {
   MOCK_FUNCTION_META = MOCK_FUNCTION_META,
   fn = fn,
   isMockFunction = isMockFunction,
+  restoreAllMocks = restoreAllMocks,
 }

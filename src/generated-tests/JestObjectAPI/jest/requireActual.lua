@@ -7,7 +7,7 @@ local tests = {
 	(function()
 		test("jest.requireActual 0", function()
 			
-			local ____lualib = require('lualib_bundle')
+			local ____lualib = require("lualib_bundle")
 			local __TS__ObjectAssign = ____lualib.__TS__ObjectAssign
 			jestronaut:mock(
 			    "../myModule",
@@ -20,7 +20,7 @@ local tests = {
 			        )
 			    end
 			)
-			local getRandom = require('myModule').getRandom
+			local getRandom = require("../myModule").getRandom
 			getRandom()
 			
 		

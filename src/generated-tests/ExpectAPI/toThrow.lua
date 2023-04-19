@@ -26,7 +26,7 @@ local tests = {
 		test(".toThrow 1", function()
 			-- For example, let's say that `drinkFlavor` is coded like this:
 			-- 
-			local ____lualib = require('lualib_bundle')
+			local ____lualib = require("lualib_bundle")
 			local __TS__New = ____lualib.__TS__New
 			local function drinkFlavor(flavor)
 			    if flavor == "octopus" then
@@ -47,7 +47,7 @@ local tests = {
 	(function()
 		-- We could test this error gets thrown in several ways:
 		-- 
-		local ____lualib = require('lualib_bundle')
+		local ____lualib = require("lualib_bundle")
 		local Error = ____lualib.Error
 		local RangeError = ____lualib.RangeError
 		local ReferenceError = ____lualib.ReferenceError

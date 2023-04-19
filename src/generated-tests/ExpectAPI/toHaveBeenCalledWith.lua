@@ -7,7 +7,7 @@ local tests = {
 	(function()
 		-- For example, let's say that you can register a beverage with a `register` function, and `applyToAll(f)` should apply the function `f` to all registered beverages. To make sure this works, you could write:
 		-- 
-		local ____lualib = require('lualib_bundle')
+		local ____lualib = require("lualib_bundle")
 		local __TS__New = ____lualib.__TS__New
 		test(
 		    "registration applies correctly to orange La Croix",

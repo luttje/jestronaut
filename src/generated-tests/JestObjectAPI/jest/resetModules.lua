@@ -24,9 +24,9 @@ local tests = {
 		-- ```
 		-- 
 		-- Returns the `jest` object for chaining.
-		local sum1 = require('sum')
+		local sum1 = require("sum")
 		jestronaut:resetModules()
-		local sum2 = require('sum')
+		local sum2 = require("sum")
 		local ____ = sum1 == sum2
 		
 	

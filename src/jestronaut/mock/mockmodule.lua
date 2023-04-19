@@ -1,5 +1,19 @@
 local mockFunctionLib = require "jestronaut.mock.mockfunction"
+
+local preloadedModules = {}
 local mockedModules = {}
+
+local function requireActual(moduleName)
+  if preloadedModules[moduleName] ~= nil then
+    return preloadedModules[moduleName](moduleName)
+  end
+
+  return require(moduleName)
+end
+
+local function preloadRequireActual(moduleName, factory)
+  preloadedModules[moduleName] = factory
+end
 
 local function setupModuleMocking()
   --- Search for modules in the test mocking environment.
@@ -51,11 +65,44 @@ local function createMockFromModule(moduleName)
     end
   end
 
+  mockedModules[moduleName] = module
+
   return module
+end
+
+local function resetModules()
+  for moduleName, value in pairs(mockedModules) do
+    setmetatable(value, nil)
+    package.loaded[moduleName] = nil
+  end
+
+  mockedModules = {}
+end
+
+local function isolateModules(fn)
+  local originalPackagePreload = package.preload
+  local originalPackageLoaded = package.loaded
+  package.preload = {}
+  package.loaded = {}
+  fn()
+  package.loaded = originalPackageLoaded
+  package.preload = originalPackagePreload
+end
+
+local function isolateModulesAsync(fn)
+  --- @Not implemented (async)
 end
 
 return {
   mock = mock,
+  doMock = mock,
+
+  requireActual = requireActual,
+  preloadRequireActual = preloadRequireActual,
+
   createMockFromModule = createMockFromModule,
   setupModuleMocking = setupModuleMocking,
+  resetModules = resetModules,
+  isolateModules = isolateModules,
+  isolateModulesAsync = isolateModulesAsync,
 }

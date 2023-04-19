@@ -142,22 +142,6 @@ function drinkFlavor(flavor)
   end
 end
 
--- generated-tests\JestObjectAPI\jest\mock.lua:64
-jestronaut:mock(
-  "moduleName",
-  function()
-    return jestronaut:fn(function() return 42 end)
-  end
-)
-
--- generated-tests\JestObjectAPI\jest\requireActual.lua:9
-package.loaded['../myModule'] = {
-  getRandom = function() return 42 end
-}
-
--- generated-tests\JestObjectAPI\jest\requireActual.lua:17
-package.loaded['myModule'] = package.loaded['../myModule']
-
 -- generated-tests\JestObjectAPI\jest\resetModules.lua:22
 package.loaded['sum'] = {
   sum = function(a, b) return a + b end
@@ -208,7 +192,16 @@ function makeGlobalDatabase()
       callback({length = 1})
     end,
     insert = function(self, collection, data, callback)
-      callback({success = true})
+    end,
+    clear = function(self)
+      return { 
+        ["then"] = function(self, callback)
+          callback()
+        end
+      }
+    end,
+    cleanUp = function(self)
+      return true
     end
   }
 end
@@ -219,6 +212,16 @@ function makeThing()
     value = 42
   }
 end
+
+jestronaut:preloadRequireActual("../myModule", function(moduleName)
+  return {
+    getRandom = function()
+      return 42
+    end,
+  }
+end)
+
+package.loaded['myModule'] = {}
 
 -- generated-tests\JestObjectAPI\jest\replaceProperty.lua:22
 package.loaded['utils'] = {
