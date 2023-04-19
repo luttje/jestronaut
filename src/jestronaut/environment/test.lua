@@ -16,18 +16,36 @@ extendMetaTableIndex(TEST_META, DESCRIBE_OR_TEST_META)
 --- @param fn function
 --- @param timeout number
 --- @return Test
-local function test(name, fn, timeout)
+local function _internalTest(name, fn, timeout, options)
+  if(type(name) ~= "string") then
+    error("describe name must be a string")
+  end
+
   local test = {
     name = name,
     fn = fn,
     timeout = timeout,
   }
 
+  if options then
+    test.isOnly = options.isOnly
+    test.isSkipped = options.isSkipped
+  end
+
   setmetatable(test, TEST_META)
 
   registerDescribeOrTest(test)
 
   return test
+end
+
+--- Creates a new test.
+--- @param name string
+--- @param fn function
+--- @param timeout number
+--- @return Test
+local function test(name, fn, timeout)
+  return _internalTest(name, fn, timeout)
 end
 
 --- Creates a new test that is the only one that will run.
@@ -37,8 +55,9 @@ end
 --- @param timeout number
 --- @return Test
 local function testOnly(self, name, fn, timeout)
-  local _test = test(name, fn, timeout)
-  _test.isOnly = true
+  local _test = _internalTest(name, fn, timeout, {
+    isOnly = true,
+  })
 
   return _test
 end
@@ -50,8 +69,9 @@ end
 --- @param timeout number
 --- @return Test
 local function testSkip(self, name, fn, timeout)
-  local _test = test(name, fn, timeout)
-  _test.isSkipped = true
+  local _test = _internalTest(name, fn, timeout, {
+    isSkipped = true,
+  })
 
   return _test
 end
