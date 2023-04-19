@@ -1,11 +1,12 @@
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
+local functionLib = require "jestronaut.utils.functions"
 local tableLib = require "jestronaut.utils.tables"
 
 local function generateErrorMessage(expect, actualValue, expected)
   return "Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(expected)
 end
 
-local function compareValues(expect, actual, expected, customEqualityTesters)
+local function compareValues(expect, actual, customEqualityTesters, expected)
   if customEqualityTesters then
     for _, tester in ipairs(customEqualityTesters) do
       local result = tester(actual, expected)
@@ -28,9 +29,9 @@ local function compareValues(expect, actual, expected, customEqualityTesters)
   elseif type(actual) == 'table' and type(actual) == type(expected) then
     for key, value in pairs(expected) do
       if type(value) == 'table' and type(actual[key]) == 'table' then
-        compareValues(expect, actual[key], value)
+        compareValues(expect, actual[key], customEqualityTesters, value)
       else
-        compareValues(expect, actual[key], value)
+        compareValues(expect, actual[key], customEqualityTesters, value)
       end
     end
   else
@@ -45,8 +46,8 @@ end
 --- @param expect Expect
 --- @param expected any
 --- @return boolean
-local function toEqual(expect, expected, customEqualityTesters)
-  compareValues(expect, expect.actual, expected, customEqualityTesters)
+local function toEqual(expect, customEqualityTesters, ...)
+  compareValues(expect, expect.actual, customEqualityTesters or {}, functionLib.wrapAndTagVarargsOrReturn(...))
   return true
 end
 
@@ -55,8 +56,8 @@ return {
 
   --- @param expect Expect
   build = function(expect, customEqualityTesters)
-    return function(expect, sample)
-      return toEqual(expect, sample, customEqualityTesters)
+    return function(expect, ...)
+      return toEqual(expect, customEqualityTesters or {}, ...)
     end
   end,
 }

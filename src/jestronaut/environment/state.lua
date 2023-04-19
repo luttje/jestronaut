@@ -313,8 +313,13 @@ local DESCRIBE_OR_TEST_META = {
         return debug.traceback(err, 2)
       end))
 
-      if not success and self.expectFail == true then
-        success = true
+      if self.expectFail == true then
+        if success then
+          success = false
+          results = {"Expected test to fail, but it succeeded"}
+        else
+          success = true
+        end
       end
 
       afterDescribeOrTest(self, success)

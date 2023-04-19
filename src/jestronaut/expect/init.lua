@@ -1,5 +1,5 @@
 local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexableFunction
-local makeFunctionShim = require "jestronaut.utils.functions".makeFunctionShim
+local functionLib = require "jestronaut.utils.functions"
 local stateLib = require "jestronaut.environment.state"
 
 local customEqualityTesters = {}
@@ -104,7 +104,7 @@ EXPECT_META.__index = function(self, key)
       matcherFunc = matcher.default
     end
     
-    return makeFunctionShim(matcherFunc, function(success, ...)
+    return functionLib.makeFunctionShim(matcherFunc, function(success, ...)
       stateLib.incrementAssertionCount()
     end)
   end
@@ -121,9 +121,9 @@ EXPECT_META.__index = function(self, key)
   error('Unknown (asymmetric) matcher or modifier: ' .. key)
 end
 
-function expect(actual)
+function expect(...)
   local expectInstance = {
-    actual = actual,
+    actual = functionLib.wrapAndTagVarargsOrReturn(...),
     inverse = false,
   }
 
