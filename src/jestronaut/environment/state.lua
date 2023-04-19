@@ -192,8 +192,9 @@ DESCRIBE_OR_TEST_META.__index = DESCRIBE_OR_TEST_META
 --- Must be called once befrore all others with a Describe to set as root.
 --- @param describeOrTest DescribeOrTest
 local function registerDescribeOrTest(describeOrTest)
-  describeOrTest.filePath = debug.getinfo(6, "S").source:sub(2)
-  describeOrTest.lineNumber = debug.getinfo(6, "l").currentline
+  local offset = (JESTRONAUT_OFFSET_TRACE_LEVEL or 0) + 6
+  describeOrTest.filePath = debug.getinfo(offset, "S").source:sub(2)
+  describeOrTest.lineNumber = debug.getinfo(offset, "l").currentline
   
   if not currentParent then
     currentParent = describeOrTest
