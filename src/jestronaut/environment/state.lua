@@ -294,6 +294,10 @@ local DESCRIBE_OR_TEST_META = {
         return debug.traceback(err, 2)
       end))
 
+      if not success and self.expectFail == true then
+        success = true
+      end
+
       afterDescribeOrTest(self, success)
 
       if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then

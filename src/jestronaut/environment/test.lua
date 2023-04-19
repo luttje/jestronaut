@@ -30,6 +30,7 @@ local function _internalTest(name, fn, timeout, options)
   if options then
     test.isOnly = options.isOnly
     test.isSkipped = options.isSkipped
+    test.expectFail = options.expectFail
   end
 
   setmetatable(test, TEST_META)
@@ -77,72 +78,98 @@ local function testSkip(self, name, fn, timeout)
 end
 
 --- Creates a new test that will run concurrently.
+--- @param self Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
 --- @private
-local function testConcurrent(name, fn, timeout)
+local function testConcurrent(self, name, fn, timeout)
   --- @Not yet implemented
   return {}
 end
 
 --- Creates a new test that will run concurrently and is the only one that will run.
+--- @param self Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
 --- @private
-local function testConcurrentOnly(name, fn, timeout)
+local function testConcurrentOnly(self, name, fn, timeout)
   --- @Not yet implemented
 end
 
 --- Creates a new test that will run concurrently and will be skipped.
+--- @param self Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
 --- @private
-local function testConcurrentSkip(name, fn, timeout)
+local function testConcurrentSkip(self, name, fn, timeout)
   --- @Not yet implemented
 end
 
 --- Creates a new test that will fail.
+--- @param self Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
 --- @private
-local function testFailing(name, fn, timeout)
-  --- @Not yet implemented
+local function testFailing(self, name, fn, timeout)
+  local _test = _internalTest(name, fn, timeout, {
+    expectFail = true,
+  })
+
+  return _test
 end
 
 --- Creates a new test that will fail and is the only one that will run.
+--- @param self Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
 --- @private
-local function testFailingOnly(name, fn, timeout)
-  --- @Not yet implemented
+local function testFailingOnly(self, name, fn, timeout)
+  local _test = _internalTest(name, fn, timeout, {
+    expectFail = true,
+    isOnly = true,
+  })
+
+  return _test
 end
 
 --- Creates a new test that will fail and will be skipped.
+--- @param self Test
 --- @param name string
 --- @param fn function
 --- @param timeout number
 --- @return Test
 --- @private
-local function testFailingSkip(name, fn, timeout)
-  --- @Not yet implemented
+local function testFailingSkip(self, name, fn, timeout)
+  local _test = _internalTest(name, fn, timeout, {
+    expectFail = true,
+    isSkipped = true,
+  })
+
+  return _test
 end
 
 --- Indicates this test is yet to be written.
+--- @param self Test
 --- @param name string
+--- @param fn function
 --- @return Test
 --- @private
-local function testTodo(name)
-  --- @Not yet implemented
+local function testTodo(self, name, fn)
+  if fn ~= nil then
+    error("test.todo cannot have an implementation")
+  end
+
+  -- TODO: Implement this, it should print a warning that this test is not implemented
 end
 
 return {
