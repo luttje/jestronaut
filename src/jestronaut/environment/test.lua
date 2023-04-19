@@ -51,7 +51,7 @@ end
 --- @return Test
 local function testSkip(self, name, fn, timeout)
   local _test = test(name, fn, timeout)
-  _test.isSkipping = true
+  _test.isSkipped = true
 
   return _test
 end

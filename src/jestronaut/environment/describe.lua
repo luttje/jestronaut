@@ -12,8 +12,9 @@ extendMetaTableIndex(DESCRIBE_META, DESCRIBE_OR_TEST_META)
 --- Creates a new describe.
 --- @param name string
 --- @param fn function
+--- @param options DescribeOptions
 --- @return Describe
-local function describe(name, fn)
+local function _internalDescribe(name, fn, options)
   if(type(name) ~= "string") then
     error("describe name must be a string")
   end
@@ -26,11 +27,24 @@ local function describe(name, fn)
     childrenLookup = {},
   }
 
+  if options then
+    describe.isOnly = options.isOnly
+    describe.isSkipped = options.isSkipped
+  end
+
   setmetatable(describe, DESCRIBE_META)
   
   registerDescribeOrTest(describe)
 
   return describe
+end
+
+--- Creates a new describe.
+--- @param name string
+--- @param fn function
+--- @return Describe
+local function describe(name, fn)
+  return _internalDescribe(name, fn)
 end
 
 --- Creates a new describe that is the only one that will run.
@@ -39,8 +53,9 @@ end
 --- @param fn function
 --- @return Describe
 local function describeOnly(self, name, fn)
-  local _describe = describe(name, fn)
-  _describe.isOnly = true
+  local _describe = _internalDescribe(name, fn, {
+    isOnly = true,
+  })
 
   return _describe
 end
@@ -51,8 +66,9 @@ end
 --- @param fn function
 --- @return Describe
 local function describeSkip(self, name, fn)
-  local _describe = describe(name, fn)
-  _describe.isSkipping = true
+  local _describe = _internalDescribe(name, fn, {
+    isSkipped = true,
+  })
 
   return _describe
 end

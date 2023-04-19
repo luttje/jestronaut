@@ -1,5 +1,6 @@
 local optionsLib = require "jestronaut.environment.options"
 local currentDescribeOrTest = nil
+local notExecutingInFiles = {}
 
 local function getCurrentDescribeOrTest()
   return currentDescribeOrTest
@@ -11,12 +12,20 @@ local isExecutingTests = false
 --- @type DescribeOrTest
 local currentParent = nil
 
-local function getIsExecutingTests()
+local function getIsExecutingTests(filePath)
+  if filePath and notExecutingInFiles[filePath] then
+    return false
+  end
+
   return isExecutingTests
 end
 
 local function setIsExecutingTests(executing)
   isExecutingTests = executing
+end
+
+local function setNotExecuteTestsIn(filePath)
+  notExecutingInFiles[filePath] = true
 end
 
 local function incrementAssertionCount()
@@ -85,7 +94,7 @@ local DESCRIBE_OR_TEST_META = {
   name = "",
   fn = function() end,
   isOnly = false,
-  isSkipping = false,
+  isSkipped = false,
 
   assertionCount = 0,
   parent = nil,
@@ -116,46 +125,46 @@ local DESCRIBE_OR_TEST_META = {
     local failedTestCount = 0
     local skippedTestCount = 0
 
-    if self.isSkipping then
+    if self.isSkipped then
       printer:printSkip(self)
 
       return failedTestCount, skippedTestCount + 1
     end
 
+    if not getIsExecutingTests(self.filePath) then
+      printer:printSkip(self)
+      return failedTestCount, skippedTestCount + 1
+    end
+    
     if self.isTest then
-      if getIsExecutingTests() then
-        if runnerOptions.testPathIgnorePatterns then
-          for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
-            if self.name:find(pattern) then
-              printer:printSkip(self)
-              return failedTestCount, skippedTestCount + 1
-            end
-          end
-        elseif runnerOptions.testNamePattern then
-          if not self.name:find(runnerOptions.testNamePattern) then
+      if runnerOptions.testPathIgnorePatterns then
+        for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
+          if self.name:find(pattern) then
             printer:printSkip(self)
             return failedTestCount, skippedTestCount + 1
           end
         end
-
-        beforeDescribeOrTest(self)
-
-        local success = printer:printResult(self, xpcall(self.fn, function(err)
-          return debug.traceback(err, 2)
-        end))
-
-        afterDescribeOrTest(self, success)
-
-        if not success then
-          failedTestCount = failedTestCount + 1
-
-          if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
-            error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests"))
-          end
+      elseif runnerOptions.testNamePattern then
+        if not self.name:find(runnerOptions.testNamePattern) then
+          printer:printSkip(self)
+          return failedTestCount, skippedTestCount + 1
         end
-      else
-        printer:printSkip(self)
-        return failedTestCount, skippedTestCount + 1
+      end
+
+      beforeDescribeOrTest(self)
+
+      local success = printer:printResult(self, xpcall(self.fn, function(err)
+        return debug.traceback(err, 2)
+      end))
+
+      afterDescribeOrTest(self, success)
+
+      if not success then
+        failedTestCount = failedTestCount + 1
+
+        if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
+          error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests"))
+        end
       end
     elseif #self.children > 0 then
       for _, child in pairs(self.children) do
@@ -168,7 +177,7 @@ local DESCRIBE_OR_TEST_META = {
     end
 
     if self.isOnly then
-      setIsExecutingTests(false)
+      setNotExecuteTestsIn(self.filePath)
     end
 
     return failedTestCount, skippedTestCount
@@ -181,8 +190,8 @@ DESCRIBE_OR_TEST_META.__index = DESCRIBE_OR_TEST_META
 --- Must be called once befrore all others with a Describe to set as root.
 --- @param describeOrTest DescribeOrTest
 local function registerDescribeOrTest(describeOrTest)
-  describeOrTest.filePath = debug.getinfo(5, "S").source:sub(2)
-  describeOrTest.lineNumber = debug.getinfo(5, "l").currentline
+  describeOrTest.filePath = debug.getinfo(6, "S").source:sub(2)
+  describeOrTest.lineNumber = debug.getinfo(6, "l").currentline
   
   if not currentParent then
     currentParent = describeOrTest
