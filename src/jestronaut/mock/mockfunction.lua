@@ -1,4 +1,5 @@
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
+local allPropertyReplacements = {}
 local allMocks = {}
 
 --- @class MockFunction
@@ -350,6 +351,111 @@ local function fn(defaultImplementation)
   return mockFn
 end
 
+local function makeMethodSpy(object, propertyName)
+  local originalProperty = object[propertyName]
+  local mockFn = fn(originalProperty)
+
+  object[propertyName] = mockFn
+
+  return mockFn
+end
+
+--- Add or extend the existing metatable of the object so that we can spy on a property.
+--- @param object table
+--- @param propertyName string
+--- @param accessType string get or set
+local function makePropertySpy(object, propertyName, accessType)
+  local propertyValue = object[propertyName]
+  local originalMetatable = getmetatable(object)
+  local newMetaTable = {
+    originalMetatable = originalMetatable
+  }
+  local mockFn = fn()
+
+  object[propertyName] = nil -- Set it to nil, so that it is only accessible through the metatable
+
+  setmetatable(object, newMetaTable)
+
+  if newMetaTable.__index == nil then
+    newMetaTable.__index = function(_, key)
+      if key == propertyName then
+        mockFn()
+        return propertyValue
+      end
+
+      return rawget(object, key)
+    end
+  end
+
+  if newMetaTable.__newindex == nil then
+    newMetaTable.__newindex = function(_, key, value)
+      if key == propertyName then
+        mockFn(value)
+        propertyValue = value
+        return
+      end
+
+      rawset(object, key, value)
+    end
+  end
+
+  if accessType ~= nil then
+    if accessType == "get" then
+      newMetaTable.__index = function(_, key)
+        if key == propertyName then
+          mockFn()
+          return propertyValue
+        end
+
+        return rawget(object, key)
+      end
+    elseif accessType == "set" then
+      newMetaTable.__newindex = function(_, key, value)
+        if key == propertyName then
+          mockFn(value)
+          propertyValue = value
+          return
+        end
+
+        rawset(object, key, value)
+      end
+    end
+  end
+
+  return mockFn
+end
+
+local function spyOn(object, propertyName, accessType)
+  local originalProperty = object[propertyName]
+
+  if originalProperty == nil then
+    error("Cannot spyOn the method \"" .. propertyName .. "\" because it is nil")
+  end
+
+  local mock
+  
+  if type(originalProperty) == "function" then
+    mock = makeMethodSpy(object, propertyName)
+  else
+    mock = makePropertySpy(object, propertyName, accessType)
+  end
+
+  allMocks[#allMocks + 1] = mock
+
+  return mock
+end
+
+local function replaceProperty(object, propertyKey, value)
+  local originalValue = object[propertyKey]
+  object[propertyKey] = value
+
+  allPropertyReplacements[#allPropertyReplacements + 1] = {
+    object = object,
+    propertyKey = propertyKey,
+    originalValue = originalValue,
+  }
+end
+
 local function isMockFunction(fn)
   return getmetatable(fn) == MOCK_FUNCTION_META
 end
@@ -358,11 +464,17 @@ local function restoreAllMocks()
   for _, mockFn in ipairs(allMocks) do
     mockFn:mockRestore()
   end
+
+  for _, replacement in ipairs(allPropertyReplacements) do
+    replacement.object[replacement.propertyKey] = replacement.originalValue
+  end
 end
 
 return {
   MOCK_FUNCTION_META = MOCK_FUNCTION_META,
   fn = fn,
+  spyOn = spyOn,
   isMockFunction = isMockFunction,
   restoreAllMocks = restoreAllMocks,
+  replaceProperty = replaceProperty,
 }

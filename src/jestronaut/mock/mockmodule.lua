@@ -40,7 +40,7 @@ end
 --- @param factory function
 --- @param options table
 local function mock(moduleName, factory, options)
-  -- Trim ./ or .\ from the start of the module name.
+    -- Trim ./ or .\ from the start of the module name.
   moduleName = moduleName:gsub("^%.[/\\]", "")
 
   local module = factory ~= nil and factory() 

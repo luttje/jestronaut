@@ -6,6 +6,14 @@ local function exposeTo(targetEnvironment)
     return mockFunctionLib.fn(fn)
   end
 
+  targetEnvironment.replaceProperty = function(targetEnvironment, object, propertyName, value)
+    return mockFunctionLib.replaceProperty(object, propertyName, value)
+  end
+
+  targetEnvironment.spyOn = function(targetEnvironment, object, methodName, accessType)
+    return mockFunctionLib.spyOn(object, methodName, accessType)
+  end
+
   targetEnvironment.mock = function(targetEnvironment, moduleName, factory, options)
     return mockModuleLib.mock(moduleName, factory, options)
   end

@@ -8,7 +8,6 @@ function generatedTestPreLoad(moduleName, moduleBuilder)
   JESTRONAUT_OFFSET_TRACE_LEVEL = (JESTRONAUT_OFFSET_TRACE_LEVEL or 0) + 1
   local module = moduleBuilder(moduleName)
   package.loaded[moduleName] = module
-  package.loaded[moduleName:gsub("_js$", "")] = module
   JESTRONAUT_OFFSET_TRACE_LEVEL = oldJESTRONAUT_OFFSET_TRACE_LEVEL
 end
 
@@ -221,7 +220,13 @@ jestronaut:preloadRequireActual("../myModule", function(moduleName)
   }
 end)
 
-package.loaded['myModule'] = {}
+table.insert(package.loaders, function(moduleName)
+  if moduleName == "SomeClass" then
+    return function(moduleName)
+      return require("SomeClass_js")
+    end
+  end
+end)
 
 -- generated-tests\JestObjectAPI\jest\replaceProperty.lua:22
 package.loaded['utils'] = {
@@ -229,6 +234,8 @@ package.loaded['utils'] = {
       return process.env.HOSTNAME == "localhost"
   end
 }
+
+package.loaded['myModule'] = {}
 
 -- generated-tests\JestObjectAPI\jest\spyOn.lua:19
 package.loaded['audio'] ={
@@ -274,5 +281,11 @@ end
 Number = 'number'
 
 Function = 'function'
+
+process = {
+  env = {
+    HOSTNAME = "127.0.0.1",
+  },
+}
 
 require "generated-tests.all"

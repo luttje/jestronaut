@@ -30,6 +30,9 @@ local tests = {
 		test(
 		    "isLocalhost returns true when HOSTNAME is localhost",
 		    function()
+          for key, value in pairs(utils) do
+            print(key, value)
+          end
 		        jestronaut:replaceProperty(process, "env", {HOSTNAME = "localhost"})
 		        expect(utils:isLocalhost()):toBe(true)
 		    end
