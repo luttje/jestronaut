@@ -341,6 +341,7 @@ end
 local function fn(defaultImplementation)
   defaultImplementation = defaultImplementation or function() end
 
+  --- @type MockFunction
   local mockFn = setmetatable({}, MOCK_FUNCTION_META)
   mockFn:mockReset()
   mockFn:mockImplementation(defaultImplementation)
@@ -348,7 +349,12 @@ local function fn(defaultImplementation)
   return mockFn
 end
 
+local function isMockFunction(fn)
+  return getmetatable(fn) == MOCK_FUNCTION_META
+end
+
 return {
   MOCK_FUNCTION_META = MOCK_FUNCTION_META,
   fn = fn,
+  isMockFunction = isMockFunction,
 }

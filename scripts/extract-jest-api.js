@@ -166,6 +166,69 @@ function luaTestFromExample(example, testDirectory) {
 }
 
 /**
+ * Workarounds for code related to specific methods.
+ * In most cases Regex fixes because TypescriptToLua doesn't transpile them for us.
+ * 
+ * @param {object} method
+ * @param {string} luaTest
+ * 
+ * @returns {string}
+ */
+function applyMethodWorkarounds(method, luaTest) {
+  const lineReplacements = [];
+
+  if (method.name === 'describe') {
+    // Workaround the fact of regex not being transpiled.
+    // JS: if not /^[01]+$/:test(binString) then
+    lineReplacements.push({ 'if not nil:test(binString) then': 'if not string.match(binString, "^[01]+$") then' });
+  } else if (method.name === '.toMatch') {
+    // JS:
+    // expect(essayOnTheBestFlavor()).toMatch(/grapefruit/);
+    // expect(essayOnTheBestFlavor()).toMatch(new RegExp('grapefruit'));
+    lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(nil)': 'expect(essayOnTheBestFlavor()):toMatch("grapefruit")' });
+    lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(__TS__New(RegExp, "grapefruit"))': '' }); // This line is not needed. 
+  } else if (method.name === '.toMatchObject') {
+    // JS: wallColor: expect.stringMatching(/white|yellow/)
+    lineReplacements.push({ 'wallColor = expect:stringMatching(nil)': 'wallColor = expect:stringMatching("white")' }); // There is no OR in Lua Patterns.
+  } else if (method.name === '.toHaveProperty') {
+    // JS: 
+    // - expect(houseForSale).toHaveProperty(['kitchen', 'amenities', 0], 'oven');
+    // - expect(houseForSale).toHaveProperty('livingroom.amenities[0].couch[0][1].dimensions[0]', 20 );
+    // - expect(houseForSale).toHaveProperty(['ceiling.height'], 'tall'); // mistake in the jest docs, should be 2
+    lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"kitchen", "amenities", 0}, "oven")': 'expect(houseForSale):toHaveProperty({"kitchen", "amenities", 1}, "oven")' });
+    lineReplacements.push({ 'expect(houseForSale):toHaveProperty("livingroom.amenities[0].couch[0][1].dimensions[0]", 20)': `expect(houseForSale):toHaveProperty("livingroom.amenities[1].couch[1][2].dimensions[1]", 20)` });
+    lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"ceiling.height"}, "tall")': 'expect(houseForSale):toHaveProperty({"ceiling.height"}, 2)' });
+  } else if (method.name === '.toBeInstanceOf') {
+    lineReplacements.push({ 'expect(__TS__New(A)):toBeInstanceOf(Function)': '' }); // Only Javascript objects are also Functions, this is not the case in Lua.
+  } else if (method.name === '.toThrow') {
+    // JS: 
+    // - expect(drinkOctopus).toThrow(/yuck/);
+    // - expect(drinkOctopus).toThrow(/^yuck, octopus flavor$/);
+    lineReplacements.push({ 'expect(drinkOctopus):toThrow(nil)': 'expect(drinkOctopus):toThrow("yuck")' });
+    lineReplacements.push({ 'expect(drinkOctopus):toThrow(nil)': 'expect(drinkOctopus):toThrow("^yuck, octopus flavor$")' });
+  } else if (method.name === 'expect.stringMatching') {
+    // JS:
+    // - expect.stringMatching(/^Alic/)
+    // - expect.stringMatching(/^[BR]ob/)
+    lineReplacements.push({ 'expect:stringMatching(nil)': "expect:stringMatching('^Alic')" });
+    lineReplacements.push({ 'expect:stringMatching(nil)': "expect:stringMatching('^[BR]ob')" });
+  } else if (method.name === 'expect.not.stringMatching') {
+    // JS: const expected = /Hello world!/;
+    lineReplacements.push({ 'local expected = nil': 'local expected = "Hello world!"' });
+  } else if (method.name == "jest.createMockFromModule") {
+    // JS: expect(utils.isAuthorized('not wizard')).toBe(true);
+    lineReplacements.push({ 'expect(utils:isAuthorized("not wizard")):toBe(true)': 'expect(utils.isAuthorized("not wizard")):toBe(true)' });
+  }
+    
+  for (const lineReplacement of lineReplacements) {
+    const [from, to] = Object.entries(lineReplacement)[0];
+    luaTest = luaTest.replace(from, to);
+  }
+
+  return luaTest;
+}
+
+/**
  * Builds Lua tests from a list of examples.
  * 
  * @param {object} method
@@ -180,54 +243,7 @@ function luaTestsFromMethod(method, testDirectory) {
     const luaTestBase = luaTestFromExample(example, testDirectory);
     let luaTest = luaTestBase;
 
-    // Workarounds for specific methods.
-    // In most cases Regex fixes because TypescriptToLua doesn't transpile them for us.
-    const lineReplacements = [];
-
-    if (method.name === 'describe') {
-      // Workaround the fact of regex not being transpiled.
-      // JS: if not /^[01]+$/:test(binString) then
-      lineReplacements.push({ 'if not nil:test(binString) then': 'if not string.match(binString, "^[01]+$") then' });
-    } else if (method.name === '.toMatch') {
-      // JS:
-      // expect(essayOnTheBestFlavor()).toMatch(/grapefruit/);
-      // expect(essayOnTheBestFlavor()).toMatch(new RegExp('grapefruit'));
-      lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(nil)': 'expect(essayOnTheBestFlavor()):toMatch("grapefruit")' });
-      lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(__TS__New(RegExp, "grapefruit"))': '' }); // This line is not needed. 
-    } else if (method.name === '.toMatchObject') {
-      // JS: wallColor: expect.stringMatching(/white|yellow/)
-      lineReplacements.push({ 'wallColor = expect:stringMatching(nil)': 'wallColor = expect:stringMatching("white")' }); // There is no OR in Lua Patterns.
-    } else if (method.name === '.toHaveProperty') {
-      // JS: 
-      // - expect(houseForSale).toHaveProperty(['kitchen', 'amenities', 0], 'oven');
-      // - expect(houseForSale).toHaveProperty('livingroom.amenities[0].couch[0][1].dimensions[0]', 20 );
-      // - expect(houseForSale).toHaveProperty(['ceiling.height'], 'tall'); // mistake in the jest docs, should be 2
-      lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"kitchen", "amenities", 0}, "oven")': 'expect(houseForSale):toHaveProperty({"kitchen", "amenities", 1}, "oven")' });
-      lineReplacements.push({ 'expect(houseForSale):toHaveProperty("livingroom.amenities[0].couch[0][1].dimensions[0]", 20)': `expect(houseForSale):toHaveProperty("livingroom.amenities[1].couch[1][2].dimensions[1]", 20)` });
-      lineReplacements.push({ 'expect(houseForSale):toHaveProperty({"ceiling.height"}, "tall")': 'expect(houseForSale):toHaveProperty({"ceiling.height"}, 2)' });
-    } else if (method.name === '.toBeInstanceOf') {
-      lineReplacements.push({ 'expect(__TS__New(A)):toBeInstanceOf(Function)': '' }); // Only Javascript objects are also Functions, this is not the case in Lua.
-    } else if (method.name === '.toThrow') {
-      // JS: 
-      // - expect(drinkOctopus).toThrow(/yuck/);
-      // - expect(drinkOctopus).toThrow(/^yuck, octopus flavor$/);
-      lineReplacements.push({ 'expect(drinkOctopus):toThrow(nil)': 'expect(drinkOctopus):toThrow("yuck")' });
-      lineReplacements.push({ 'expect(drinkOctopus):toThrow(nil)': 'expect(drinkOctopus):toThrow("^yuck, octopus flavor$")' });
-    } else if (method.name === 'expect.stringMatching') {
-      // JS:
-      // - expect.stringMatching(/^Alic/)
-      // - expect.stringMatching(/^[BR]ob/)
-      lineReplacements.push({ 'expect:stringMatching(nil)': "expect:stringMatching('^Alic')" });
-      lineReplacements.push({ 'expect:stringMatching(nil)': "expect:stringMatching('^[BR]ob')" });
-    } else if (method.name === 'expect.not.stringMatching') {
-      // JS: const expected = /Hello world!/;
-      lineReplacements.push({ 'local expected = nil': 'local expected = "Hello world!"' });
-    }
-    
-    for (const lineReplacement of lineReplacements) {
-      const [ from, to ] = Object.entries(lineReplacement)[0];
-      luaTest = luaTest.replace(from, to);
-    }
+    luaTest = applyMethodWorkarounds(method, luaTest);
 
     // Find top-level returns (no indentation before them), wrap them in a function, along with related code (up until first 3 empty newlines before it).
     const returnRegex = /(?<code>[\s\S]*?)(?<return>^return\s*[\s\S]*?)(?=\n\n\n|$)/gm;
@@ -278,6 +294,8 @@ function luaTestsFromMethod(method, testDirectory) {
           && !luaTestWithExport.trimEnd().endsWith('return ____exports') && !luaTestWithExport.trimEnd().endsWith('return ____exports;'))
           luaTestWithExport += `\nreturn exports`;
       }
+      
+      luaTestWithExport = applyMethodWorkarounds(method, luaTestWithExport);
 
       packagePreLoads += `generatedTestPreLoad('${title}', function()\n${prefixLines(luaTestWithExport, '\t')}\nend)\n\n`;
 

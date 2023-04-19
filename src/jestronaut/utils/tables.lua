@@ -69,7 +69,6 @@ local function copy(t1)
 
   for k, v in pairs(t1) do
     if type(v) == 'table' then
-      print(k,v)
       t[k] = copy(v)
     else
       t[k] = v

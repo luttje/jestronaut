@@ -21,7 +21,7 @@ generatedTestPreLoad('__tests__/createMockFromModule_test_js', function()
 	    "implementation created by jestronaut.createMockFromModule",
 	    function()
 	        expect(jestronaut:isMockFunction(utils.authorize)):toBe(true)
-	        expect(utils:isAuthorized("not wizard")):toBe(true)
+	        expect(utils.isAuthorized("not wizard")):toBe(true)
 	    end
 	)
 	

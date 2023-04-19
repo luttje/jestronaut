@@ -18,7 +18,7 @@ local function toBe(expect, expected)
   local actual = expect.value
 
   if not expect:checkEquals(actual, expected) then
-    error("Expected " .. tostring(actual) .. (expect.inverse and " not " or "") .. "to be " .. tostring(expected))
+    error("Expected " .. tostring(actual) .. (expect.inverse and " not " or "") .. " to be " .. tostring(expected))
   end
 
   return true

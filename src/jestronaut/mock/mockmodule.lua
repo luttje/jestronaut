@@ -1,4 +1,4 @@
-local MOCK_FUNCTION_META = require "jestronaut.mock.mockfunction".MOCK_FUNCTION_META
+local mockFunctionLib = require "jestronaut.mock.mockfunction"
 local mockedModules = {}
 
 local function setupModuleMocking()
@@ -32,7 +32,7 @@ local function mock(moduleName, factory, options)
   local module = factory ~= nil and factory() 
     or (package.loaded[moduleName] and package.loaded[moduleName] or {})
 
-  setmetatable(module, MOCK_FUNCTION_META)
+  setmetatable(module, mockFunctionLib.MOCK_FUNCTION_META)
 
   mockedModules[moduleName] = module
 
@@ -41,7 +41,21 @@ local function mock(moduleName, factory, options)
   end
 end
 
+local function createMockFromModule(moduleName)
+  local module = require(moduleName)
+
+  -- Iterate all functions in the module and mock them.
+  for key, value in pairs(module) do
+    if type(value) == "function" then
+      module[key] = mockFunctionLib.fn(value)
+    end
+  end
+
+  return module
+end
+
 return {
   mock = mock,
+  createMockFromModule = createMockFromModule,
   setupModuleMocking = setupModuleMocking,
 }

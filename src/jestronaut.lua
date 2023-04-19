@@ -8,14 +8,6 @@ setupModuleMocking()
 --- @class Jestronaut
 local JESTRONAUT = {}
 
-function JESTRONAUT:createMockFromModule(moduleName)
-  return {
-    fn = function()
-      --- @Not implemented
-    end,
-  }; --- @Not implemented
-end
-
 function JESTRONAUT:resetModules()
   -- Hack: https://www.freelists.org/post/luajit/BUG-Assertion-failures-when-unloading-and-reloading-the-ffi-package,1
   -- package.loaded = {} -- Dont do this, breaks everything

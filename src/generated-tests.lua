@@ -194,6 +194,13 @@ package.loaded['toBeWithinRange'] = {
   end
 }
 
+package.loaded['../utils'] = {
+    authorize = function()
+        return "token"
+    end,
+    isAuthorized = function(secret) return secret == "wizard" end
+}
+
 -- generated-tests\GlobalAPI\afterAll.lua:7
 function makeGlobalDatabase()
   return {
