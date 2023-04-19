@@ -246,7 +246,10 @@ local DESCRIBE_OR_TEST_META = {
     if self.isTest then
       if runnerOptions.testPathIgnorePatterns then
         for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
-          if self.filePath:find(pattern) then
+          local plain = not pattern:find("^/.*/$") -- Only enable pattern matching if the pattern doesn't start and end with a slash
+          pattern = plain and pattern or pattern:sub(2, -2) -- Remove the slashes if pattern matching is enabled
+          
+          if self.filePath:find(pattern, nil, plain) then
             printer:printSkip(self)
             return failedTestCount, skippedTestCount + 1
           end
