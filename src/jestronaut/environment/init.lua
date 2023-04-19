@@ -52,8 +52,8 @@ local function exposeTo(targetEnvironment)
   targetEnvironment.describe.skip = makeIndexableFunction(function(mainDescribe, blockName, blockFn) return describeLib.describeSkip(mainDescribe, blockName, blockFn) end)
 
   eachLib.bindTo(targetEnvironment.describe)
-  eachLib.bindTo(targetEnvironment.describe.only)
-  eachLib.bindTo(targetEnvironment.describe.skip)
+  eachLib.bindTo(targetEnvironment.describe.only, targetEnvironment.describe)
+  eachLib.bindTo(targetEnvironment.describe.skip, targetEnvironment.describe)
 
   -- Refactored so both test and it can be used
   local aliases = {'test', 'it'}
@@ -71,14 +71,14 @@ local function exposeTo(targetEnvironment)
     targetEnvironment[alias].todo = function(blockName) return testLib.testTodo(blockName) end
 
     eachLib.bindTo(targetEnvironment[alias])
-    eachLib.bindTo(targetEnvironment[alias].concurrent)
-    eachLib.bindTo(targetEnvironment[alias].concurrent.only)
-    eachLib.bindTo(targetEnvironment[alias].concurrent.skip)
-    eachLib.bindTo(targetEnvironment[alias].failing)
-    eachLib.bindTo(targetEnvironment[alias].failing.only)
-    eachLib.bindTo(targetEnvironment[alias].failing.skip)
-    eachLib.bindTo(targetEnvironment[alias].only)
-    eachLib.bindTo(targetEnvironment[alias].skip)
+    eachLib.bindTo(targetEnvironment[alias].concurrent, targetEnvironment[alias])
+    eachLib.bindTo(targetEnvironment[alias].concurrent.only, targetEnvironment[alias])
+    eachLib.bindTo(targetEnvironment[alias].concurrent.skip, targetEnvironment[alias])
+    eachLib.bindTo(targetEnvironment[alias].failing, targetEnvironment[alias])
+    eachLib.bindTo(targetEnvironment[alias].failing.only, targetEnvironment[alias])
+    eachLib.bindTo(targetEnvironment[alias].failing.skip, targetEnvironment[alias])
+    eachLib.bindTo(targetEnvironment[alias].only, targetEnvironment[alias])
+    eachLib.bindTo(targetEnvironment[alias].skip, targetEnvironment[alias])
   end
 end
 

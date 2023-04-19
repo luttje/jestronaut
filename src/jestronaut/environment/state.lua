@@ -1,6 +1,6 @@
 local optionsLib = require "jestronaut.environment.options"
 local currentDescribeOrTest = nil
-local notExecutingInFiles = {}
+local notExecutingTestsIn = {}
 
 local function getCurrentDescribeOrTest()
   return currentDescribeOrTest
@@ -12,8 +12,9 @@ local isExecutingTests = false
 --- @type DescribeOrTest
 local currentParent = nil
 
-local function getIsExecutingTests(filePath)
-  if filePath and notExecutingInFiles[filePath] then
+--- @param test DescribeOrTest
+local function getIsExecutingTests(test)
+  if test and notExecutingTestsIn[test.filePath] and notExecutingTestsIn[test.filePath] ~= test and notExecutingTestsIn[test.filePath] ~= test.parent then
     return false
   end
 
@@ -24,8 +25,9 @@ local function setIsExecutingTests(executing)
   isExecutingTests = executing
 end
 
-local function setNotExecuteTestsIn(filePath)
-  notExecutingInFiles[filePath] = true
+--- @param test DescribeOrTest
+local function setNotExecuteTestsOtherThan(test)
+  notExecutingTestsIn[test.filePath] = test
 end
 
 local function incrementAssertionCount()
@@ -131,11 +133,11 @@ local DESCRIBE_OR_TEST_META = {
       return failedTestCount, skippedTestCount + 1
     end
 
-    if not getIsExecutingTests(self.filePath) then
+    if not getIsExecutingTests(self) then
       printer:printSkip(self)
       return failedTestCount, skippedTestCount + 1
     end
-    
+
     if self.isTest then
       if runnerOptions.testPathIgnorePatterns then
         for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
@@ -177,7 +179,7 @@ local DESCRIBE_OR_TEST_META = {
     end
 
     if self.isOnly then
-      setNotExecuteTestsIn(self.filePath)
+      setNotExecuteTestsOtherThan(self)
     end
 
     return failedTestCount, skippedTestCount

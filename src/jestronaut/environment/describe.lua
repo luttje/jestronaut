@@ -16,6 +16,7 @@ extendMetaTableIndex(DESCRIBE_META, DESCRIBE_OR_TEST_META)
 --- @return Describe
 local function _internalDescribe(name, fn, options)
   if(type(name) ~= "string") then
+    print(name, fn, options)
     error("describe name must be a string")
   end
 
