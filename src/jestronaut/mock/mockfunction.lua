@@ -49,21 +49,21 @@ local MOCK_FUNCTION_META = {
     if #self._mockImplementationStack > 0 then
       local results = storeReturn(self._mockImplementationStack[#self._mockImplementationStack](...))
       table.remove(self._mockImplementationStack, #self._mockImplementationStack)
-      return functionLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
+      return forcedReturn ~= nil and forcedReturn or results
     end
 
     if self._mockReturnThis then
       local results = storeReturn(self)
-      return functionLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
+      return forcedReturn ~= nil and forcedReturn or results
     end
 
     if self._mockReturnValue ~= nil then
       local results = storeReturn(self._mockReturnValue)
-      return functionLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
+      return forcedReturn ~= nil and forcedReturn or results
     end
 
     local results = storeReturn(self._mockImplementation(...))
-    return functionLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
+    return forcedReturn ~= nil and forcedReturn or results
   end,
 }
 

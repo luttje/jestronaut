@@ -30,6 +30,12 @@ describe('mocks', function()
       mockFn:mockReturnValueOnce(4, 5, 6)
       expect(mockFn(1, 2, 3)):toEqual(4, 5, 6)
     end)
+
+    it('can be called with explicit variable arguments and return values', function()
+      local mockFn = jestronaut:fn()
+      mockFn:mockReturnValueOnce(4, 5, 6)
+      expect(mockFn(1, 2, 3)):toEqual(expect:varargsmatching(4, 5, 6))
+    end)
     
     it:failing('can be match only matching variable arguments and return values', function()
       local mockFn = jestronaut:fn()

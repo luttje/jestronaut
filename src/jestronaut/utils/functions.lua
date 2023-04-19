@@ -1,5 +1,4 @@
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
-local VARARGS_MATCHING_META = require "jestronaut.expect.asymmetricmatchers.varargsMatching".VARARGS_MATCHING_META
 local tableLib = require "jestronaut.utils.tables"
 
 --- Replace a function with a callback function that is called after the original function is called, allowing us to spy on the function.
@@ -51,7 +50,7 @@ local function wrapAndTagVarargsOrReturn(...)
     args = args
   }
 
-  return VARARGS_MATCHING_META.new(varargs)
+  return (require "jestronaut.expect.asymmetricmatchers.varargsMatching".VARARGS_MATCHING_META).new(varargs)
 end
 
 --- Compares varargs or values with the expected values or value
