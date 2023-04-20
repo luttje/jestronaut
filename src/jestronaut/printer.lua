@@ -1,4 +1,5 @@
 local split = require "jestronaut.utils.strings".split
+local styledText = require "jestronaut.utils.styledtexts"
 
 --- @class Printer
 local DefaultPrinter = {
@@ -46,25 +47,46 @@ end
 --- @return boolean
 function DefaultPrinter:printTestResult(describeOrTest, success, ...)
   if not success then
-    print(getIndentations(describeOrTest) .. "\27[30;41m FAIL \27[m\n\t• Test suite failed to run\n\n" .. prefixLines(tostring(...), "\t\t") .. "\n")
+    print(
+      styledText.new()
+        :plain(getIndentations(describeOrTest))
+        :colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
+        :plain("\n\t• Test suite failed to run\n\n")
+        :plain(prefixLines(tostring(...), "\t\t"))
+    )
     return false
   end
   
-  print(getIndentations(describeOrTest) .. "\27[30;42m PASS \27[m\n")
+  print(
+    styledText.new()
+      :plain(getIndentations(describeOrTest))
+      :colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
+      :plain("\n")
+  )
   return true
 end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
 function DefaultPrinter:printSkip(describeOrTest)
-  print(getIndentations(describeOrTest) .. "🚫 Skipped\n")
+  print(
+    styledText.new()
+      :plain(getIndentations(describeOrTest))
+      :colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
+      :plain("\n")
+  )
 end
 
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
 function DefaultPrinter:printRetry(describeOrTest, retryCount)
-  print(getIndentations(describeOrTest) .. "🔁 Retrying (" .. retryCount .. ")...\n")
+  print(
+    styledText.new()
+      :plain(getIndentations(describeOrTest))
+      :colored(" RETRY ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
+      :plain("\n")
+  )
 end
 
 --- Prints text centered, using the printer width.
@@ -108,25 +130,16 @@ function DefaultPrinter:printStart(rootDescribe)
   self:printNewline(2)
 end
 
---- Prints the end message of the test.
---- @param duration number
-function DefaultPrinter:printEnd(duration)
-  local endTime = os.date("%X")
-  self:printNewline()
-  self:printCentered("🏁 Finished tests at " .. endTime .. " in " .. duration .. " seconds.")
-  self:printNewline()
-end
-
 --- Prints the success message of the test.
 --- @param rootDescribe Describe
 --- @param failedTestCount number
 --- @param skippedTestCount number
-function DefaultPrinter:printSuccess(rootDescribe, failedTestCount, skippedTestCount)
+--- @param duration number
+function DefaultPrinter:printSummary(rootDescribe, failedTestCount, skippedTestCount, duration)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local notRunCount = failedTestCount + skippedTestCount
   local relativeSuccess = 1 - (notRunCount / totalTestCount)
 
-  self:printProgress(relativeSuccess)
   self:printNewline()
 
   if(relativeSuccess == 1) then
@@ -135,12 +148,35 @@ function DefaultPrinter:printSuccess(rootDescribe, failedTestCount, skippedTestC
     return
   end
 
-  self:printCentered("✅ " .. (totalTestCount - notRunCount) .. " of " .. totalTestCount .. " tests succeeded.")
-  self:printNewline()
-  self:printCentered("🚨 " .. failedTestCount .. " tests failed.")
-  self:printNewline()
-  self:printCentered("🚫 " .. skippedTestCount .. " tests skipped.")
-  self:printNewline()
+  local testResults = styledText.new()
+    :colored("Tests:       ", styledText.foregroundColors.white)
+
+  if failedTestCount > 0 then
+    testResults = testResults
+      :colored(failedTestCount .. " failed", styledText.foregroundColors.black, styledText.backgroundColors.red)
+      :plain(", ")
+  end
+
+  if skippedTestCount > 0 then
+    testResults = testResults
+      :colored(skippedTestCount .. " skipped", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
+      :plain(", ")
+  end
+
+  testResults = testResults
+    :colored((totalTestCount - notRunCount) .. " passed", styledText.foregroundColors.black, styledText.backgroundColors.green)
+    :plain(", " .. totalTestCount .. " total")
+
+  print(testResults)
+
+  print(
+    styledText.new()
+      :plain("Time:        " .. duration .. "s")
+  )
+  print(
+    styledText.new()
+      :styled("Ran all test suites.", styledText.styles.dim)
+  )
 end
 
 --- Prints the progress of the test.

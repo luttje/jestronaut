@@ -409,15 +409,13 @@ end
 local function runTests(runnerOptions)
   local printer = runnerOptions.printer or (require "jestronaut.printer".DefaultPrinter)
 
-  local startTime = os.clock()
   setIsExecutingTests(true)
 
   printer:printStart(currentParent)
 
+  local startTime = os.clock()
   local success, errOrFailedTestCount, skippedTestCount = pcall(currentParent.run, currentParent, printer, runnerOptions)
-
   local endTime = os.clock()
-  printer:printEnd(endTime - startTime)
 
   if not success then
     if not errOrFailedTestCount:find("^Bail after") then
@@ -426,9 +424,9 @@ local function runTests(runnerOptions)
     end
 
     printer:printFailFast(currentParent)
-  else
-    printer:printSuccess(currentParent, errOrFailedTestCount, skippedTestCount)
   end
+
+  printer:printSummary(currentParent, errOrFailedTestCount, skippedTestCount, endTime - startTime)
 
   setIsExecutingTests(false)
 end
