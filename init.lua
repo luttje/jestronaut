@@ -24,6 +24,6 @@ jestronaut:configure({
   }
 }):registerTests(function()
   -- Setup and register the tests:
-  require "tests"
   require "generated-tests"
+  require "tests"
 end):runTests()

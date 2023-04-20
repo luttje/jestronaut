@@ -1,12 +1,29 @@
+local split = require "jestronaut.utils.strings".split
+
 --- @class Printer
 local DefaultPrinter = {
   width = 75,
 }
 
+--- Prefixes each line in a string with a prefix.
+--- @param string string
+--- @param prefix string
+--- @return string
+local function prefixLines(string, prefix)
+  local lines = split(string, "\n")
+  local prefixedLines = {}
+
+  for _, line in ipairs(lines) do
+    table.insert(prefixedLines, prefix .. line)
+  end
+
+  return table.concat(prefixedLines, "\n")
+end
+
 --- Gets the indentations.
 --- @param describeOrTest DescribeOrTest
 --- @return string
-function DefaultPrinter:getIndentations(describeOrTest)
+local function getIndentations(describeOrTest)
   return string.rep("  ", describeOrTest.indentationLevel)
 end
 
@@ -14,12 +31,12 @@ end
 --- @param describeOrTest DescribeOrTest
 function DefaultPrinter:printName(describeOrTest)
   if describeOrTest.isTest then
-    print(self:getIndentations(describeOrTest) .. "🧪 " .. describeOrTest.name .. "...")
+    print(getIndentations(describeOrTest) .. "🧪 " .. describeOrTest.name .. "...")
   else
-    print(self:getIndentations(describeOrTest) .. "📦 " .. describeOrTest.name .. "...")
+    print(getIndentations(describeOrTest) .. "📦 " .. describeOrTest.name .. "...")
   end
 
-  print(self:getIndentations(describeOrTest) .. "(" .. describeOrTest.filePath .. ":" .. describeOrTest.lineNumber .. ")")
+  print(getIndentations(describeOrTest) .. "(" .. describeOrTest.filePath .. ":" .. describeOrTest.lineNumber .. ")")
 end
 
 --- Prints the result of the test and returns whether it passed.
@@ -29,25 +46,25 @@ end
 --- @return boolean
 function DefaultPrinter:printTestResult(describeOrTest, success, ...)
   if not success then
-    print(self:getIndentations(describeOrTest) .. "❌ Failed with error: " .. tostring(...) .. "\n")
+    print(getIndentations(describeOrTest) .. "\27[30;41m FAIL \27[m\n\t• Test suite failed to run\n\n" .. prefixLines(tostring(...), "\t\t") .. "\n")
     return false
   end
   
-  print(self:getIndentations(describeOrTest) .. "✅ Passed\n")
+  print(getIndentations(describeOrTest) .. "\27[30;42m PASS \27[m\n")
   return true
 end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
 function DefaultPrinter:printSkip(describeOrTest)
-  print(self:getIndentations(describeOrTest) .. "🚫 Skipped\n")
+  print(getIndentations(describeOrTest) .. "🚫 Skipped\n")
 end
 
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
 function DefaultPrinter:printRetry(describeOrTest, retryCount)
-  print(self:getIndentations(describeOrTest) .. "🔁 Retrying (" .. retryCount .. ")...\n")
+  print(getIndentations(describeOrTest) .. "🔁 Retrying (" .. retryCount .. ")...\n")
 end
 
 --- Prints text centered, using the printer width.

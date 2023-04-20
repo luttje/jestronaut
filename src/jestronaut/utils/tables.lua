@@ -1,4 +1,5 @@
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
+local split = require "jestronaut.utils.strings".split
 
 local function equals(objectA, objectB, ignoreMetatable)
   if asymmetricMatcherLib.isMatcher(objectA) then
