@@ -80,46 +80,56 @@ local endFunction = "m"
 local STYLED_TEXT_META = {}
 STYLED_TEXT_META.__index = STYLED_TEXT_META
 
-function STYLED_TEXT_META:add(text, code)
+function STYLED_TEXT_META:addText(text, code)
   if code then
-    self.parts[#self.parts + 1] = startFunction .. code .. endFunction .. text .. startFunction .. resetColorsCode .. endFunction
-  else
+    self.parts[#self.parts + 1] = startFunction .. code .. endFunction .. (text or "") .. startFunction .. resetColorsCode .. endFunction
+  elseif text then
     self.parts[#self.parts + 1] = text
   end
 
   return self
 end
 
+function STYLED_TEXT_META:addCommand(code)
+  self.parts[#self.parts + 1] = startFunction .. code .. "\r"
+  return self
+end
+
 function STYLED_TEXT_META:plain(text)
-  return self:add(text, "")
+  return self:addText(text, "")
 end
 
 function STYLED_TEXT_META:colored(text, foreground, background)
   if background then
-    return self:add(text, foreground .. ";" .. background)
+    return self:addText(text, foreground .. ";" .. background)
   end
 
-  return self:add(text, foreground)
+  return self:addText(text, foreground)
 end
 
 function STYLED_TEXT_META:background(text, background)
-  return self:add(text, background)
+  return self:addText(text, background)
 end
 
 function STYLED_TEXT_META:styled(text, style)
-  return self:add(text, style)
+  return self:addText(text, style)
 end
 
-function STYLED_TEXT_META:cursor(text, command, ...)
-  return self:add(text, string.format(command, ...))
+function STYLED_TEXT_META:cursor(command, ...)
+  return self:addCommand(command:format(...))
 end
 
-function STYLED_TEXT_META:erase(text, command)
-  return self:add(text, command)
+function STYLED_TEXT_META:erase(command, reps)
+  reps = reps or 1
+  for i = 1, reps do
+    self:addCommand(command)
+  end
+
+  return self
 end
 
-function STYLED_TEXT_META:reset(text)
-  return self:add(text, resetColorsCode)
+function STYLED_TEXT_META:reset()
+  return self:addCommand(resetColorsCode)
 end
 
 function STYLED_TEXT_META:__tostring()

@@ -276,15 +276,18 @@ local DESCRIBE_OR_TEST_META = {
     local skippedTestCount = 0
 
     if self.isSkipped then
-      printer:printSkip(self)
+      printer:testSkipped(self)
 
       return failedTestCount, skippedTestCount + 1
     end
 
     if not getIsExecutingTests(self) then
-      printer:printSkip(self)
+      self.isSkipped = true
+      printer:testSkipped(self)
       return failedTestCount, skippedTestCount + 1
     end
+    
+    printer:startingTest(self)
 
     if self.isTest then
       if runnerOptions.testPathIgnorePatterns then
@@ -293,13 +296,15 @@ local DESCRIBE_OR_TEST_META = {
           pattern = plain and pattern or pattern:sub(2, -2) -- Remove the slashes if pattern matching is enabled
           
           if self.filePath:find(pattern, nil, plain) then
-            printer:printSkip(self)
+            self.isSkipped = true
+            printer:testSkipped(self)
             return failedTestCount, skippedTestCount + 1
           end
         end
       elseif runnerOptions.testNamePattern then
         if not self.name:find(runnerOptions.testNamePattern) then
-          printer:printSkip(self)
+          self.isSkipped = true
+          printer:testSkipped(self)
           return failedTestCount, skippedTestCount + 1
         end
       end
@@ -324,8 +329,10 @@ local DESCRIBE_OR_TEST_META = {
 
       afterDescribeOrTest(self, success)
 
+      self.success = success
+
       if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
-        printer:printTestResult(self, success, unpack(results))
+        printer:testFinished(self, success, unpack(results))
       end
 
       if not success then
@@ -335,7 +342,7 @@ local DESCRIBE_OR_TEST_META = {
           if retrySettings.timesRemaining > 0 then
             retrySettings.timesRemaining = retrySettings.timesRemaining - 1
 
-            printer:printRetry(self, retrySettings.timesRemaining + 1)
+            printer:testRetrying(self, retrySettings.timesRemaining + 1)
 
             return self:run(printer, runnerOptions)
           end
@@ -345,13 +352,20 @@ local DESCRIBE_OR_TEST_META = {
           error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
         end
       end
-    elseif #self.children > 0 then
-      for _, child in pairs(self.children) do
-        printer:printName(child)
-        local childFailedCount, childSkippedCount = child:run(printer, runnerOptions)
+    else
+      if #self.children > 0 then
+        for _, child in pairs(self.children) do
+          local childFailedCount, childSkippedCount = child:run(printer, runnerOptions)
 
-        failedTestCount = failedTestCount + childFailedCount
-        skippedTestCount = skippedTestCount + childSkippedCount
+          failedTestCount = failedTestCount + childFailedCount
+          skippedTestCount = skippedTestCount + childSkippedCount
+        end
+
+        self.success = failedTestCount == 0
+      end
+
+      if self.parent then
+        printer:testFinished(self, self.success)
       end
     end
 
@@ -408,6 +422,8 @@ end
 --- @param runnerOptions RunnerOptions
 local function runTests(runnerOptions)
   local printer = runnerOptions.printer or (require "jestronaut.printer".DefaultPrinter)
+
+  printer.isVerbose = runnerOptions.verbose
 
   setIsExecutingTests(true)
 

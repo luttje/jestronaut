@@ -1,8 +1,11 @@
 local split = require "jestronaut.utils.strings".split
 local styledText = require "jestronaut.utils.styledtexts"
+local originalPrint = print
 
 --- @class Printer
 local DefaultPrinter = {
+  isVerbose = false,
+
   width = 75,
 }
 
@@ -28,16 +31,98 @@ local function getIndentations(describeOrTest)
   return string.rep("  ", describeOrTest.indentationLevel)
 end
 
---- Prints the name of the test.
---- @param describeOrTest DescribeOrTest
-function DefaultPrinter:printName(describeOrTest)
-  if describeOrTest.isTest then
-    print(getIndentations(describeOrTest) .. "🧪 " .. describeOrTest.name .. "...")
-  else
-    print(getIndentations(describeOrTest) .. "📦 " .. describeOrTest.name .. "...")
+--- Redraws the summary lines, clearing the previous ones.
+-- Draws a summary like:
+-- PASS ./src/tests/expectAPI/toBeCloseTo.lua
+-- RUNS ./src/tests/expectAPI/toBeCloseToYo.lua
+--   ✓ toBeCloseTo
+--   ✓ toBeCloseToYo
+--   o toBeCloseToYoYo
+function DefaultPrinter:redrawSummary()
+  local currentTestDescribes = self.currentTestDescribes or {}
+  local currentTests = self.currentTests or {}
+
+  local summary = styledText.new()
+  local height = 0
+
+  for _, describe in pairs(currentTestDescribes) do
+    local isActiveDescribe = false
+
+    if describe.success then
+      summary:colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
+    else
+      -- summary:colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
+      summary:colored(" RUNS ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
+      isActiveDescribe = true
+    end
+    summary:plain(" " .. describe.filePath .. "\n")
+    height = height + 1
+
+    if isActiveDescribe then
+      for _, test in ipairs(currentTests) do
+        summary:plain(getIndentations(test))
+
+        if test.success then
+          summary:colored("✓", styledText.foregroundColors.green)
+        elseif test.isSkipped then
+          summary:colored("⚠", styledText.foregroundColors.yellow)
+        else
+          summary:colored("✗", styledText.foregroundColors.red)
+        end
+
+        summary:plain(" " .. test.name .. "\n")
+        height = height + 1
+      end
+    end
   end
 
-  print(getIndentations(describeOrTest) .. "(" .. describeOrTest.filePath .. ":" .. describeOrTest.lineNumber .. ")")
+  -- Remove all the previous lines (same height) and print the new summary.
+  local clearLines = styledText.new()
+    :cursor(styledText.cursorCodes.moveUpLines, 1)
+    :erase(styledText.eraseCodes.eraseLine)
+    
+  originalPrint(tostring(clearLines):rep(height) .. tostring(summary))
+end
+
+
+--- Prints the name of the test.
+--- @param describeOrTest DescribeOrTest
+function DefaultPrinter:startingTest(describeOrTest)
+  -- Override print so there's no interference with the test output.
+  print = function() end -- TODO: Store the print and output it at the end of the test.
+
+  if describeOrTest.isDescribe then
+    self.currentTestDescribes = self.currentTestDescribes or {}
+    local exists = false
+
+    for _, value in pairs(self.currentTestDescribes) do
+      if value.filePath == describeOrTest.filePath then
+        exists = true
+        break
+      end
+    end
+    
+    if not exists then
+      self.currentTests = {}
+      table.insert(self.currentTestDescribes, describeOrTest)
+    end
+  else
+    self.currentTests = self.currentTests or {}
+    table.insert(self.currentTests, describeOrTest)
+  end
+
+  if not self.isVerbose then
+    self:redrawSummary()
+    return
+  end
+
+  if describeOrTest.isTest then
+    originalPrint(getIndentations(describeOrTest) .. "🧪 " .. describeOrTest.name .. "...")
+  else
+    originalPrint(getIndentations(describeOrTest) .. "📦 " .. describeOrTest.name .. "...")
+  end
+
+  originalPrint(getIndentations(describeOrTest) .. "(" .. describeOrTest.filePath .. ":" .. describeOrTest.lineNumber .. ")")
 end
 
 --- Prints the result of the test and returns whether it passed.
@@ -45,9 +130,21 @@ end
 --- @param success boolean
 --- @param ... any
 --- @return boolean
-function DefaultPrinter:printTestResult(describeOrTest, success, ...)
+function DefaultPrinter:testFinished(describeOrTest, success, ...)
+  print = originalPrint
+
+  if describeOrTest.isDescribe then
+    
+  end
+
+  if not self.isVerbose then
+    self:redrawSummary()
+
+    return
+  end
+  
   if not success then
-    print(
+    originalPrint(
       styledText.new()
         :plain(getIndentations(describeOrTest))
         :colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
@@ -57,7 +154,7 @@ function DefaultPrinter:printTestResult(describeOrTest, success, ...)
     return false
   end
   
-  print(
+  originalPrint(
     styledText.new()
       :plain(getIndentations(describeOrTest))
       :colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
@@ -68,8 +165,14 @@ end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
-function DefaultPrinter:printSkip(describeOrTest)
-  print(
+function DefaultPrinter:testSkipped(describeOrTest)
+  if not self.isVerbose then
+    self:redrawSummary()
+
+    return
+  end
+  
+  originalPrint(
     styledText.new()
       :plain(getIndentations(describeOrTest))
       :colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
@@ -80,8 +183,14 @@ end
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
-function DefaultPrinter:printRetry(describeOrTest, retryCount)
-  print(
+function DefaultPrinter:testRetrying(describeOrTest, retryCount)
+  if not self.isVerbose then
+    self:redrawSummary()
+
+    return
+  end
+  
+  originalPrint(
     styledText.new()
       :plain(getIndentations(describeOrTest))
       :colored(" RETRY ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
@@ -96,7 +205,7 @@ function DefaultPrinter:printCentered(text)
   local leftPadding = math.floor((self.width - textLength) * .5)
   local rightPadding = self.width - textLength - leftPadding
 
-  print(((" "):rep(leftPadding)) .. text .. (" "):rep(rightPadding))
+  originalPrint(((" "):rep(leftPadding)) .. text .. (" "):rep(rightPadding))
 end
 
 --- Creates a horizontal line using the printer width.
@@ -104,7 +213,7 @@ end
 function DefaultPrinter:printHorizontalLine(char)
   char = char or "─"
 
-  print(char:rep(self.width))
+  originalPrint(char:rep(self.width))
 end
 
 --- Creates some space by printing a new line.
@@ -113,7 +222,7 @@ function DefaultPrinter:printNewline(count)
   count = count or 1
 
   for i = 1, count do
-    print()
+    originalPrint()
   end
 end
 
@@ -167,13 +276,13 @@ function DefaultPrinter:printSummary(rootDescribe, failedTestCount, skippedTestC
     :colored((totalTestCount - notRunCount) .. " passed", styledText.foregroundColors.black, styledText.backgroundColors.green)
     :plain(", " .. totalTestCount .. " total")
 
-  print(testResults)
+  originalPrint(testResults)
 
-  print(
+  originalPrint(
     styledText.new()
       :plain("Time:        " .. duration .. "s")
   )
-  print(
+  originalPrint(
     styledText.new()
       :styled("Ran all test suites.", styledText.styles.dim)
   )
@@ -194,7 +303,7 @@ function DefaultPrinter:printProgress(relativeSuccess)
   progressBar = progressBar .. "]"
 
   self:printHorizontalLine()
-  print(progressBar .. " " .. suffix)
+  originalPrint(progressBar .. " " .. suffix)
   self:printHorizontalLine()
 end
 

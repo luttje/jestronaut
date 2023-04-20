@@ -8,6 +8,8 @@ jestronaut:configure({
     "./src/tests/",
     "./src/generated-tests/",
   },
+
+  -- Jestronaut will automatically ignore any files listed here. If the path starts and ends with / it will be treated as a Lua pattern.
   testPathIgnorePatterns = {
     "/generated%-tests/ExpectAPI/toBeCloseTo.lua$/", -- This test fails because of floating point errors (the example in Jest docs is meant to fail)
     "/generated%-tests/GlobalAPI/test.lua$/", -- This test fails because of async not being supported
@@ -21,7 +23,10 @@ jestronaut:configure({
     "generated-tests/MockFunctionAPI/mockFn/mockName.lua", -- The docs have mockFn commented, causing this test to fail.
     "generated-tests/GlobalAPI/test/failing.lua", -- This test succeeds, but it's supposed to fail
     "generated-tests/GlobalAPI/test/failing/each.lua", -- This test succeeds, but it's supposed to fail
-  }
+  },
+
+  -- Set to true to show every test result, false to keep output compact.
+  -- verbose = true,
 }):registerTests(function()
   -- Setup and register the tests:
   require "generated-tests"
