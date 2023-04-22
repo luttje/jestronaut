@@ -268,26 +268,26 @@ local DESCRIBE_OR_TEST_META = {
 
   --- Runs the test and returns the amount of failed and skippewd tests.
   --- @param self DescribeOrTest
-  --- @param printer Printer
+  --- @param reporter Reporter
   --- @param runnerOptions RunnerOptions
   --- @return number
-  run = function(self, printer, runnerOptions)
+  run = function(self, reporter, runnerOptions)
     local failedTestCount = 0
     local skippedTestCount = 0
 
     if self.isSkipped then
-      printer:testSkipped(self)
+      reporter:testSkipped(self)
 
       return failedTestCount, skippedTestCount + 1
     end
 
     if not getIsExecutingTests(self) then
       self.isSkipped = true
-      printer:testSkipped(self)
+      reporter:testSkipped(self)
       return failedTestCount, skippedTestCount + 1
     end
     
-    printer:startingTest(self)
+    reporter:startingTest(self)
 
     if self.isTest then
       if runnerOptions.testPathIgnorePatterns then
@@ -297,14 +297,14 @@ local DESCRIBE_OR_TEST_META = {
           
           if self.filePath:find(pattern, nil, plain) then
             self.isSkipped = true
-            printer:testSkipped(self)
+            reporter:testSkipped(self)
             return failedTestCount, skippedTestCount + 1
           end
         end
       elseif runnerOptions.testNamePattern then
         if not self.name:find(runnerOptions.testNamePattern) then
           self.isSkipped = true
-          printer:testSkipped(self)
+          reporter:testSkipped(self)
           return failedTestCount, skippedTestCount + 1
         end
       end
@@ -332,7 +332,7 @@ local DESCRIBE_OR_TEST_META = {
       self.success = success
 
       if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
-        printer:testFinished(self, success, unpack(results))
+        reporter:testFinished(self, success, unpack(results))
       end
 
       if not success then
@@ -342,9 +342,9 @@ local DESCRIBE_OR_TEST_META = {
           if retrySettings.timesRemaining > 0 then
             retrySettings.timesRemaining = retrySettings.timesRemaining - 1
 
-            printer:testRetrying(self, retrySettings.timesRemaining + 1)
+            reporter:testRetrying(self, retrySettings.timesRemaining + 1)
 
-            return self:run(printer, runnerOptions)
+            return self:run(reporter, runnerOptions)
           end
         end
 
@@ -355,7 +355,7 @@ local DESCRIBE_OR_TEST_META = {
     else
       if #self.children > 0 then
         for _, child in pairs(self.children) do
-          local childFailedCount, childSkippedCount = child:run(printer, runnerOptions)
+          local childFailedCount, childSkippedCount = child:run(reporter, runnerOptions)
 
           failedTestCount = failedTestCount + childFailedCount
           skippedTestCount = skippedTestCount + childSkippedCount
@@ -365,7 +365,7 @@ local DESCRIBE_OR_TEST_META = {
       end
 
       if self.parent then
-        printer:testFinished(self, self.success)
+        reporter:testFinished(self, self.success)
       end
     end
 
@@ -421,16 +421,16 @@ end
 --- Runs all registered tests.
 --- @param runnerOptions RunnerOptions
 local function runTests(runnerOptions)
-  local printer = runnerOptions.printer or (require "jestronaut.printer".DefaultPrinter)
+  local reporter = runnerOptions.reporter or (require "jestronaut.reporter".DefaultReporter)
 
-  printer.isVerbose = runnerOptions.verbose
+  reporter.isVerbose = runnerOptions.verbose
 
   setIsExecutingTests(true)
 
-  printer:printStart(currentParent)
+  reporter:printStart(currentParent)
 
   local startTime = os.clock()
-  local success, errOrFailedTestCount, skippedTestCount = pcall(currentParent.run, currentParent, printer, runnerOptions)
+  local success, errOrFailedTestCount, skippedTestCount = pcall(currentParent.run, currentParent, reporter, runnerOptions)
   local endTime = os.clock()
 
   if not success then
@@ -439,10 +439,10 @@ local function runTests(runnerOptions)
       error(errOrFailedTestCount)
     end
 
-    printer:printFailFast(currentParent)
+    reporter:printFailFast(currentParent)
   end
 
-  printer:printSummary(currentParent, errOrFailedTestCount, skippedTestCount, endTime - startTime)
+  reporter:printSummary(currentParent, errOrFailedTestCount, skippedTestCount, endTime - startTime)
 
   setIsExecutingTests(false)
 end

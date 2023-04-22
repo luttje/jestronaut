@@ -2,8 +2,8 @@ local split = require "jestronaut.utils.strings".split
 local styledText = require "jestronaut.utils.styledtexts"
 local originalPrint = print
 
---- @class Printer
-local DefaultPrinter = {
+--- @class Reporter
+local DefaultReporter = {
   isVerbose = false,
 
   width = 75,
@@ -38,7 +38,7 @@ end
 --   ✓ toBeCloseTo
 --   ✓ toBeCloseToYo
 --   o toBeCloseToYoYo
-function DefaultPrinter:redrawSummary()
+function DefaultReporter:redrawSummary()
   local currentTestDescribes = self.currentTestDescribes or {}
   local currentTests = self.currentTests or {}
 
@@ -87,7 +87,7 @@ end
 
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
-function DefaultPrinter:startingTest(describeOrTest)
+function DefaultReporter:startingTest(describeOrTest)
   -- Override print so there's no interference with the test output.
   print = function() end -- TODO: Store the print and output it at the end of the test.
 
@@ -130,7 +130,7 @@ end
 --- @param success boolean
 --- @param ... any
 --- @return boolean
-function DefaultPrinter:testFinished(describeOrTest, success, ...)
+function DefaultReporter:testFinished(describeOrTest, success, ...)
   print = originalPrint
 
   if describeOrTest.isDescribe then
@@ -165,7 +165,7 @@ end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
-function DefaultPrinter:testSkipped(describeOrTest)
+function DefaultReporter:testSkipped(describeOrTest)
   if not self.isVerbose then
     self:redrawSummary()
 
@@ -183,7 +183,7 @@ end
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
-function DefaultPrinter:testRetrying(describeOrTest, retryCount)
+function DefaultReporter:testRetrying(describeOrTest, retryCount)
   if not self.isVerbose then
     self:redrawSummary()
 
@@ -198,9 +198,9 @@ function DefaultPrinter:testRetrying(describeOrTest, retryCount)
   )
 end
 
---- Prints text centered, using the printer width.
+--- Prints text centered, using the reporter width.
 --- @param text string
-function DefaultPrinter:printCentered(text)
+function DefaultReporter:printCentered(text)
   local textLength = text:len()
   local leftPadding = math.floor((self.width - textLength) * .5)
   local rightPadding = self.width - textLength - leftPadding
@@ -208,9 +208,9 @@ function DefaultPrinter:printCentered(text)
   originalPrint(((" "):rep(leftPadding)) .. text .. (" "):rep(rightPadding))
 end
 
---- Creates a horizontal line using the printer width.
+--- Creates a horizontal line using the reporter width.
 --- @param char string
-function DefaultPrinter:printHorizontalLine(char)
+function DefaultReporter:printHorizontalLine(char)
   char = char or "─"
 
   originalPrint(char:rep(self.width))
@@ -218,7 +218,7 @@ end
 
 --- Creates some space by printing a new line.
 --- @param count number
-function DefaultPrinter:printNewline(count)
+function DefaultReporter:printNewline(count)
   count = count or 1
 
   for i = 1, count do
@@ -228,7 +228,7 @@ end
 
 --- Prints the start message of the test.
 --- @param rootDescribe Describe
-function DefaultPrinter:printStart(rootDescribe)
+function DefaultReporter:printStart(rootDescribe)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local startTime = os.date("%X")
 
@@ -244,7 +244,7 @@ end
 --- @param failedTestCount number
 --- @param skippedTestCount number
 --- @param duration number
-function DefaultPrinter:printSummary(rootDescribe, failedTestCount, skippedTestCount, duration)
+function DefaultReporter:printSummary(rootDescribe, failedTestCount, skippedTestCount, duration)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local notRunCount = failedTestCount + skippedTestCount
   local relativeSuccess = 1 - (notRunCount / totalTestCount)
@@ -290,7 +290,7 @@ end
 
 --- Prints the progress of the test.
 --- @param relativeSuccess number
-function DefaultPrinter:printProgress(relativeSuccess)
+function DefaultReporter:printProgress(relativeSuccess)
   local suffix = math.floor(relativeSuccess * 100) .. "% of tests succeeded"
   
   local progressBar = "["
@@ -309,10 +309,10 @@ end
 
 --- Prints the fail fast message of the test.
 --- @param describeOrTest DescribeOrTest
-function DefaultPrinter:printFailFast(describeOrTest)
+function DefaultReporter:printFailFast(describeOrTest)
   self:printCentered("🚨 Fail fast triggered by " .. describeOrTest.name .. ".")
 end
 
 return {
-  DefaultPrinter = DefaultPrinter,
+  DefaultReporter = DefaultReporter,
 }
