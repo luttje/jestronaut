@@ -428,24 +428,49 @@ local function makeDescribeOrTestForRun(describeOrTest, runnerOptions)
   return describeOrTestForRun, (describeOrTestForRun.toSkip and 1 or 0)
 end
 
---- Recursively copies a Describe or Test to be run.
+--- Recursively copies a Describe or Test to be run, returning the root describe, a table with all describes grouped by file path, and the number of skipped tests.
 --- @param describeOrTest DescribeOrTest
 --- @param runnerOptions RunnerOptions
---- @return DescribeOrTestForRun, number
+--- @return DescribeOrTestForRun, table, number
 local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
   local describeOrTestForRun, skippedTestCount = makeDescribeOrTestForRun(describeOrTest, runnerOptions)
+  local describesByFilePath = {}
 
-  if describeOrTest.children then
+  local function insertChildWithFile(child)
+    local fileIndex = #describesByFilePath + 1
+
+    for i, file in ipairs(describesByFilePath) do
+      if file.filePath == child.filePath then
+        fileIndex = i
+        break
+      end
+    end
+
+    describesByFilePath[fileIndex] = describesByFilePath[fileIndex] or {
+      filePath = child.filePath,
+      describesOrTests = {},
+    }
+
+    table.insert(describesByFilePath[fileIndex].describesOrTests, child)
+  end
+  
+  if describeOrTest.isDescribe then
     for _, child in pairs(describeOrTest.children) do
-      local child, childSkippedCount = copyDescribeOrTestForRun(child, runnerOptions)
-
+      local child, childDescribesByFilePath, childSkippedCount = copyDescribeOrTestForRun(child, runnerOptions)
+        
       describeOrTestForRun:addChild(child)
 
       skippedTestCount = skippedTestCount + childSkippedCount
     end
   end
 
-  return describeOrTestForRun, skippedTestCount
+  if describeOrTestForRun.children then
+    for _, child in pairs(describeOrTestForRun.children) do
+      insertChildWithFile(child)
+    end
+  end
+
+  return describeOrTestForRun, describesByFilePath, skippedTestCount
 end
 
 --- Registers a Describe or Test to be run.
@@ -495,8 +520,8 @@ local function runTests(runnerOptions)
   reporter.isVerbose = runnerOptions.verbose
   
   -- currentParent is the root describe at this point
-  local testSetRoot, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
-  reporter:setTestSet(testSetRoot)
+  local testSetRoot, describesByFilePath, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
+  reporter:setTestSet(describesByFilePath)
 
   setIsExecutingTests(true)
 

@@ -29,7 +29,7 @@ jestronaut:configure({
   -- verbose = true,
 
   -- Slow down the tests by x milliseconds to make it easier to follow the output.
-  slowDown = 500,
+  slowDown = 200,
 }):registerTests(function()
   -- Setup and register the tests:
   require "generated-tests"

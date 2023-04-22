@@ -31,35 +31,41 @@ local function getIndentations(describeOrTest)
   return string.rep("  ", describeOrTest.indentationLevel)
 end
 
---- Gets the summary text and the amount of lines it takes up.
---- @param currentDescribe DescribeOrTestForRun
---- @param isRoot boolean
---- @return string, number
-function DefaultReporter:getSummary(currentDescribe, isRoot)
+--- @param filePath string
+function DefaultReporter:getFileByPath(filePath)
+  for _, file in ipairs(self.describesByFilePath) do
+    if filePath == file.filePath then
+      return file
+    end
+  end
+end
+
+local function drawDescribeOrTest(describeOrTest)
   local summary = styledText.new()
 
-  if not isRoot then
-    if currentDescribe.hasRun then
-      if currentDescribe.success then
-        summary:colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
-      else
-        summary:colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
-      end
-    elseif currentDescribe.toSkip then
-      summary:colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.blue)
+  summary:plain(getIndentations(describeOrTest))
+
+  if describeOrTest.hasRun then
+    if describeOrTest.success then
+      summary:colored("✓", styledText.foregroundColors.green)
     else
-      summary:colored(" RUNS ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
+      summary:colored("✗", styledText.foregroundColors.red)
     end
-    summary:plain(" " .. currentDescribe.filePath .. "\n")
+  elseif describeOrTest.toSkip then
+    summary:colored("⚠", styledText.foregroundColors.blue)
+  else
+    summary:colored("o", styledText.foregroundColors.yellow)
   end
+
+  summary:plain(" " .. describeOrTest.name .. "\n")
   
-  if (isRoot or currentDescribe.isRunning) and currentDescribe.children then
-    for _, describeOrTest in ipairs(currentDescribe.children) do
+  if (describeOrTest.isRunning and describeOrTest.children) then
+    for _, describeOrTest in ipairs(describeOrTest.children) do
       if describeOrTest.isDescribe then
-        summary:plain(self:getSummary(describeOrTest))
+        summary:plain(drawDescribeOrTest(describeOrTest))
       else
         summary:plain(getIndentations(describeOrTest))
-
+        
         if describeOrTest.hasRun then
           if describeOrTest.success then
             summary:colored("✓", styledText.foregroundColors.green)
@@ -77,12 +83,48 @@ function DefaultReporter:getSummary(currentDescribe, isRoot)
     end
   end
 
+  return tostring(summary)
+end
+
+--- Gets the summary text and the amount of lines it takes up.
+--- @param describesByFilePath table
+--- @return string, number
+function DefaultReporter:getSummary(describesByFilePath)
+  local summary = styledText.new()
+
+  for _, file in ipairs(describesByFilePath) do
+    local filePath = file.filePath
+    local describesOrTests = file.describesOrTests
+
+    if file.hasRun then
+      if file.success then
+        summary:colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
+      else
+        summary:colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
+      end
+
+      summary:plain(filePath .. "\n")
+    elseif file.toSkip then
+      summary:colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.blue)
+      summary:plain(filePath .. "\n")
+    else
+      summary:colored(" RUNS ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
+      summary:plain(filePath .. "\n")
+      
+      if file.isRunning then
+        for _, describeOrTest in ipairs(describesOrTests) do
+          summary:plain(drawDescribeOrTest(describeOrTest))
+        end
+      end
+    end
+  end
+
   return tostring(summary), summary:getLineCount()
 end
 
 --- Redraws the summary lines, clearing the previous ones.
 function DefaultReporter:redrawSummary()
-  local summary, lineCount = self:getSummary(self.rootDescribe, true)
+  local summary, lineCount = self:getSummary(self.describesByFilePath)
 
   if self.lastPrintEraseCount then
     if lineCount > self.lastPrintEraseCount then
@@ -104,7 +146,6 @@ function DefaultReporter:redrawSummary()
   originalPrint(summaryText)
 end
 
-
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
 function DefaultReporter:startingTest(describeOrTest)
@@ -112,6 +153,12 @@ function DefaultReporter:startingTest(describeOrTest)
   print = function() end -- TODO: Store the print and output it at the end of the test.
 
   if not self.isVerbose then
+    local file = self:getFileByPath(describeOrTest.filePath)
+
+    if file then
+      file.isRunning = true
+    end
+
     self:redrawSummary()
     return
   end
@@ -134,6 +181,22 @@ function DefaultReporter:testFinished(describeOrTest, success, ...)
   print = originalPrint
 
   if not self.isVerbose then
+    local file = self:getFileByPath(describeOrTest.filePath)
+
+    if file then
+      if not self.lastFile then
+        self.lastFile = file
+      elseif self.lastFile ~= file then
+        self.lastFile.isRunning = false
+        self.lastFile.hasRun = true
+        self.lastFile.success = true -- TODO: Check if all tests passed?
+
+        self.lastFile = file
+      end
+      
+      file.isRunning = true
+    end
+
     self:redrawSummary()
 
     return
@@ -225,9 +288,9 @@ function DefaultReporter:printNewline(count)
 end
 
 --- Stores the tests that will be run.
---- @param rootDescribe Describe
-function DefaultReporter:setTestSet(rootDescribe)
-  self.rootDescribe = rootDescribe
+--- @param describesByFilePath table
+function DefaultReporter:setTestSet(describesByFilePath)
+  self.describesByFilePath = describesByFilePath
 
   self:redrawSummary()
 end
@@ -254,6 +317,12 @@ function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCoun
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local notRunCount = failedTestCount + skippedTestCount
   local relativeSuccess = 1 - (notRunCount / totalTestCount)
+
+  if self.lastFile then
+    self.lastFile.isRunning = false
+    self.lastFile.hasRun = true
+    self.lastFile.success = true -- TODO: Check if all tests passed?
+  end
 
   self:redrawSummary()
   self:printNewline()
