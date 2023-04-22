@@ -31,57 +31,77 @@ local function getIndentations(describeOrTest)
   return string.rep("  ", describeOrTest.indentationLevel)
 end
 
---- Redraws the summary lines, clearing the previous ones.
--- Draws a summary like:
--- PASS ./src/tests/expectAPI/toBeCloseTo.lua
--- RUNS ./src/tests/expectAPI/toBeCloseToYo.lua
---   ✓ toBeCloseTo
---   ✓ toBeCloseToYo
---   o toBeCloseToYoYo
-function DefaultReporter:redrawSummary()
-  local currentTestDescribes = self.currentTestDescribes or {}
-  local currentTests = self.currentTests or {}
-
+--- Gets the summary text and the amount of lines it takes up.
+--- @param currentDescribe DescribeOrTestForRun
+--- @param isRoot boolean
+--- @return string, number
+function DefaultReporter:getSummary(currentDescribe, isRoot)
   local summary = styledText.new()
-  local height = 0
 
-  for _, describe in pairs(currentTestDescribes) do
-    local isActiveDescribe = false
-
-    if describe.success then
-      summary:colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
+  if not isRoot then
+    if currentDescribe.hasRun then
+      if currentDescribe.success then
+        summary:colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
+      else
+        summary:colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
+      end
+    elseif currentDescribe.toSkip then
+      summary:colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.blue)
     else
-      -- summary:colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
       summary:colored(" RUNS ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
-      isActiveDescribe = true
     end
-    summary:plain(" " .. describe.filePath .. "\n")
-    height = height + 1
+    summary:plain(" " .. currentDescribe.filePath .. "\n")
+  end
+  
+  if (isRoot or currentDescribe.isRunning) and currentDescribe.children then
+    for _, describeOrTest in ipairs(currentDescribe.children) do
+      if describeOrTest.isDescribe then
+        summary:plain(self:getSummary(describeOrTest))
+      else
+        summary:plain(getIndentations(describeOrTest))
 
-    if isActiveDescribe then
-      for _, test in ipairs(currentTests) do
-        summary:plain(getIndentations(test))
-
-        if test.success then
-          summary:colored("✓", styledText.foregroundColors.green)
-        elseif test.isSkipped then
-          summary:colored("⚠", styledText.foregroundColors.yellow)
+        if describeOrTest.hasRun then
+          if describeOrTest.success then
+            summary:colored("✓", styledText.foregroundColors.green)
+          else
+            summary:colored("✗", styledText.foregroundColors.red)
+          end
+        elseif describeOrTest.toSkip then
+          summary:colored("⚠", styledText.foregroundColors.blue)
         else
-          summary:colored("✗", styledText.foregroundColors.red)
+          summary:colored("o", styledText.foregroundColors.yellow)
         end
 
-        summary:plain(" " .. test.name .. "\n")
-        height = height + 1
+        summary:plain(" " .. describeOrTest.name .. "\n")
       end
     end
   end
 
-  -- Remove all the previous lines (same height) and print the new summary.
-  local clearLines = styledText.new()
-    :cursor(styledText.cursorCodes.moveUpLines, 1)
-    :erase(styledText.eraseCodes.eraseLine)
-    
-  originalPrint(tostring(clearLines):rep(height) .. tostring(summary))
+  return tostring(summary), summary:getLineCount()
+end
+
+--- Redraws the summary lines, clearing the previous ones.
+function DefaultReporter:redrawSummary()
+  local summary, lineCount = self:getSummary(self.rootDescribe, true)
+
+  if self.lastPrintEraseCount then
+    if lineCount > self.lastPrintEraseCount then
+      self.lastPrintEraseCount = lineCount
+    end
+  
+    -- Remove all the previous lines (same height) and print the new summary.
+    local clearLines = styledText.new()
+      :erase(styledText.eraseCodes.eraseCursorToEndOfLine)
+      :cursor(styledText.cursorCodes.moveUpLines, 1)
+      :rep(self.lastPrintEraseCount + 1)
+
+    originalPrint(clearLines)
+  else
+    self.lastPrintEraseCount = lineCount
+  end
+
+  local summaryText = tostring(summary)
+  originalPrint(summaryText)
 end
 
 
@@ -90,26 +110,6 @@ end
 function DefaultReporter:startingTest(describeOrTest)
   -- Override print so there's no interference with the test output.
   print = function() end -- TODO: Store the print and output it at the end of the test.
-
-  if describeOrTest.isDescribe then
-    self.currentTestDescribes = self.currentTestDescribes or {}
-    local exists = false
-
-    for _, value in pairs(self.currentTestDescribes) do
-      if value.filePath == describeOrTest.filePath then
-        exists = true
-        break
-      end
-    end
-    
-    if not exists then
-      self.currentTests = {}
-      table.insert(self.currentTestDescribes, describeOrTest)
-    end
-  else
-    self.currentTests = self.currentTests or {}
-    table.insert(self.currentTests, describeOrTest)
-  end
 
   if not self.isVerbose then
     self:redrawSummary()
@@ -133,10 +133,6 @@ end
 function DefaultReporter:testFinished(describeOrTest, success, ...)
   print = originalPrint
 
-  if describeOrTest.isDescribe then
-    
-  end
-
   if not self.isVerbose then
     self:redrawSummary()
 
@@ -144,12 +140,14 @@ function DefaultReporter:testFinished(describeOrTest, success, ...)
   end
   
   if not success then
+    local err = ... or "Unknown error"
+
     originalPrint(
       styledText.new()
         :plain(getIndentations(describeOrTest))
         :colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
         :plain("\n\t• Test suite failed to run\n\n")
-        :plain(prefixLines(tostring(...), "\t\t"))
+        :plain(prefixLines(tostring(err), "\t\t"))
     )
     return false
   end
@@ -226,6 +224,14 @@ function DefaultReporter:printNewline(count)
   end
 end
 
+--- Stores the tests that will be run.
+--- @param rootDescribe Describe
+function DefaultReporter:setTestSet(rootDescribe)
+  self.rootDescribe = rootDescribe
+
+  self:redrawSummary()
+end
+
 --- Prints the start message of the test.
 --- @param rootDescribe Describe
 function DefaultReporter:printStart(rootDescribe)
@@ -244,11 +250,12 @@ end
 --- @param failedTestCount number
 --- @param skippedTestCount number
 --- @param duration number
-function DefaultReporter:printSummary(rootDescribe, failedTestCount, skippedTestCount, duration)
+function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCount, duration)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local notRunCount = failedTestCount + skippedTestCount
   local relativeSuccess = 1 - (notRunCount / totalTestCount)
 
+  self:redrawSummary()
   self:printNewline()
 
   if(relativeSuccess == 1) then

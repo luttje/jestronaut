@@ -62,6 +62,7 @@ local cursorCodesMap = {
 --- the last position it was at before the line was erased. You can use \r after erasing 
 --- the line, to return the cursor to the start of the current line.
 local eraseCodesMap = {
+  eraseBelow = "J",
   eraseCursorToEndOfScreen = "0J",
   eraseCursorToScreenStart = "1J",
   eraseScreen = "2J",
@@ -93,6 +94,10 @@ end
 function STYLED_TEXT_META:addCommand(code)
   self.parts[#self.parts + 1] = startFunction .. code .. "\r"
   return self
+end
+
+function STYLED_TEXT_META:newline()
+  return self:addText("\n")
 end
 
 function STYLED_TEXT_META:plain(text)
@@ -130,6 +135,20 @@ end
 
 function STYLED_TEXT_META:reset()
   return self:addCommand(resetColorsCode)
+end
+
+function STYLED_TEXT_META:getLineCount()
+  local count = 0
+
+  for _ in string.gmatch(tostring(self), "\n") do
+    count = count + 1
+  end
+
+  return count
+end
+
+function STYLED_TEXT_META:rep(reps)
+  return tostring(self):rep(reps)
 end
 
 function STYLED_TEXT_META:__tostring()

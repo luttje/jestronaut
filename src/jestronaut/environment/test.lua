@@ -28,8 +28,8 @@ local function _internalTest(name, fn, timeout, options)
   }
 
   if options then
-    test.isOnly = options.isOnly
-    test.isSkipped = options.isSkipped
+    test.isOnlyToRun = options.isOnlyToRun
+    test.toSkip = options.toSkip
     test.expectFail = options.expectFail
   end
 
@@ -57,7 +57,7 @@ end
 --- @return Test
 local function testOnly(self, name, fn, timeout)
   local _test = _internalTest(name, fn, timeout, {
-    isOnly = true,
+    isOnlyToRun = true,
   })
 
   return _test
@@ -71,7 +71,7 @@ end
 --- @return Test
 local function testSkip(self, name, fn, timeout)
   local _test = _internalTest(name, fn, timeout, {
-    isSkipped = true,
+    toSkip = true,
   })
 
   return _test
@@ -136,7 +136,7 @@ end
 local function testFailingOnly(self, name, fn, timeout)
   local _test = _internalTest(name, fn, timeout, {
     expectFail = true,
-    isOnly = true,
+    isOnlyToRun = true,
   })
 
   return _test
@@ -152,7 +152,7 @@ end
 local function testFailingSkip(self, name, fn, timeout)
   local _test = _internalTest(name, fn, timeout, {
     expectFail = true,
-    isSkipped = true,
+    toSkip = true,
   })
 
   return _test

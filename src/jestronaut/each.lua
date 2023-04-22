@@ -94,9 +94,9 @@ local function bindTo(target)
           fn(normalizeItem(item))
         end, unpack(args))
 
-        -- Leave the isOnly flag only on the last test (so only the last each iteration will block the rest of the test suite)
-        if describeOrTest.isOnly and index < #table then
-          describeOrTest.isOnly = false
+        -- Leave the isOnlyToRun flag only on the last test (so only the last each iteration will block the rest of the test suite)
+        if describeOrTest.isOnlyToRun and index < #table then
+          describeOrTest.isOnlyToRun = false
         end
       end
     end

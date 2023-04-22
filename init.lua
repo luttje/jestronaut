@@ -27,6 +27,9 @@ jestronaut:configure({
 
   -- Set to true to show every test result, false to keep output compact.
   -- verbose = true,
+
+  -- Slow down the tests by x milliseconds to make it easier to follow the output.
+  slowDown = 500,
 }):registerTests(function()
   -- Setup and register the tests:
   require "generated-tests"

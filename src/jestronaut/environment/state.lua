@@ -1,3 +1,4 @@
+local extendMetaTableIndex = require "jestronaut.utils.metatables".extendMetaTableIndex
 local functionLib = require "jestronaut.utils.functions"
 local stringsLib = require "jestronaut.utils.strings"
 
@@ -243,141 +244,209 @@ local DESCRIBE_OR_TEST_META = {
   indentationLevel = 0,
   name = "",
   fn = function() end,
-  isOnly = false,
-  isSkipped = false,
+  isOnlyToRun = false,
+  toSkip = false,
 
   assertionCount = 0,
   parent = nil,
   childCount = 0,
   grandChildrenCount = 0,
 
-  --- Adds a child describe or test.
-  --- @param child DescribeOrTest
-  addChild = function(self, child)
-    self.childCount = self.childCount + 1
-
-    self.children[self.childCount] = child
-    self.childrenLookup[child.name] = self.childCount
-
-    child.parent = self
-
-    if self.parent then
-      self.parent.grandChildrenCount = self.parent.grandChildrenCount + 1
-    end
-  end,
-
-  --- Runs the test and returns the amount of failed and skippewd tests.
-  --- @param self DescribeOrTest
-  --- @param reporter Reporter
-  --- @param runnerOptions RunnerOptions
-  --- @return number
-  run = function(self, reporter, runnerOptions)
-    local failedTestCount = 0
-    local skippedTestCount = 0
-
-    if self.isSkipped then
-      reporter:testSkipped(self)
-
-      return failedTestCount, skippedTestCount + 1
-    end
-
-    if not getIsExecutingTests(self) then
-      self.isSkipped = true
-      reporter:testSkipped(self)
-      return failedTestCount, skippedTestCount + 1
-    end
-    
-    reporter:startingTest(self)
-
-    if self.isTest then
-      if runnerOptions.testPathIgnorePatterns then
-        for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
-          local plain = not pattern:find("^/.*/$") -- Only enable pattern matching if the pattern doesn't start and end with a slash
-          pattern = plain and pattern or pattern:sub(2, -2) -- Remove the slashes if pattern matching is enabled
-          
-          if self.filePath:find(pattern, nil, plain) then
-            self.isSkipped = true
-            reporter:testSkipped(self)
-            return failedTestCount, skippedTestCount + 1
-          end
-        end
-      elseif runnerOptions.testNamePattern then
-        if not self.name:find(runnerOptions.testNamePattern) then
-          self.isSkipped = true
-          reporter:testSkipped(self)
-          return failedTestCount, skippedTestCount + 1
-        end
-      end
-
-      local testLocalState = getTestLocalState(self.filePath)
-      local retrySettings = testLocalState.retrySettings
-
-      beforeDescribeOrTest(self)
-
-      local success, results = functionLib.captureSafeCallInTable(xpcall(self.fn, function(err)
-        return debug.traceback(err, 2)
-      end))
-
-      if self.expectFail == true then
-        if success then
-          success = false
-          results = {"Expected test to fail, but it succeeded"}
-        else
-          success = true
-        end
-      end
-
-      afterDescribeOrTest(self, success)
-
-      self.success = success
-
-      if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
-        reporter:testFinished(self, success, unpack(results))
-      end
-
-      if not success then
-        failedTestCount = failedTestCount + 1
-
-        if retrySettings and retrySettings.timesRemaining then
-          if retrySettings.timesRemaining > 0 then
-            retrySettings.timesRemaining = retrySettings.timesRemaining - 1
-
-            reporter:testRetrying(self, retrySettings.timesRemaining + 1)
-
-            return self:run(reporter, runnerOptions)
-          end
-        end
-
-        if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
-          error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
-        end
-      end
-    else
-      if #self.children > 0 then
-        for _, child in pairs(self.children) do
-          local childFailedCount, childSkippedCount = child:run(reporter, runnerOptions)
-
-          failedTestCount = failedTestCount + childFailedCount
-          skippedTestCount = skippedTestCount + childSkippedCount
-        end
-
-        self.success = failedTestCount == 0
-      end
-
-      if self.parent then
-        reporter:testFinished(self, self.success)
-      end
-    end
-
-    if self.isOnly then
-      setNotExecuteTestsOtherThan(self)
-    end
-
-    return failedTestCount, skippedTestCount
-  end,
+  --- @type DescribeOrTest[]
+  children = nil
 }
 
 DESCRIBE_OR_TEST_META.__index = DESCRIBE_OR_TEST_META
+
+--- Adds a child describe or test.
+--- @param child DescribeOrTest
+function DESCRIBE_OR_TEST_META:addChild(child)
+  self.childCount = self.childCount + 1
+
+  self.children[self.childCount] = child
+  self.childrenLookup[child.name] = self.childCount
+
+  child.parent = self
+
+  if self.parent then
+    self.parent.grandChildrenCount = self.parent.grandChildrenCount + 1
+  end
+end
+
+--- Runs the test and returns the amount of failed and skippewd tests.
+--- @param reporter Reporter
+--- @param runnerOptions RunnerOptions
+--- @return number
+function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
+  local failedTestCount = 0
+
+  if self.toSkip then
+    reporter:testSkipped(self)
+
+    return failedTestCount
+  end
+
+  if not getIsExecutingTests(self) then
+    -- self.toSkip = true -- TODO: Should we count this as Skipping?
+    reporter:testSkipped(self)
+    return failedTestCount
+  end
+
+  if(runnerOptions.slowDown) then -- For debugging terminal output
+    local slowDown = runnerOptions.slowDown * 0.001
+    
+    local startTime = os.clock()
+    local endTime = startTime + slowDown
+
+    -- Start a loop to freeze for the specified amount of milliseconds
+    while os.clock() < endTime do end
+  end
+  
+  reporter:startingTest(self)
+  self.isRunning = true
+
+  if self.isTest then
+    local testLocalState = getTestLocalState(self.filePath)
+    local retrySettings = testLocalState.retrySettings
+
+    beforeDescribeOrTest(self)
+
+    local success, results = functionLib.captureSafeCallInTable(xpcall(self.fn, function(err)
+      return debug.traceback(err, 2)
+    end))
+
+    if self.expectFail == true then
+      if success then
+        success = false
+        results = {"Expected test to fail, but it succeeded"}
+      else
+        success = true
+      end
+    end
+
+    afterDescribeOrTest(self, success)
+
+    self.success = success
+    self.isRunning = false
+    self.hasRun = true
+
+    if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
+      reporter:testFinished(self, success, unpack(results))
+    end
+
+    if not success then
+      failedTestCount = failedTestCount + 1
+
+      if retrySettings and retrySettings.timesRemaining then
+        if retrySettings.timesRemaining > 0 then
+          retrySettings.timesRemaining = retrySettings.timesRemaining - 1
+
+          reporter:testRetrying(self, retrySettings.timesRemaining + 1)
+
+          return self:run(reporter, runnerOptions)
+        end
+      end
+
+      if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
+        error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
+      end
+    end
+  else
+    if #self.children > 0 then
+      self.isRunning = true
+
+      for _, child in pairs(self.children) do
+        local childFailedCount = child:run(reporter, runnerOptions)
+
+        failedTestCount = failedTestCount + childFailedCount
+      end
+
+      self.isRunning = false
+      self.hasRun = true
+      self.success = failedTestCount == 0
+    end
+
+    reporter:testFinished(self, self.success)
+  end
+
+  if self.isOnlyToRun then
+    setNotExecuteTestsOtherThan(self)
+  end
+
+  return failedTestCount
+end
+
+--- @class DescribeOrTestForRun : DescribeOrTest
+local DESCRIBE_OR_TEST_FOR_RUN_META = {
+  isDescribeOrTestForRun = true,
+}
+
+extendMetaTableIndex(DESCRIBE_OR_TEST_FOR_RUN_META, DESCRIBE_OR_TEST_META)
+
+function DESCRIBE_OR_TEST_FOR_RUN_META:addChild(describeOrTest)
+  self.children[#self.children + 1] = describeOrTest
+end
+
+--- @param describeOrTest DescribeOrTest
+--- @param runnerOptions RunnerOptions
+--- @return DescribeOrTestForRun, number
+local function makeDescribeOrTestForRun(describeOrTest, runnerOptions)
+  local describeOrTestForRun = {}
+
+  for key, value in pairs(describeOrTest) do
+    if key == "children" then
+      value = {}
+    elseif key == "parent" then
+      value = nil
+    end
+
+    describeOrTestForRun[key] = value
+  end
+
+  -- Some things to copy that are in the metatable
+  describeOrTestForRun.indentationLevel = describeOrTest.indentationLevel
+  describeOrTestForRun.isTest = describeOrTest.isTest
+  describeOrTestForRun.isDescribe = describeOrTest.isDescribe
+
+  if runnerOptions.testPathIgnorePatterns then
+    for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
+      local plain = not pattern:find("^/.*/$") -- Only enable pattern matching if the pattern doesn't start and end with a slash
+      pattern = plain and pattern or pattern:sub(2, -2) -- Remove the slashes if pattern matching is enabled
+      
+      if describeOrTestForRun.filePath:find(pattern, nil, plain) then
+        describeOrTestForRun.toSkip = true
+      end
+    end
+  elseif runnerOptions.testNamePattern then
+    if not describeOrTestForRun.name:find(runnerOptions.testNamePattern) then
+      describeOrTestForRun.toSkip = true
+    end
+  end
+
+  setmetatable(describeOrTestForRun, DESCRIBE_OR_TEST_FOR_RUN_META)
+
+  return describeOrTestForRun, (describeOrTestForRun.toSkip and 1 or 0)
+end
+
+--- Recursively copies a Describe or Test to be run.
+--- @param describeOrTest DescribeOrTest
+--- @param runnerOptions RunnerOptions
+--- @return DescribeOrTestForRun, number
+local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
+  local describeOrTestForRun, skippedTestCount = makeDescribeOrTestForRun(describeOrTest, runnerOptions)
+
+  if describeOrTest.children then
+    for _, child in pairs(describeOrTest.children) do
+      local child, childSkippedCount = copyDescribeOrTestForRun(child, runnerOptions)
+
+      describeOrTestForRun:addChild(child)
+
+      skippedTestCount = skippedTestCount + childSkippedCount
+    end
+  end
+
+  return describeOrTestForRun, skippedTestCount
+end
 
 --- Registers a Describe or Test to be run.
 --- Must be called once befrore all others with a Describe to set as root.
@@ -424,13 +493,17 @@ local function runTests(runnerOptions)
   local reporter = runnerOptions.reporter or (require "jestronaut.reporter".DefaultReporter)
 
   reporter.isVerbose = runnerOptions.verbose
+  
+  -- currentParent is the root describe at this point
+  local testSetRoot, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
+  reporter:setTestSet(testSetRoot)
 
   setIsExecutingTests(true)
 
-  reporter:printStart(currentParent)
+  reporter:printStart(testSetRoot)
 
   local startTime = os.clock()
-  local success, errOrFailedTestCount, skippedTestCount = pcall(currentParent.run, currentParent, reporter, runnerOptions)
+  local success, errOrFailedTestCount = pcall(testSetRoot.run, testSetRoot, reporter, runnerOptions)
   local endTime = os.clock()
 
   if not success then
@@ -439,17 +512,19 @@ local function runTests(runnerOptions)
       error(errOrFailedTestCount)
     end
 
-    reporter:printFailFast(currentParent)
+    reporter:printFailFast(testSetRoot)
   end
 
-  reporter:printSummary(currentParent, errOrFailedTestCount, skippedTestCount, endTime - startTime)
+  reporter:printEnd(testSetRoot, errOrFailedTestCount, skippedTestCount, endTime - startTime)
 
   setIsExecutingTests(false)
 end
 
 return {
   DESCRIBE_OR_TEST_META = DESCRIBE_OR_TEST_META,
+  DESCRIBE_OR_TEST_FOR_RUN_META = DESCRIBE_OR_TEST_FOR_RUN_META,
   getCurrentDescribeOrTest = getCurrentDescribeOrTest,
+  getDescribeOrTestForRun = copyDescribeOrTestForRun,
 
   registerDescribeOrTest = registerDescribeOrTest,
   setRoots = setRoots,

@@ -28,8 +28,8 @@ local function _internalDescribe(name, fn, options)
   }
 
   if options then
-    describe.isOnly = options.isOnly
-    describe.isSkipped = options.isSkipped
+    describe.isOnlyToRun = options.isOnlyToRun
+    describe.toSkip = options.toSkip
   end
 
   setmetatable(describe, DESCRIBE_META)
@@ -54,7 +54,7 @@ end
 --- @return Describe
 local function describeOnly(self, name, fn)
   local _describe = _internalDescribe(name, fn, {
-    isOnly = true,
+    isOnlyToRun = true,
   })
 
   return _describe
@@ -67,7 +67,7 @@ end
 --- @return Describe
 local function describeSkip(self, name, fn)
   local _describe = _internalDescribe(name, fn, {
-    isSkipped = true,
+    toSkip = true,
   })
 
   return _describe
