@@ -88,9 +88,12 @@ end
 
 --- Gets the summary text and the amount of lines it takes up.
 --- @param describesByFilePath table
+--- @param verbose boolean
 --- @return string, number
-function DefaultReporter:getSummary(describesByFilePath)
+local function getSummary(describesByFilePath, verbose)
   local summary = styledText.new()
+
+  verbose = verbose == nil and false or verbose
 
   for _, file in ipairs(describesByFilePath) do
     local filePath = file.filePath
@@ -111,7 +114,7 @@ function DefaultReporter:getSummary(describesByFilePath)
       summary:colored(" RUNS ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
       summary:plain(filePath .. "\n")
       
-      if file.isRunning then
+      if verbose and file.isRunning then
         for _, describeOrTest in ipairs(describesOrTests) do
           summary:plain(drawDescribeOrTest(describeOrTest))
         end
@@ -123,8 +126,9 @@ function DefaultReporter:getSummary(describesByFilePath)
 end
 
 --- Redraws the summary lines, clearing the previous ones.
-function DefaultReporter:redrawSummary()
-  local summary, lineCount = self:getSummary(self.describesByFilePath)
+--- @param verbose boolean
+function DefaultReporter:redrawSummary(verbose)
+  local summary, lineCount = getSummary(self.describesByFilePath, verbose)
 
   if self.lastPrintEraseCount then
     if lineCount > self.lastPrintEraseCount then
@@ -152,24 +156,14 @@ function DefaultReporter:testStarting(describeOrTest)
   -- Override print so there's no interference with the test output.
   print = function() end -- TODO: Store the print and output it at the end of the test.
 
-  if not self.isVerbose then
-    local file = self:getFileByPath(describeOrTest.filePath)
+  local file = self:getFileByPath(describeOrTest.filePath)
 
-    if file then
-      file.isRunning = true
-    end
-
-    self:redrawSummary()
-    return
+  if file then
+    file.isRunning = true
   end
 
-  if describeOrTest.isTest then
-    originalPrint(getIndentations(describeOrTest) .. "🧪 " .. describeOrTest.name .. "...")
-  else
-    originalPrint(getIndentations(describeOrTest) .. "📦 " .. describeOrTest.name .. "...")
-  end
-
-  originalPrint(getIndentations(describeOrTest) .. "(" .. describeOrTest.filePath .. ":" .. describeOrTest.lineNumber .. ")")
+  self:redrawSummary(self.isVerbose)
+  return
 end
 
 --- Prints the result of the test and returns whether it passed.
@@ -180,89 +174,44 @@ end
 function DefaultReporter:testFinished(describeOrTest, success, ...)
   print = originalPrint
 
-  if not self.isVerbose then
-    local file = self:getFileByPath(describeOrTest.filePath)
+  local file = self:getFileByPath(describeOrTest.filePath)
 
-    if file then
-      if not self.lastFile then
-        self.lastFile = file
-      elseif self.lastFile ~= file then
-        self.lastFile.isRunning = false
-        self.lastFile.hasRun = true
-        self.lastFile.success = success
+  if file then
+    if not self.lastFile then
+      self.lastFile = file
+    elseif self.lastFile ~= file then
+      self.lastFile.isRunning = false
+      self.lastFile.hasRun = true
+      self.lastFile.success = success
 
-        self.lastFile = file
-      end
-      
-      file.isRunning = true
+      self.lastFile = file
     end
-
-    self:redrawSummary()
-
-    return
+    
+    file.isRunning = true
   end
-  
-  if not success then
-    local err = ... or "Unknown error"
 
-    originalPrint(
-      styledText.new()
-        :plain(getIndentations(describeOrTest))
-        :colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
-        :plain("\n\t• Test suite failed to run\n\n")
-        :plain(prefixLines(tostring(err), "\t\t"))
-    )
-    return false
-  end
-  
-  originalPrint(
-    styledText.new()
-      :plain(getIndentations(describeOrTest))
-      :colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
-      :plain("\n")
-  )
-  return true
+  self:redrawSummary(self.isVerbose)
 end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
 function DefaultReporter:testSkipped(describeOrTest)
-  if not self.isVerbose then
-    local file = self:getFileByPath(describeOrTest.filePath)
+  local file = self:getFileByPath(describeOrTest.filePath)
 
-    if file then
-      file.skippedCount = file.skippedCount + 1
-    end
-
-    self:redrawSummary()
-
-    return
+  if file then
+    file.skippedCount = file.skippedCount + 1
   end
-  
-  originalPrint(
-    styledText.new()
-      :plain(getIndentations(describeOrTest))
-      :colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
-      :plain("\n")
-  )
+
+  self:redrawSummary(self.isVerbose)
+
+  return
 end
 
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
 function DefaultReporter:testRetrying(describeOrTest, retryCount)
-  if not self.isVerbose then
-    self:redrawSummary()
-
-    return
-  end
-  
-  originalPrint(
-    styledText.new()
-      :plain(getIndentations(describeOrTest))
-      :colored(" RETRY ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
-      :plain("\n")
-  )
+  self:redrawSummary(self.isVerbose)
 end
 
 --- Prints text centered, using the reporter width.
@@ -350,12 +299,12 @@ function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCoun
 
   if skippedTestCount > 0 then
     testResults = testResults
-      :colored(skippedTestCount .. " skipped", styledText.foregroundColors.black, styledText.backgroundColors.blue)
+      :colored(skippedTestCount .. " skipped", styledText.foregroundColors.blue)
       :plain(", ")
   end
 
   testResults = testResults
-    :colored((totalTestCount - notRunCount) .. " passed", styledText.foregroundColors.black, styledText.backgroundColors.green)
+    :colored((totalTestCount - notRunCount) .. " passed", styledText.foregroundColors.green)
     :plain(", " .. totalTestCount .. " total")
 
   originalPrint(testResults)
