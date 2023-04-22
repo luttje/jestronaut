@@ -19,9 +19,6 @@ local LOCAL_STATE_META = {}
 --- @type LocalState[]
 local testLocalStates = {}
 
---- @type DescribeOrTest[]
-local isExecutingTests = false
-
 --- @type DescribeOrTest
 local currentParent = nil
 
@@ -96,20 +93,6 @@ local function getTestLocalState(testFilePath)
   end
 
   return testLocalState
-end
-
---- @param test DescribeOrTest
-local function getIsExecutingTests(test)
-  local fileLocalState = getTestLocalState(test.filePath)
-  if test and fileLocalState.notExecuting and fileLocalState.notExecuting ~= test and fileLocalState.notExecuting ~= test.parent then
-    return false
-  end
-
-  return isExecutingTests
-end
-
-local function setIsExecutingTests(executing)
-  isExecutingTests = executing
 end
 
 --- @param test DescribeOrTest
@@ -286,12 +269,6 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
     return failedTestCount
   end
 
-  if not getIsExecutingTests(self) then
-    -- self.toSkip = true -- TODO: Should we count this as Skipping?
-    reporter:testSkipped(self)
-    return failedTestCount
-  end
-
   if(runnerOptions.slowDown) then -- For debugging terminal output
     local slowDown = runnerOptions.slowDown * 0.001
     
@@ -302,7 +279,7 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
     while os.clock() < endTime do end
   end
   
-  reporter:startingTest(self)
+  reporter:testStarting(self)
   self.isRunning = true
 
   if self.isTest then
@@ -428,6 +405,24 @@ local function makeDescribeOrTestForRun(describeOrTest, runnerOptions)
   return describeOrTestForRun, (describeOrTestForRun.toSkip and 1 or 0)
 end
 
+--- @class FileForRun
+local FILE_FOR_RUN = {
+  isFileForRun = true,
+
+  filePath = "",
+
+  --- @type DescribeOrTestForRun[]
+  describesOrTests = nil,
+
+  hasRun = false,
+  success = false,
+  isRunning = false,
+  skippedCount = 0,
+  failedCount = 0,
+}
+
+FILE_FOR_RUN.__index = FILE_FOR_RUN
+
 --- Recursively copies a Describe or Test to be run, returning the root describe, a table with all describes grouped by file path, and the number of skipped tests.
 --- @param describeOrTest DescribeOrTest
 --- @param runnerOptions RunnerOptions
@@ -446,10 +441,10 @@ local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
       end
     end
 
-    describesByFilePath[fileIndex] = describesByFilePath[fileIndex] or {
+    describesByFilePath[fileIndex] = describesByFilePath[fileIndex] or setmetatable({
       filePath = child.filePath,
       describesOrTests = {},
-    }
+    }, FILE_FOR_RUN)
 
     table.insert(describesByFilePath[fileIndex].describesOrTests, child)
   end
@@ -523,8 +518,6 @@ local function runTests(runnerOptions)
   local testSetRoot, describesByFilePath, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
   reporter:setTestSet(describesByFilePath)
 
-  setIsExecutingTests(true)
-
   reporter:printStart(testSetRoot)
 
   local startTime = os.clock()
@@ -541,8 +534,6 @@ local function runTests(runnerOptions)
   end
 
   reporter:printEnd(testSetRoot, errOrFailedTestCount, skippedTestCount, endTime - startTime)
-
-  setIsExecutingTests(false)
 end
 
 return {
@@ -555,9 +546,6 @@ return {
   setRoots = setRoots,
   registerTests = registerTests,
   runTests = runTests,
-
-  getIsExecutingTests = getIsExecutingTests,
-  setIsExecutingTests = setIsExecutingTests,
 
   incrementAssertionCount = incrementAssertionCount,
   getAssertionCount = getAssertionCount,

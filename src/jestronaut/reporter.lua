@@ -65,7 +65,7 @@ local function drawDescribeOrTest(describeOrTest)
         summary:plain(drawDescribeOrTest(describeOrTest))
       else
         summary:plain(getIndentations(describeOrTest))
-        
+
         if describeOrTest.hasRun then
           if describeOrTest.success then
             summary:colored("✓", styledText.foregroundColors.green)
@@ -104,7 +104,7 @@ function DefaultReporter:getSummary(describesByFilePath)
       end
 
       summary:plain(filePath .. "\n")
-    elseif file.toSkip then
+    elseif file.skippedCount == #describesOrTests then
       summary:colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.blue)
       summary:plain(filePath .. "\n")
     else
@@ -148,7 +148,7 @@ end
 
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
-function DefaultReporter:startingTest(describeOrTest)
+function DefaultReporter:testStarting(describeOrTest)
   -- Override print so there's no interference with the test output.
   print = function() end -- TODO: Store the print and output it at the end of the test.
 
@@ -189,7 +189,7 @@ function DefaultReporter:testFinished(describeOrTest, success, ...)
       elseif self.lastFile ~= file then
         self.lastFile.isRunning = false
         self.lastFile.hasRun = true
-        self.lastFile.success = true -- TODO: Check if all tests passed?
+        self.lastFile.success = success
 
         self.lastFile = file
       end
@@ -228,6 +228,12 @@ end
 --- @param describeOrTest DescribeOrTest
 function DefaultReporter:testSkipped(describeOrTest)
   if not self.isVerbose then
+    local file = self:getFileByPath(describeOrTest.filePath)
+
+    if file then
+      file.skippedCount = file.skippedCount + 1
+    end
+
     self:redrawSummary()
 
     return
@@ -344,7 +350,7 @@ function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCoun
 
   if skippedTestCount > 0 then
     testResults = testResults
-      :colored(skippedTestCount .. " skipped", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
+      :colored(skippedTestCount .. " skipped", styledText.foregroundColors.black, styledText.backgroundColors.blue)
       :plain(", ")
   end
 
