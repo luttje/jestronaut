@@ -1,3 +1,4 @@
-cache
+/dist
+/cache
 node_modules
 lua_modules

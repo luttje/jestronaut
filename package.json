@@ -8,7 +8,10 @@
     "download-api": "node ./scripts/download-jest-api.js v29.5.0",
     "extract-api": "node ./scripts/extract-jest-api.js",
     "copy-api-tests": "rm -rf ./tests/generated && cp -r ./cache/tests ./tests/generated",
-    "generate-tests": "npm run download-api && npm run extract-api && npm run copy-api-tests"
+    "generate-tests": "npm run download-api && npm run extract-api && npm run copy-api-tests",
+
+    "dev": "luvi . -- --roots=./tests/generated --roots=./tests --testPathIgnorePatterns=\"/tests/generated/ExpectAPI/toBeCloseTo.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/useFakeTimers.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/useRealTimers.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/retryTimes.lua$/\" --testPathIgnorePatterns=\"/tests/generated/MockFunctionAPI/mockFn/mockName.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test/failing.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test/failing/each.lua$/\"",
+    "build": "([ -d dist ] || mkdir dist) && lit make . ./dist/jestronaut.exe"
   },
   "author": "Luttje",
   "license": "MIT",
