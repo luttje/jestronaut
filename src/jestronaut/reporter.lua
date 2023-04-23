@@ -182,12 +182,17 @@ function DefaultReporter:testFinished(describeOrTest, success, ...)
     elseif self.lastFile ~= file then
       self.lastFile.isRunning = false
       self.lastFile.hasRun = true
-      self.lastFile.success = success
+      self.lastFile.success = true -- TODO: Check if all tests passed.
 
       self.lastFile = file
     end
     
     file.isRunning = true
+    
+    if not success then
+      file.hasRun = true
+      file.success = false
+    end
   end
 
   self:redrawSummary(self.isVerbose)
@@ -336,12 +341,6 @@ function DefaultReporter:printProgress(relativeSuccess)
   self:printHorizontalLine()
   originalPrint(progressBar .. " " .. suffix)
   self:printHorizontalLine()
-end
-
---- Prints the fail fast message of the test.
---- @param describeOrTest DescribeOrTest
-function DefaultReporter:printFailFast(describeOrTest)
-  self:printCentered("🚨 Fail fast triggered by " .. describeOrTest.name .. ".")
 end
 
 return {

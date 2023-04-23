@@ -1,6 +1,7 @@
 require "jestronaut":withGlobals()
 
-package.path = package.path .. ";./src/generated-tests/?.lua"
+-- Search for modules relative to this file
+package.path = package.path .. ";./tests/generated/?.lua"
 
 -- Preloads the provided module into the package.loaded table
 function generatedTestPreLoad(moduleName, moduleBuilder)
@@ -11,7 +12,7 @@ end
 --[[
   These functions and tables are used in the examples, but are not defined.
 ]]
-local luaLib = require("lualib_bundle")
+local luaLib = require "lualib_bundle"
 
 -- toHaveBeenCalled, etc ...
 function drinkSomeLaCroix() end
@@ -138,19 +139,19 @@ function drinkFlavor(flavor)
   end
 end
 
--- generated-tests\JestObjectAPI\jest\resetModules.lua:22
+-- tests\generated\JestObjectAPI\jest\resetModules.lua:22
 package.loaded['sum'] = {
   sum = function(a, b) return a + b end
 }
 
--- generated-tests\ExpectAPI\expect\addSnapshotSerializer.lua:7
+-- tests\generated\ExpectAPI\expect\addSnapshotSerializer.lua:7
 package.loaded['my-serializer-module'] = {
   default = {
     -- TODO: Implement example
   }
 }
 
--- generated-tests\ExpectAPI\expect\extend.lua:293
+-- tests\generated\ExpectAPI\expect\extend.lua:293
 package.loaded['toBeWithinRange'] = {
   toBeWithinRange = function(actual, floor, ceiling)
     if type(actual) ~= "number" or type(floor) ~= "number" or type(ceiling) ~= "number" then
@@ -181,7 +182,7 @@ package.loaded['../utils'] = {
     isAuthorized = function(secret) return secret == "wizard" end
 }
 
--- generated-tests\GlobalAPI\afterAll.lua:7
+-- tests\generated\GlobalAPI\afterAll.lua:7
 function makeGlobalDatabase()
   return {
     find = function(self, collection, query, callback)
@@ -225,7 +226,7 @@ table.insert(package.loaders, function(moduleName)
   end
 end)
 
--- generated-tests\JestObjectAPI\jest\replaceProperty.lua:22
+-- tests\generated\JestObjectAPI\jest\replaceProperty.lua:22
 package.loaded['utils'] = {
   isLocalhost = function(self)
       return process.env.HOSTNAME == "localhost"
@@ -234,27 +235,27 @@ package.loaded['utils'] = {
 
 package.loaded['myModule'] = {}
 
--- generated-tests\JestObjectAPI\jest\spyOn.lua:19
+-- tests\generated\JestObjectAPI\jest\spyOn.lua:19
 package.loaded['audio'] ={
   volume = 0
 }
 
--- generated-tests\JestObjectAPI\jest\spyOn.lua:19
+-- tests\generated\JestObjectAPI\jest\spyOn.lua:19
 package.loaded['video'] = {
   play = function() return true end
 }
 
--- generated-tests\GlobalAPI\test.lua:13 and \generated-tests\GlobalAPI\test\only.lua:13
+-- tests\generated\GlobalAPI\test.lua:13 and \tests\generated\GlobalAPI\test\only.lua:13
 function inchesOfRain()
   return 1
 end
 
--- generated-tests\GlobalAPI\test\only.lua:19
+-- tests\generated\GlobalAPI\test\only.lua:19
 function inchesOfSnow()
   return 0
 end
 
--- generated-tests\ExpectAPI\expect\objectContaining.lua:14
+-- tests\generated\ExpectAPI\expect\objectContaining.lua:14
 function simulatePresses(fn)
   local fakeEvent = {
     x = 0,
@@ -282,4 +283,4 @@ process = {
   },
 }
 
-require "generated-tests.all"
+require "tests.generated.all"

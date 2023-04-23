@@ -325,6 +325,8 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
       end
 
       if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
+        reporter:testFinished(self, success, unpack(results))
+
         error("Bail after " .. failedTestCount .. " failed " .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
       end
     end
@@ -525,12 +527,12 @@ local function runTests(runnerOptions)
   local endTime = os.clock()
 
   if not success then
-    if not errOrFailedTestCount:find("^Bail after") then
+    if not errOrFailedTestCount:find("(.*): Bail after") then
       -- TODO: Use xpcall as to not lose the stack trace
       error(errOrFailedTestCount)
     end
 
-    reporter:printFailFast(testSetRoot)
+    return
   end
 
   reporter:printEnd(testSetRoot, errOrFailedTestCount, skippedTestCount, endTime - startTime)
