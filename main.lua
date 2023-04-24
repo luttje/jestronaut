@@ -1,3 +1,4 @@
+package.path = "./src/?.lua;" .. package.path -- Try our local version first
 local jestronaut = require "jestronaut"
 local args = {...}
 
@@ -5,6 +6,12 @@ local config = {}
 
 for _, arg in ipairs(args) do
   local key, value = arg:match("^%-%-([%w_]+)=(.+)$")
+
+  if value == "true" then
+    value = true
+  elseif value == "false" then
+    value = false
+  end
 
   if key then
     if config[key] then

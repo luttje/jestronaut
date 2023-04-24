@@ -1,5 +1,8 @@
 # Jestronaut
 
+[![GitHub Tests Action](https://github.com/luttje/jestronaut/actions/workflows/tests.yml/badge.svg)](https://github.com/luttje/jestronaut/actions/workflows/tests.yml)
+[![Test Coverage Status](https://coveralls.io/repos/github/luttje/jestronaut/badge.svg?branch=main)](https://coveralls.io/github/luttje/jestronaut?branch=main)
+
 > **Warning**
 > Jestronaut is still in early development.
 
@@ -10,7 +13,7 @@ A Lua library for testing your code. It tries to work similarly to [Jest](https:
 ## 🚀 Getting Started
 
 > **Note**
-> Before continuing, make sure you have installed [Luarocks](https://luarocks.org/) with at least [Lua 5.1](https://www.lua.org/).
+> Before continuing, make sure you have installed [LuaRocks](https://luarocks.org/) with at least [Lua 5.1](https://www.lua.org/).
 
 1. Install Jestronaut as a LuaRocks module in your project
     ```bash
@@ -79,23 +82,19 @@ This binary is a standalone executable that can be used to run Jestronaut tests 
 > **Note**
 > Before continuing, make sure you have installed:
 > * [NodeJS](https://nodejs.org/en/).
-> * [Luarocks](https://luarocks.org/) with at least [Lua 5.1](https://www.lua.org/).
+> * [LuaRocks](https://luarocks.org/) with at least [Lua 5.1](https://www.lua.org/).
+> * [Luvit](https://luvit.io/)
 
 ### Building
 
-The LuaRocks module is built using:
-
+To build Jestronaut, run the following command:
 ```bash
-luarocks make --local
+npm run build
 ```
 
-The Lit binary is built using:
-  
-  ```bash
-  npm run build
-  ```
+This builds the [LuaRocks](https://luarocks.org/) module and [lit](https://luvit.io/) binary.
 
-*This will generate a `jestronaut.exe` binary in the `dist` directory of this project. It expects to be added to path and will currently only run tests if you execute jestronaut in the root of your project*
+*This will generate a `jestronaut` binary in the `dist` directory of this project. It expects to be added to path and will currently only run tests if you execute jestronaut in the root of your project*
 
 ### Jestronaut's own Tests
 
@@ -104,3 +103,7 @@ Most of Jestronaut's own tests are generated from the Jest documentation automat
 You can run the test generation script with `npm run generate-tests`. All tests in `tests/generated` will be overwritten.
 
 Use `luarocks test` in the root of this repo to execute the Jestronaut tests.
+
+For coverage install the following LuaRocks modules:
+* `luarocks install luacov`
+* `luarocks install luacov-reporter-lcov`

@@ -1,0 +1,49 @@
+name: tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: 
+      - '**'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        luaVersion: ["5.1.5", "5.2.4", "5.3.5", "luajit-2.0.5", "luajit-2.1.0-beta3", "luajit-openresty", "5.1", "5.4"]
+        
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Lua/LuaJIT
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: ${{ matrix.luaVersion }}
+      - uses: leafo/gh-actions-luarocks@v4
+      - name: Install Luvit
+        run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
+      - name: Make lit and luvit available and executable
+        run: |
+          sudo cp lit /usr/local/bin/lit
+          sudo chmod +x /usr/local/bin/lit
+          sudo cp luvit /usr/local/bin/luvit
+          sudo chmod +x /usr/local/bin/luvit
+      - name: Install LuaCov
+        run: luarocks install luacov
+      - name: Install the LuaCov LCOV reporter
+        run: luarocks install luacov-reporter-lcov
+      - name: Install dependencies
+        run: npm ci
+      - name: Build the LuaRocks module and Lit binary
+        run: npm run build
+      - name: Test package
+        run: npm run ci:test
+      - run: mv ./luacov.report.out ./luacov.lcov
+      - uses: coverallsapp/github-action@v2
+        with:
+          path-to-lcov: ./luacov.lcov
