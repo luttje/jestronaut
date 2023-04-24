@@ -27,6 +27,8 @@ jobs:
       - uses: leafo/gh-actions-luarocks@v4
       - name: Install Luvit
         run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
+      - name: Test lit
+        run: lit --version
       - name: Install LuaCov
         run: luarocks install luacov
       - name: Install the LuaCov LCOV reporter
