@@ -43,8 +43,7 @@ jobs:
         run: npm run build
       - name: Test package
         run: npm run ci:test
-      - name: Output coverage report
-        run: cat luacov.report.out
+      - run: mv ./luacov.report.out ./luacov.lcov
       - uses: coverallsapp/github-action@v2
         with:
-          path-to-lcov: ./luacov.report.out
+          path-to-lcov: ./luacov.lcov
