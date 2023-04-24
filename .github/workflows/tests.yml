@@ -33,8 +33,6 @@ jobs:
           sudo chmod +x /usr/local/bin/lit
           sudo cp luvit /usr/local/bin/luvit
           sudo chmod +x /usr/local/bin/luvit
-      - name: Test lit
-        run: lit --version
       - name: Install LuaCov
         run: luarocks install luacov
       - name: Install the LuaCov LCOV reporter
@@ -46,3 +44,5 @@ jobs:
       - name: Test package
         run: npm run ci:test
       - uses: coverallsapp/github-action@v2
+        with:
+          path-to-lcov: ./luacov.report.out
