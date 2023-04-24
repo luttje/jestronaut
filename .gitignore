@@ -2,3 +2,6 @@
 /cache
 node_modules
 lua_modules
+
+/luacov.stats.out
+/luacov.report.out

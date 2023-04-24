@@ -1,6 +1,7 @@
 local optionsLib = require "jestronaut.environment.options"
 local describeLib = require "jestronaut.environment.describe"
 local environmentLib = require "jestronaut.environment"
+local coverageLib = require "jestronaut.coverage"
 local expectLib = require "jestronaut.expect"
 local mockLib = require "jestronaut.mock"
 local setupModuleMocking = mockLib.setupModuleMocking
@@ -27,6 +28,10 @@ function JESTRONAUT:configure(runnerOptions)
   end
 
   environmentLib.setRoots(runnerOptions.roots)
+
+  if runnerOptions.coverage == true then
+    coverageLib.setupCoverage(runnerOptions.roots, runnerOptions.coverageDirectory, runnerOptions.coverageProvider)
+  end
 
   return self
 end
