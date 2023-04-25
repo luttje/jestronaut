@@ -1,4 +1,4 @@
-# Jestronaut
+# Jestronaut <img src="./docs/logo-without-background.png" alt="Jestronaut logo showing a jester in a space helmet" width="200" align="right" />
 
 [![GitHub Tests Action](https://github.com/luttje/jestronaut/actions/workflows/tests.yml/badge.svg)](https://github.com/luttje/jestronaut/actions/workflows/tests.yml)
 [![Test Coverage Status](https://coveralls.io/repos/github/luttje/jestronaut/badge.svg?branch=main)](https://coveralls.io/github/luttje/jestronaut?branch=main)
