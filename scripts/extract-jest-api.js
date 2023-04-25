@@ -340,6 +340,8 @@ function main(cacheDirectory) {
   
   fs.mkdirSync(testDirectory, { recursive: true });
 
+  fs.copyFileSync(path.resolve('scripts', 'init.lua'), path.join(testDirectory, 'init.lua'));
+
   fs.writeFileSync(allTestsFilePath, '');
 
   // Build Lua tests using all the examples.
