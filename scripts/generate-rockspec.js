@@ -9,7 +9,7 @@ if (!srcDir) {
   throw new Error('Please provide a source directory');
 }
 
-const rockspecTemplateFile = path.resolve('jestronaut-scm-1.rockspec.template');
+const rockspecTemplateFile = path.resolve('jestronaut-scm-0.rockspec.template');
 const rockspecTemplate = fs.readFileSync(rockspecTemplateFile, 'utf8');
 
 const modulePlaceholderRegex = /\n(\s*){{\s*MODULES\s*}}/;
@@ -39,4 +39,4 @@ function walkBuildModules(dir) {
 const modules = walkBuildModules(srcDir).join('\n');
 const rockspec = rockspecTemplate.replace(modulePlaceholderRegex, `\n${modules}`);
 
-fs.writeFileSync('jestronaut-scm-1.rockspec', rockspec);
+fs.writeFileSync('jestronaut-scm-0.rockspec', rockspec);

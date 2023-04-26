@@ -1,0 +1,28 @@
+name: publish_rock
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Lua/LuaJIT
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: ${{ matrix.luaVersion }}
+      - name: Install LuaRocks
+        uses: leafo/gh-actions-luarocks@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Create .env file
+        run: |
+          touch .env
+          echo LUAROCKS_API_KEY=${{ secrets.LUAROCKS_API_KEY }} >> .env
+      - name: Publish the rock
+        run: npm run ci:publish
