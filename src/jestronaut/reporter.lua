@@ -100,7 +100,7 @@ local function getSummary(describesByFilePath, verbose)
   verbose = verbose == nil and false or verbose
 
   for _, file in ipairs(describesByFilePath) do
-    local filePath = file.filePath
+    local filePathForShowing = " " .. file.filePath .. "\n"
     local describesOrTests = file.describesOrTests
 
     if file.hasRun then
@@ -110,7 +110,7 @@ local function getSummary(describesByFilePath, verbose)
         summary:colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
       end
 
-      summary:plain(filePath .. "\n")
+      summary:plain(filePathForShowing)
 
       if not file.success then
         for _, describeOrTest in ipairs(describesOrTests) do
@@ -121,10 +121,10 @@ local function getSummary(describesByFilePath, verbose)
       end
     elseif file.skippedCount == #describesOrTests then
       summary:colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.blue)
-      summary:plain(filePath .. "\n")
+      summary:plain(filePathForShowing)
     else
       summary:colored(" RUNS ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
-      summary:plain(filePath .. "\n")
+      summary:plain(filePathForShowing)
       
       if verbose and file.isRunning then
         for _, describeOrTest in ipairs(describesOrTests) do
