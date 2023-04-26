@@ -12,10 +12,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - name: Install Lua/LuaJIT
-        uses: leafo/gh-actions-lua@v10
-        with:
-          luaVersion: ${{ matrix.luaVersion }}
       - name: Install LuaRocks
         uses: leafo/gh-actions-luarocks@v4
       - name: Install dependencies
