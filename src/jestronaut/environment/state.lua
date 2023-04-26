@@ -295,7 +295,7 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
     if self.expectFail == true then
       if success then
         success = false
-        results = {"Expected test to fail, but it succeeded"}
+        results = {"Error! Expected test to fail, but it succeeded."}
       else
         success = true
       end
@@ -304,9 +304,12 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
     afterDescribeOrTest(self, success)
 
     self.success = success
-    self.results = results
     self.isRunning = false
     self.hasRun = true
+
+    if not success then
+      self.errors = results
+    end
 
     if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
       reporter:testFinished(self, success, unpack(results))
@@ -533,6 +536,7 @@ local function runTests(runnerOptions)
       error(errOrFailedTestCount)
     end
 
+    reporter:printBailed(testSetRoot, errOrFailedTestCount)
     return
   end
 

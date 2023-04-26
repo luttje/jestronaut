@@ -81,7 +81,7 @@ local function drawDescribeOrTest(describeOrTest)
         summary:plain(" " .. describeOrTest.name .. "\n")
 
         if (describeOrTest.hasRun and not describeOrTest.success) then
-          summary:plain(table.concat(describeOrTest.results, " ") .. "\n\n")
+          summary:plain(table.concat(describeOrTest.errors) .. "\n\n")
         end
       end
     end
@@ -334,6 +334,17 @@ function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCoun
     styledText.new()
       :styled("Ran all test suites.", styledText.styles.dim)
   )
+end
+
+--- Prints the bail message of the test.
+--- @param rootDescribe Describe
+--- @param bailError string
+function DefaultReporter:printBailed(rootDescribe, bailError)
+  self:printNewline(2)
+  self:printCentered("🚨 Bailed out of tests!")
+  self:printNewline(2)
+  self:printHorizontalLine()
+  self:printNewline(2)
 end
 
 --- Prints the progress of the test.
