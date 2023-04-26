@@ -11,6 +11,7 @@
 A Lua library for testing your code. It tries to work similarly to [Jest](https://jestjs.io/).
 
 ![Jestronaut output showing green signals besides all tests in 4 files to indicate the tests inside passed](./docs/output.gif)
+
 *For this GIF the tests were run with the verbose and 200ms slowDown settings. Some frames were cut to prevent flickering. The actual duration of these tests was around 0.043s*
 
 ## 🚀 Getting Started
