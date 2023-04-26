@@ -1,3 +1,4 @@
+local wrapAndTagVarargsOrReturn = require "jestronaut.expect.asymmetricmatchers.varargsMatching".wrapAndTagVarargsOrReturn
 local makeIndexableFunction = require "jestronaut.utils.metatables".makeIndexableFunction
 local functionLib = require "jestronaut.utils.functions"
 local stateLib = require "jestronaut.environment.state"
@@ -123,7 +124,7 @@ end
 
 function expect(...)
   local expectInstance = {
-    actual = functionLib.wrapAndTagVarargsOrReturn(...),
+    actual = wrapAndTagVarargsOrReturn(...),
     inverse = false,
   }
 

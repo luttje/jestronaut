@@ -70,6 +70,7 @@ local function createMockFromModule(moduleName)
   return module
 end
 
+--- TODO: This causes weird behaviour where modules are loaded multiple times and cant rely on local tables being the same instance.
 local function resetModules()
   for moduleName, value in pairs(mockedModules) do
     setmetatable(value, nil)

@@ -1,9 +1,12 @@
+local wrapAndTagVarargsOrReturn = require "jestronaut.expect.asymmetricmatchers.varargsMatching".wrapAndTagVarargsOrReturn
 local asymmetricMatcherLib = require "jestronaut.expect.asymmetricmatchers.asymmetricmatcher"
-local functionLib = require "jestronaut.utils.functions"
 local tableLib = require "jestronaut.utils.tables"
 
-local function generateErrorMessage(expect, actualValue, expected)
-  return "Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(expected)
+local function generateErrorMessage(expect, actual, expected)
+  local actualValue = type(actual) == 'table' and ("table: '" .. tableLib.implode(actual, ', ') .. "'") or tostring(actual)
+  local expectedValue = type(expected) == 'table' and ("table: '" .. tableLib.implode(expected, ', ') .. "'") or tostring(expected)
+
+  return "Expected " .. actualValue ..(expect.inverse and " not" or "") ..  " to equal " .. tostring(expectedValue)
 end
 
 local function compareValues(expect, actual, customEqualityTesters, expected)
@@ -12,8 +15,7 @@ local function compareValues(expect, actual, customEqualityTesters, expected)
       local result = tester(actual, expected)
       if result ~= nil then
         if not expect:checkEquals(result, expect.inverse) then
-          local actualValue = type(actual) == 'table' and ("table: '" .. tableLib.implode(actual, ', ') .. "'") or tostring(actual)
-          error(generateErrorMessage(expect, actualValue, expected))
+          error(generateErrorMessage(expect, actual, expected))
         end
         
         return
@@ -23,8 +25,7 @@ local function compareValues(expect, actual, customEqualityTesters, expected)
 
   if asymmetricMatcherLib.isMatcher(expected) then
     if not expect:checkEquals(true, asymmetricMatcherLib.matches(expected, actual)) then
-      local actualValue = type(actual) == 'table' and ("table: '" .. tableLib.implode(actual, ', ') .. "'") or tostring(actual)
-      error(generateErrorMessage(expect, actualValue, expected))
+      error(generateErrorMessage(expect, actual, expected))
     end
   elseif type(actual) == 'table' and type(actual) == type(expected) then
     for key, value in pairs(expected) do
@@ -36,8 +37,7 @@ local function compareValues(expect, actual, customEqualityTesters, expected)
     end
   else
     if not expect:checkEquals(expected, actual) then
-      local actualValue = type(actual) == 'table' and ("table: '" .. tableLib.implode(actual, ', ') .. "'") or tostring(actual)
-      error(generateErrorMessage(expect, actualValue, expected))
+      error(generateErrorMessage(expect, actual, expected))
     end
   end
 end
@@ -47,7 +47,7 @@ end
 --- @param expected any
 --- @return boolean
 local function toEqual(expect, customEqualityTesters, ...)
-  compareValues(expect, expect.actual, customEqualityTesters or {}, functionLib.wrapAndTagVarargsOrReturn(...))
+  compareValues(expect, expect.actual, customEqualityTesters or {}, wrapAndTagVarargsOrReturn(...))
   return true
 end
 

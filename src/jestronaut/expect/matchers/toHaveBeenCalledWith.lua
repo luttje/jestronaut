@@ -1,4 +1,5 @@
-local tableImplode = require "jestronaut.utils.tables".implode
+local wrapAndTagVarargsOrReturn = require "jestronaut.expect.asymmetricmatchers.varargsMatching".wrapAndTagVarargsOrReturn
+local tableLib = require "jestronaut.utils.tables"
 
 --- @param expect Expect
 --- @param ... any
@@ -6,12 +7,12 @@ local function toHaveBeenCalledWith(expect, ...)
   local actual = expect.actual
 
   if not expect:checkEquals(true, actual:wasCalledWith(...)) then
-    local tbl = {...}
+    local args = wrapAndTagVarargsOrReturn(...)
 
-    if #tbl == 0 then
-      error("Expected " .. tostring(actual) .. " to have been called with no arguments but it was called with " .. tableImplode({actual:getCallArgs()}, ", "))
+    if tableLib.count(args) == 0 then
+      error("Expected " .. tostring(actual) .. " to have been called with no arguments but it was called with " .. tableLib.implode(actual:getCallArgs(), ", "))
     else
-      error("Expected " .. tostring(actual) .. " to have been called with " .. tableImplode(tbl, ", ") .. " but it was called with " .. tableImplode({actual:getCallArgs()}, ", "))
+      error("Expected " .. tostring(actual) .. " to have been called with " .. tableLib.implode(args, ", ") .. " but it was called with " .. tableLib.implode(actual:getCallArgs(), ", "))
     end
   end
 
