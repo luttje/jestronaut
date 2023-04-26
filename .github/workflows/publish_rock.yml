@@ -15,6 +15,7 @@ jobs:
       - uses: leafo/gh-actions-lua@v10
       - name: Install LuaRocks
         uses: leafo/gh-actions-luarocks@v4
+      - run: luarocks install dkjson
       - name: Install dependencies
         run: npm ci
       - name: Create .env file
