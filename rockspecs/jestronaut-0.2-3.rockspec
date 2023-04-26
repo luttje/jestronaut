@@ -1,5 +1,5 @@
 package = "jestronaut"
-version = "0.2-2"
+version = "0.2-3"
 source = {
    url = "git+https://github.com/luttje/jestronaut"
 }
