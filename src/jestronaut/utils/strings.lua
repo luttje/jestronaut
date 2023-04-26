@@ -33,8 +33,24 @@ local function normalizePath(path)
   return normalizedPath
 end
 
+--- Prefixes each line in a string with a prefix.
+--- @param string string
+--- @param prefix string
+--- @return string
+local function prefixLines(string, prefix)
+  local lines = split(string, "\n")
+  local prefixedLines = {}
+
+  for _, line in ipairs(lines) do
+    table.insert(prefixedLines, prefix .. line)
+  end
+
+  return table.concat(prefixedLines, "\n")
+end
+
 return {
   split = split,
   implodePath = implodePath,
   normalizePath = normalizePath,
+  prefixLines = prefixLines,
 }

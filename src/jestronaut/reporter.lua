@@ -9,21 +9,6 @@ local DefaultReporter = {
   width = 75,
 }
 
---- Prefixes each line in a string with a prefix.
---- @param string string
---- @param prefix string
---- @return string
-local function prefixLines(string, prefix)
-  local lines = split(string, "\n")
-  local prefixedLines = {}
-
-  for _, line in ipairs(lines) do
-    table.insert(prefixedLines, prefix .. line)
-  end
-
-  return table.concat(prefixedLines, "\n")
-end
-
 --- Gets the indentations.
 --- @param describeOrTest DescribeOrTest
 --- @return string
@@ -91,11 +76,12 @@ local function drawDescribeOrTest(describeOrTest)
 end
 
 --- Gets the summary text and the amount of lines it takes up.
+--- @param header styledText
 --- @param describesByFilePath table
 --- @param verbose boolean
 --- @return string, number
-local function getSummary(describesByFilePath, verbose)
-  local summary = styledText.new()
+local function getSummary(header, describesByFilePath, verbose)
+  local summary = styledText.new(header)
 
   verbose = verbose == nil and false or verbose
 
@@ -140,26 +126,21 @@ end
 --- Redraws the summary lines, clearing the previous ones.
 --- @param verbose boolean
 function DefaultReporter:redrawSummary(verbose)
-  local summary, lineCount = getSummary(self.describesByFilePath, verbose)
+  local summary, lineCount = getSummary(self.summaryHeader, self.describesByFilePath, verbose)
+  local summaryText = tostring(summary)
 
   if self.lastPrintEraseCount then
-    if lineCount > self.lastPrintEraseCount then
-      self.lastPrintEraseCount = lineCount
-    end
-  
-    -- Remove all the previous lines (same height) and print the new summary.
+    -- Remove all the previous lines and print the new summary.
     local clearLines = styledText.new()
       :erase(styledText.eraseCodes.eraseCursorToEndOfLine)
       :cursor(styledText.cursorCodes.moveUpLines, 1)
-      :rep(self.lastPrintEraseCount + 1)
+      :rep(self.lastPrintEraseCount + 2) -- The two is to add two newlines caused by the two prints below
 
-    originalPrint(clearLines)
-  else
-    self.lastPrintEraseCount = lineCount
+    originalPrint(clearLines) -- 1
   end
+  self.lastPrintEraseCount = lineCount
 
-  local summaryText = tostring(summary)
-  originalPrint(summaryText)
+  originalPrint(summaryText) -- 2
 end
 
 --- Prints the name of the test.
@@ -259,25 +240,21 @@ function DefaultReporter:printNewline(count)
   end
 end
 
---- Stores the tests that will be run.
---- @param describesByFilePath table
-function DefaultReporter:setTestSet(describesByFilePath)
-  self.describesByFilePath = describesByFilePath
-
-  self:redrawSummary()
-end
-
---- Prints the start message of the test.
+--- Stores the tests that will be run and prints the summary with header.
 --- @param rootDescribe Describe
-function DefaultReporter:printStart(rootDescribe)
+--- @param describesByFilePath table
+function DefaultReporter:startTestSet(rootDescribe, describesByFilePath)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
-  local startTime = os.date("%X")
 
-  self:printNewline(2)
-  self:printCentered("🚀 Starting " .. totalTestCount .. " tests at " .. startTime .. "...")
-  self:printNewline(2)
-  self:printHorizontalLine()
-  self:printNewline(2)
+  self.summaryHeader = styledText.new()
+    :plain("🚀 Starting ")
+    :colored(tostring(totalTestCount), styledText.foregroundColors.yellow)
+    :plain(" tests at ")
+    :colored(os.date("%X"), styledText.foregroundColors.yellow)
+    :plain("...\n\n")
+
+  self.describesByFilePath = describesByFilePath
+  self:redrawSummary()
 end
 
 --- Prints the success message of the test.
@@ -302,7 +279,6 @@ function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCoun
   if(relativeSuccess == 1) then
     self:printCentered("🎉 All tests passed. Great job!")
     self:printNewline()
-    return
   end
 
   local testResults = styledText.new()

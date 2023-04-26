@@ -522,9 +522,8 @@ local function runTests(runnerOptions)
   
   -- currentParent is the root describe at this point
   local testSetRoot, describesByFilePath, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
-  reporter:setTestSet(describesByFilePath)
 
-  reporter:printStart(testSetRoot)
+  reporter:startTestSet(testSetRoot, describesByFilePath)
 
   local startTime = os.clock()
   local success, errOrFailedTestCount = pcall(testSetRoot.run, testSetRoot, reporter, runnerOptions)

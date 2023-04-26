@@ -138,11 +138,7 @@ function STYLED_TEXT_META:reset()
 end
 
 function STYLED_TEXT_META:getLineCount()
-  local count = 0
-
-  for _ in string.gmatch(tostring(self), "\n") do
-    count = count + 1
-  end
+  local _, count = string.gsub(tostring(self), "\n", "")
 
   return count
 end
@@ -156,10 +152,17 @@ function STYLED_TEXT_META:__tostring()
 end
 
 --- Creates a new styled text object
+--- @param text string|StyledText
 --- @return StyledText
-local function new()
+local function new(text)
+  if text == nil then
+    text = ""
+  elseif type(text) ~= "string" then
+    text = tostring(text)
+  end
+
   return setmetatable({
-    parts = {},
+    parts = { text },
   }, STYLED_TEXT_META)
 end
 

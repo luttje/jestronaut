@@ -29,7 +29,7 @@ jestronaut
     -- Set to true to show every test result, false to keep output compact.
     -- verbose = true,
 
-    -- Slow down the tests by x milliseconds to make it easier to follow the output.
+    -- Slow down the tests by x milliseconds to make it easier to follow the output. (May cause the screen to flicker)
     -- slowDown = 200,
   })
   :registerTests(function()
