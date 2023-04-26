@@ -1,11 +1,11 @@
 package = "jestronaut"
-version = "scm-1"
+version = "scm-0"
 source = {
    url = "git+https://github.com/luttje/jestronaut"
 }
 description = {
    summary = "Library for testing your Lua scripts.",
-   detailed = "A Lua library for testing your scripts. It does for Lua what [Jest](https://jestjs.io/) does for JavaScript, with the same API.",
+   detailed = "A Lua library for testing your scripts. It does for Lua what Jest (https://jestjs.io/) does for JavaScript, with the same API.",
    homepage = "https://github.com/luttje/jestronaut",
    license = "MIT"
 }
