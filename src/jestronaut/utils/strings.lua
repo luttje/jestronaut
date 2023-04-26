@@ -1,28 +1,50 @@
-local function split (inputstr, sep)
-  if sep == nil then
-    sep = "%s"
+--- Splits a string into a table of strings at the given seperator (defaults to any whitespace)
+--- @param str string
+--- @param seperator string
+--- @return table
+local function split(str, seperator)
+  local pattern
+  
+  if seperator == '' then
+    pattern = '.'
+  else
+    if seperator == nil then
+      seperator = "%s"
+    end
+
+    pattern = "([^"..seperator.."]+)"
   end
-  local t={}
-  for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+
+  local t = {}
+  
+  for str in string.gmatch(str, pattern) do
     table.insert(t, str)
   end
+
   return t
 end
 
+--- Implodes a path table into a string.
+--- @param path table
+--- @return string
 local function implodePath(path)
-  local s = ''
+  local pathAsString = ''
+
   for _, v in ipairs(path) do
-    if type(v) == 'number' then
-      s = s .. '[' .. v .. ']'
+    if type(v) ~= 'string' then
+      pathAsString = pathAsString .. '[' .. tostring(v) .. ']'
     else
-      s = s .. '.' .. v
+      pathAsString = pathAsString .. '.' .. v
     end
   end
 
-  return s:gsub('^.', '')
+  pathAsString = pathAsString:gsub('^%.', '')
+  return pathAsString
 end
 
 --- Converts any backward slashes to forward slashes, removing duplicates, trailing slashes. Starts the string with ./ if it doesn't already.
+--- @param path string
+--- @return string
 local function normalizePath(path)
   local normalizedPath = path:gsub('\\', '/'):gsub('/+', '/'):gsub('/$', '')
 
