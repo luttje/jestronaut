@@ -304,6 +304,7 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
     afterDescribeOrTest(self, success)
 
     self.success = success
+    self.results = results
     self.isRunning = false
     self.hasRun = true
 

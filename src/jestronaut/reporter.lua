@@ -79,6 +79,10 @@ local function drawDescribeOrTest(describeOrTest)
         end
 
         summary:plain(" " .. describeOrTest.name .. "\n")
+
+        if (describeOrTest.hasRun and not describeOrTest.success) then
+          summary:plain(table.concat(describeOrTest.results, " ") .. "\n\n")
+        end
       end
     end
   end
@@ -107,6 +111,14 @@ local function getSummary(describesByFilePath, verbose)
       end
 
       summary:plain(filePath .. "\n")
+
+      if not file.success then
+        for _, describeOrTest in ipairs(describesOrTests) do
+          if not describeOrTest.success then
+            summary:plain(drawDescribeOrTest(describeOrTest))
+          end
+        end
+      end
     elseif file.skippedCount == #describesOrTests then
       summary:colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.blue)
       summary:plain(filePath .. "\n")

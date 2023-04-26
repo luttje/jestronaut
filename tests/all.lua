@@ -1,6 +1,7 @@
 require "jestronaut":withGlobals()
 
 -- Other tests
+require "tests.utils.tables"
 require "tests.expect"
 require "tests.mock"
 
