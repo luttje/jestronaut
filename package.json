@@ -12,7 +12,8 @@
     "test": "cross-env ./dist/jestronaut --roots=./tests/generated --roots=./tests --testPathIgnorePatterns=\"/tests/generated/ExpectAPI/toBeCloseTo.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/useFakeTimers.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/useRealTimers.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/retryTimes.lua$/\" --testPathIgnorePatterns=\"/tests/generated/MockFunctionAPI/mockFn/mockName.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test/failing.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test/failing/each.lua$/\"",
     "clear-coverage": "rm -rf luacov.stats.out && rm -rf luacov.report.out",
     "ci:test": "npm run clear-coverage && npm run test -- --coverage=true && luacov -r lcov",
-    "build": "npm run generate-rockspec && luarocks make --local && ([ -d dist ] || mkdir dist) && lit make . ./dist/jestronaut",
+    "build:lit": "([ -d dist ] || mkdir dist) && lit make . ./dist/jestronaut",
+    "build": "npm run generate-rockspec && luarocks make --local && npm run build:lit",
     "ci:publish": "node ./scripts/upload-new-rockspecs.js"
   },
   "author": "Luttje",
