@@ -81,7 +81,7 @@ end
 
 --- Adds a 'each' function to the table that can be used to run a function for each item in a table.
 --- @param target table
-local function bindTo(target)
+local function bindTo(target, baseTarget)
   --- Runs a function for each item in a table.
   --- @param target table
   --- @param table table
@@ -90,9 +90,17 @@ local function bindTo(target)
       local args = {...}
 
       for index, item in pairs(table) do
-        local describeOrTest = target(target, formatName(name, index, normalizeItem(item)), function()
-          fn(normalizeItem(item))
-        end, unpack(args))
+        local describeOrTest
+
+        if baseTarget ~= nil then
+          describeOrTest = target(target, formatName(name, index, normalizeItem(item)), function()
+            fn(normalizeItem(item))
+          end, unpack(args))
+        else
+          describeOrTest = target(formatName(name, index, normalizeItem(item)), function()
+            fn(normalizeItem(item))
+          end, unpack(args))
+        end
 
         -- Leave the isOnlyToRun flag only on the last test (so only the last each iteration will block the rest of the test suite)
         if describeOrTest.isOnlyToRun and index < #table then

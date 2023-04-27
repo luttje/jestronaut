@@ -33,7 +33,8 @@ local MOCK_FUNCTION_META = {
 
     local forcedReturn
 
-    local storeReturn = function(returns)
+    local storeReturn = function(...)
+      local returns = varargsMatchingLib.wrapAndTagVarargsOrReturn(...)
       table.insert(self.mock.results, returns)
       return returns
     end
@@ -265,8 +266,8 @@ function MOCK_FUNCTION_META:hasReturnedTimes(times)
 end
 
 function MOCK_FUNCTION_META:hasReturnedWith(...)
-  local results = self.mock.results
   local args = varargsMatchingLib.wrapAndTagVarargsOrReturn(...)
+  local results = self.mock.results
 
   for _, result in ipairs(results) do
     if varargsMatchingLib.isWrappedVarargsEqual(result, args) then
@@ -278,15 +279,17 @@ function MOCK_FUNCTION_META:hasReturnedWith(...)
 end
 
 function MOCK_FUNCTION_META:hasLastReturnedWith(...)
+  local args = varargsMatchingLib.wrapAndTagVarargsOrReturn(...)
   local lastResult = self.mock.results[#self.mock.results]
 
-  return varargsMatchingLib.isWrappedVarargsEqual(lastResult, varargsMatchingLib.wrapAndTagVarargsOrReturn(...))
+  return varargsMatchingLib.isWrappedVarargsEqual(lastResult, args)
 end
 
 function MOCK_FUNCTION_META:hasNthReturnedWith(n, ...)
+  local args = varargsMatchingLib.wrapAndTagVarargsOrReturn(...)
   local nthResult = self.mock.results[n]
 
-  return varargsMatchingLib.isWrappedVarargsEqual(nthResult, varargsMatchingLib.wrapAndTagVarargsOrReturn(...))
+  return varargsMatchingLib.isWrappedVarargsEqual(nthResult, args)
 end
 
 function MOCK_FUNCTION_META:getCallArgs(n)
@@ -298,6 +301,37 @@ function MOCK_FUNCTION_META:getCallArgs(n)
   end
 
   return varargsMatchingLib.unwrapVarargsOrReturn(calls[n].args)
+end
+
+function MOCK_FUNCTION_META:getAllCallArgs()
+  local unwrappedCalls = {}
+
+  for _, call in ipairs(self.mock.calls) do
+    table.insert(unwrappedCalls, {varargsMatchingLib.unwrapVarargsOrReturn(call.args)})
+  end
+
+  return unwrappedCalls
+end
+
+function MOCK_FUNCTION_META:getAllReturnValues()
+  local unwrappedResults = {}
+
+  for _, result in ipairs(self.mock.results) do
+    table.insert(unwrappedResults, {varargsMatchingLib.unwrapVarargsOrReturn(result)})
+  end
+
+  return unwrappedResults
+end
+
+function MOCK_FUNCTION_META:getReturnedValue(n)
+  local results = self.mock.results
+  n = n or #results
+
+  if results[n] == nil then
+    return nil
+  end
+
+  return varargsMatchingLib.unwrapVarargsOrReturn(results[n])
 end
 
 function MOCK_FUNCTION_META:getLastReturn()

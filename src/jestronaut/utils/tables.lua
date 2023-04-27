@@ -53,12 +53,18 @@ local function keys(tbl)
   return keys
 end
 
-local function implode(t, sep, withKeys)
+local function implode(t, sep, withKeys, depth)
   withKeys = withKeys == nil and true or withKeys
+  depth = depth or 0
   sep = sep or ''
   local s = ''
   for k, v in pairs(t) do
-    local value = type(v) == 'table' and ('(table:' .. implode(v, sep) .. ')') or tostring(v)
+    local value = tostring(v)
+    if type(v) == 'table' then
+      if depth < 5 then
+        value = '(table:' .. implode(v, sep, withKeys, depth + 1) .. ')'
+      end
+    end
     s = s .. (withKeys and (tostring(k) .. '=') or '') .. value .. sep
   end
 

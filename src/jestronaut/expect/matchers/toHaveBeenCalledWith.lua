@@ -10,9 +10,9 @@ local function toHaveBeenCalledWith(expect, ...)
     local args = wrapAndTagVarargsOrReturn(...)
 
     if tableLib.count(args) == 0 then
-      error("Expected " .. tostring(actual) .. " to have been called with no arguments but it was called with " .. tableLib.implode(actual:getCallArgs(), ", "))
+      error("Expected " .. tostring(actual) .. " to have been called with no arguments but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", "))
     else
-      error("Expected " .. tostring(actual) .. " to have been called with " .. tableLib.implode(args, ", ") .. " but it was called with " .. tableLib.implode(actual:getCallArgs(), ", "))
+      error("Expected " .. tostring(actual) .. " to have been called with " .. tableLib.implode(args, ", ") .. " but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", "))
     end
   end
 
