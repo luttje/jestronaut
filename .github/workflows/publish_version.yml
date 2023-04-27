@@ -28,6 +28,14 @@ jobs:
           echo LUAROCKS_API_KEY=${{ secrets.LUAROCKS_API_KEY }} >> .env
       - name: Publish the rock
         run: npm run ci:publish
+      - name: Install Luvit
+        run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
+      - name: Make lit and luvit available and executable
+        run: |
+          sudo cp lit /usr/local/bin/lit
+          sudo chmod +x /usr/local/bin/lit
+          sudo cp luvit /usr/local/bin/luvit
+          sudo chmod +x /usr/local/bin/luvit
       - name: Build the LuaRocks module and Lit binary
         run: npm run build
       - name: Upload binary artifact from ./dist/jestronaut
@@ -43,6 +51,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
+      - uses: ilammy/msvc-dev-cmd@v1
       - name: Install Lua
         uses: leafo/gh-actions-lua@v10
       - name: Install LuaRocks
