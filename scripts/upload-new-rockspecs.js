@@ -18,13 +18,12 @@ const rockspecs = fs.readdirSync(rockspecsDir);
 const uploadQueue = [];
 
 rockspecs.forEach(rockspec => {
-  const rockVersion = rockspec.replace(/.*-([^-]+)\.rockspec/, '$1');
+  const rockVersion = rockspec.match(/(\d+\.\d+-\d+)/)[0];
   const isOnline = onlineRockspecs.indexOf(rockVersion) !== -1;
-  
+
   if (!isOnline)
     uploadQueue.push(path.join(rockspecsDir, rockspec));
 });
-
 
 if (uploadQueue.length) {
   console.log('Uploading...');
