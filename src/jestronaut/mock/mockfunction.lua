@@ -17,6 +17,11 @@ local MOCK_FUNCTION_META = {
   _mockRejectedValue = nil,
   _mockRejectedValueStack = nil,
 
+  __tostring = function(self)
+    local name = rawget(self, "mockName")
+    return tostring(name ~= nil and name or "jestronaut.fn()")
+  end,
+
   __call = function(self, ...)
     local args = varargsMatchingLib.wrapAndTagVarargsOrReturn(...)
 
@@ -40,24 +45,23 @@ local MOCK_FUNCTION_META = {
     end
 
     if #self._mockReturnValueStack > 0 then
-      forcedReturn = self._mockReturnValueStack[#self._mockReturnValueStack]
-      storeReturn(forcedReturn)
+      local results = storeReturn(table.remove(self._mockReturnValueStack, 1))
+      return varargsMatchingLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
     end
 
     if #self._mockImplementationStack > 0 then
-      local results = storeReturn(self._mockImplementationStack[#self._mockImplementationStack](...))
-      table.remove(self._mockImplementationStack, #self._mockImplementationStack)
-      return forcedReturn ~= nil and forcedReturn or results
+      local results = storeReturn(table.remove(self._mockImplementationStack, 1)(...))
+      return varargsMatchingLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
     end
 
     if self._mockReturnThis then
       local results = storeReturn(self)
-      return forcedReturn ~= nil and forcedReturn or results
+      return varargsMatchingLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
     end
 
     if self._mockReturnValue ~= nil then
       local results = storeReturn(self._mockReturnValue)
-      return forcedReturn ~= nil and forcedReturn or results
+      return varargsMatchingLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
     end
 
     local results = storeReturn(self._mockImplementation(...))
@@ -303,26 +307,35 @@ function MOCK_FUNCTION_META:getCallArgs(n)
   return varargsMatchingLib.unwrapVarargsOrReturn(calls[n].args)
 end
 
+--- Internal function to get all call arguments.
+--- Note: Because this is an internal function, it contains raw VarargsMatching objects where varargs were used to call.
+--- @return table
 function MOCK_FUNCTION_META:getAllCallArgs()
-  local unwrappedCalls = {}
+  local callArgs = {}
 
   for _, call in ipairs(self.mock.calls) do
-    table.insert(unwrappedCalls, {varargsMatchingLib.unwrapVarargsOrReturn(call.args)})
+    table.insert(callArgs, call.args)
   end
 
-  return unwrappedCalls
+  return callArgs
 end
 
+--- Internal function to get all returned values.
+--- Note: Because this is an internal function, it contains raw VarargsMatching objects where varargs were returned.
+--- @return table
 function MOCK_FUNCTION_META:getAllReturnValues()
-  local unwrappedResults = {}
+  local returnValues = {}
 
   for _, result in ipairs(self.mock.results) do
-    table.insert(unwrappedResults, {varargsMatchingLib.unwrapVarargsOrReturn(result)})
+    table.insert(returnValues, result)
   end
 
-  return unwrappedResults
+  return returnValues
 end
 
+--- Internal function to get specific returned value.
+--- Note: Because this is an internal function, it contains raw VarargsMatching objects where varargs were returned.
+--- @return any
 function MOCK_FUNCTION_META:getReturnedValue(n)
   local results = self.mock.results
   n = n or #results
@@ -331,7 +344,7 @@ function MOCK_FUNCTION_META:getReturnedValue(n)
     return nil
   end
 
-  return varargsMatchingLib.unwrapVarargsOrReturn(results[n])
+  return results[n]
 end
 
 function MOCK_FUNCTION_META:getLastReturn()
@@ -377,19 +390,25 @@ local function makePropertySpy(object, propertyName, accessType)
 
   setmetatable(object, newMetaTable)
 
-  if newMetaTable.__index == nil then
-    newMetaTable.__index = function(_, key)
+  newMetaTable.__index = function(_, key)
+    if accessType == nil or accessType == "get" then
       if key == propertyName then
         mockFn()
         return propertyValue
       end
+    end
 
-      return rawget(object, key)
+    if propertyValue ~= nil then
+      return propertyValue
+    end
+
+    if originalMetatable ~= nil then
+      return rawget(originalMetatable, key)
     end
   end
-
-  if newMetaTable.__newindex == nil then
-    newMetaTable.__newindex = function(_, key, value)
+  
+  newMetaTable.__newindex = function(_, key, value)
+    if accessType == nil or accessType == "set" then
       if key == propertyName then
         mockFn(value)
         propertyValue = value
@@ -400,39 +419,11 @@ local function makePropertySpy(object, propertyName, accessType)
     end
   end
 
-  if accessType ~= nil then
-    if accessType == "get" then
-      newMetaTable.__index = function(_, key)
-        if key == propertyName then
-          mockFn()
-          return propertyValue
-        end
-
-        return rawget(object, key)
-      end
-    elseif accessType == "set" then
-      newMetaTable.__newindex = function(_, key, value)
-        if key == propertyName then
-          mockFn(value)
-          propertyValue = value
-          return
-        end
-
-        rawset(object, key, value)
-      end
-    end
-  end
-
   return mockFn
 end
 
 local function spyOn(object, propertyName, accessType)
   local originalProperty = object[propertyName]
-
-  if originalProperty == nil then
-    error("Cannot spyOn the method \"" .. propertyName .. "\" because it is nil")
-  end
-
   local mock
   
   if type(originalProperty) == "function" then
