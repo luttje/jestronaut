@@ -54,13 +54,9 @@ jobs:
         with:
           node-version: '18'
       - name: Install Luvit
-        run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
-      - name: Make lit and luvit available and executable
+        shell: pwsh
         run: |
-          sudo cp lit /usr/local/bin/lit
-          sudo chmod +x /usr/local/bin/lit
-          sudo cp luvit /usr/local/bin/luvit
-          sudo chmod +x /usr/local/bin/luvit
+          [Net.ServicePointManager]::SecurityProtocol = 'Tls12' iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))  
       - name: Install dependencies
         run: npm ci
       - name: Build the Lit binary
