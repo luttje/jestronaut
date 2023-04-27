@@ -3,9 +3,6 @@ on:
   push:
     tags:
       - 'v*'
-    # also on this branch for testing right now
-    branches:
-      - 'feature/github-and-lit-release'
       
 jobs:
   publish_rock_and_build_ubuntu:
