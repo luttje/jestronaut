@@ -55,8 +55,7 @@ jobs:
           node-version: '18'
       - name: Install Luvit
         shell: pwsh
-        run: |
-          [Net.ServicePointManager]::SecurityProtocol = 'Tls12' iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))  
+        run: "[Net.ServicePointManager]::SecurityProtocol = 'Tls12'; iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))"
       - name: Install dependencies
         run: npm ci
       - name: Build the Lit binary
