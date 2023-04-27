@@ -71,6 +71,8 @@ jobs:
   publish_github:
     runs-on: ubuntu-latest
     needs: [publish_rock_and_build_ubuntu, build_windows]
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
       - name: Create dist directory
