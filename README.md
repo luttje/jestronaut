@@ -77,7 +77,7 @@ This binary is a standalone executable that can be used to run Jestronaut tests 
 
 1. Download the latest binary from the [releases page](https://github.com/luttje/jestronaut/releases)
 
-2. Install the binary somewhere in your PATH
+2. Install the binary somewhere in your PATH and rename it to `jestronaut` (or `jestronaut.exe` on Windows)
 
 3. Run the tests with `jestronaut`, for example:
 
