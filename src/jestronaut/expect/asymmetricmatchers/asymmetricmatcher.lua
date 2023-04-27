@@ -6,13 +6,15 @@ ASYMMETRIC_MATCHER_META = {
   sample = nil,
 
   new = function(sample, inverse)
-    local instance = {
-      sample = sample,
-      inverse = inverse or false,
-    }
+    error('asymmetricMatch must be implemented in subclass')
+    -- e.g:
+    -- local instance = {
+    --   sample = sample,
+    --   inverse = inverse or false,
+    -- }
 
-    setmetatable(instance, ASYMMETRIC_MATCHER_META)
-    return instance
+    -- setmetatable(instance, YOUR_ASYMMETRIC_MATCHER_META)
+    -- return instance
   end,
 
   asymmetricMatch = function(self, actual)

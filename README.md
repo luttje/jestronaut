@@ -1,4 +1,11 @@
-# Jestronaut <img src="./docs/logo-without-background.png" alt="Jestronaut logo showing a jester in a space helmet" width="200" align="right" />
+> **Warning**
+> Jestronaut is still in early development.
+
+<div align="center">
+
+<img src="./docs/logo-without-background.png" alt="Jestronaut logo showing a jester in a space helmet" width="200" />
+
+# Jestronaut 
 
 [![License](https://img.shields.io/github/license/luttje/jestronaut)](https://github.com/luttje/jestronaut/blob/main/LICENSE)
 [![LuaRocks](https://img.shields.io/luarocks/v/luttje/jestronaut)](https://luarocks.org/modules/luttje/jestronaut)
@@ -6,12 +13,11 @@
 [![Dependency status](https://img.shields.io/librariesio/github/luttje/jestronaut)](https://libraries.io/github/luttje/jestronaut)
 [![Test Coverage Status](https://coveralls.io/repos/github/luttje/jestronaut/badge.svg?branch=main)](https://coveralls.io/github/luttje/jestronaut?branch=main)
 
+</div>
+
 A Lua library for testing your code. It does for Lua what [Jest](https://jestjs.io/) does for JavaScript, with the same API. 
 
-Jestronaut allows you to assert, mock, and spy on your code with ease.
-
-> **Warning**
-> Jestronaut is still in early development.
+Jestronaut allows you to assert, mock, and spy on your code with ease. It includes a test-runner that you can start from the CLI or Lua:
 
 ![Jestronaut output showing green signals besides all tests in 4 files to indicate the tests inside passed](./docs/output.gif)
 

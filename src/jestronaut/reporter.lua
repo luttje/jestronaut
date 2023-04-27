@@ -70,6 +70,8 @@ local function drawDescribeOrTest(describeOrTest)
         end
       end
     end
+  elseif (describeOrTest.hasRun and not describeOrTest.success) then
+    summary:plain(table.concat(describeOrTest.errors) .. "\n\n")
   end
 
   return tostring(summary)
@@ -310,6 +312,35 @@ function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCoun
     styledText.new()
       :styled("Ran all test suites.", styledText.styles.dim)
   )
+
+  local todos = {}
+
+  -- Find which files have describesOrTests that are marked isTodo
+  local function findTodos(file, describesOrTests)
+    for _, describeOrTest in pairs(describesOrTests) do
+      if describeOrTest.children then
+        findTodos(file, describeOrTest.children)
+      elseif describeOrTest.isTodo then
+        table.insert(todos, describeOrTest)
+      end
+    end
+  end
+  
+  for _, file in ipairs(self.describesByFilePath) do
+    findTodos(file, file.describesOrTests)
+  end
+
+  if #todos > 0 then
+    for _, describeOrTest in ipairs(todos) do
+      originalPrint(
+        styledText.new()
+          :newline()
+          :colored(" TODO ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
+          :plain(" " .. describeOrTest.name)
+          :styled(" (in file: " .. describeOrTest.filePath .. ")", styledText.styles.dim)
+      )
+    end
+  end
 end
 
 --- Prints the bail message of the test.

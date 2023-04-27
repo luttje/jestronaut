@@ -95,12 +95,6 @@ local function getTestLocalState(testFilePath)
   return testLocalState
 end
 
---- @param test DescribeOrTest
-local function setNotExecuteTestsOtherThan(test)
-  local fileLocalState = getTestLocalState(test.filePath)
-  fileLocalState.notExecuting = test
-end
-
 --- Sets the amount of times tests will be retried. Must be called at the top of a file or describe block.
 --- @param numRetries number
 --- @param options table
@@ -256,7 +250,7 @@ function DESCRIBE_OR_TEST_META:addChild(child)
   end
 end
 
---- Runs the test and returns the amount of failed and skippewd tests.
+--- Runs the test and returns the amount of failed tests.
 --- @param reporter Reporter
 --- @param runnerOptions RunnerOptions
 --- @return number
@@ -352,10 +346,6 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
     reporter:testFinished(self, self.success)
   end
 
-  if self.isOnlyToRun then
-    setNotExecuteTestsOtherThan(self)
-  end
-
   return failedTestCount
 end
 
@@ -370,6 +360,7 @@ function DESCRIBE_OR_TEST_FOR_RUN_META:addChild(describeOrTest)
   self.children[#self.children + 1] = describeOrTest
 end
 
+--- Creates a copy of the describe or test for running. Returns the estimated amount of tests to skip.
 --- @param describeOrTest DescribeOrTest
 --- @param runnerOptions RunnerOptions
 --- @return DescribeOrTestForRun, number
@@ -451,6 +442,15 @@ local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
       filePath = child.filePath,
       describesOrTests = {},
     }, FILE_FOR_RUN)
+
+    if describesByFilePath[fileIndex].__skipNextAdded then
+      child.toSkip = true
+      skippedTestCount = skippedTestCount + 1
+    end
+
+    if child.isOnlyToRun then
+      describesByFilePath[fileIndex].__skipNextAdded = true
+    end
 
     table.insert(describesByFilePath[fileIndex].describesOrTests, child)
   end

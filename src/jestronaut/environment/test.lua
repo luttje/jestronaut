@@ -169,7 +169,18 @@ local function testTodo(self, name, fn)
     error("test.todo cannot have an implementation")
   end
 
-  -- TODO: Implement this, it should print a warning that this test is not implemented
+  local test = {
+    name = name,
+  }
+
+  test.toSkip = true
+  test.isTodo = true
+
+  setmetatable(test, TEST_META)
+
+  registerDescribeOrTest(test)
+
+  return test
 end
 
 return {

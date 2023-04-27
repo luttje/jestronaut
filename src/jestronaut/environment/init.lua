@@ -43,7 +43,7 @@ local function exposeTo(targetEnvironment)
     targetEnvironment[alias].failing.skip = makeIndexableFunction(function(blockName, blockFn, timeout) return testLib.testFailingSkip(blockName, blockFn, timeout) end)
     targetEnvironment[alias].only = makeIndexableFunction(function(blockName, blockFn, timeout) return testLib.testOnly(blockName, blockFn, timeout) end)
     targetEnvironment[alias].skip = makeIndexableFunction(function(blockName, blockFn, timeout) return testLib.testSkip(blockName, blockFn, timeout) end)
-    targetEnvironment[alias].todo = function(blockName) return testLib.testTodo(blockName) end
+    targetEnvironment[alias].todo = function(blockName, blockFn, timeout) return testLib.testTodo(blockName, blockFn, timeout) end
 
     eachLib.bindTo(targetEnvironment[alias])
     eachLib.bindTo(targetEnvironment[alias].concurrent, targetEnvironment[alias])
