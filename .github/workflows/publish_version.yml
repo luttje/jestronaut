@@ -1,0 +1,100 @@
+name: publish_version
+on:
+  push:
+    tags:
+      - 'v*'
+    # also on this branch for testing right now
+    branches:
+      - 'feature/github-and-lit-release'
+      
+jobs:
+  publish_rock_and_build_ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v10
+      - name: Install LuaRocks
+        uses: leafo/gh-actions-luarocks@v4
+      - run: luarocks install dkjson
+      - name: Install dependencies
+        run: npm ci
+      - name: Create .env file
+        run: |
+          touch .env
+          echo LUAROCKS_API_KEY=${{ secrets.LUAROCKS_API_KEY }} >> .env
+      - name: Publish the rock
+        run: npm run ci:publish
+      - name: Build the LuaRocks module and Lit binary
+        run: npm run build
+      - name: Upload binary artifact from ./dist/jestronaut
+        uses: actions/upload-artifact@v3
+        with:
+          name: jestronaut-ubuntu
+          path: dist/jestronaut
+
+  build_windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v10
+      - name: Install LuaRocks
+        uses: leafo/gh-actions-luarocks@v4
+      - name: Install Luvit
+        run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
+      - name: Make lit and luvit available and executable
+        run: |
+          sudo cp lit /usr/local/bin/lit
+          sudo chmod +x /usr/local/bin/lit
+          sudo cp luvit /usr/local/bin/luvit
+          sudo chmod +x /usr/local/bin/luvit
+      - name: Install dependencies
+        run: npm ci
+      - name: Build the LuaRocks module and Lit binary
+        run: npm run build
+      - name: Upload binary artifact from ./dist/jestronaut
+        uses: actions/upload-artifact@v3
+        with:
+          name: jestronaut-windows
+          path: dist/jestronaut
+
+  publish_github:
+    runs-on: ubuntu-latest
+    needs: [publish_rock_and_build_ubuntu, build_windows]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create dist directories
+        run: |
+          mkdir -p dist/ubuntu
+          mkdir -p dist/windows
+      - name: Download binary artifact from publish_rock_and_build_ubuntu
+        uses: actions/download-artifact@v2
+        with:
+          name: jestronaut-ubuntu
+          path: dist/ubuntu
+      - name: Download binary artifact from build_windows
+        uses: actions/download-artifact@v2
+        with:
+          name: jestronaut-windows
+          path: dist/windows
+      - name: Rename binaries
+        run: |
+          mv dist/ubuntu/jestronaut dist/jestronaut-ubuntu
+          mv dist/windows/jestronaut dist/jestronaut-windows.exe
+      - name: Create a new release
+        uses: "marvinpinto/action-automatic-releases@v1.2.1"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Latest (automatic build)"
+          files: |
+            dist/jestronaut-ubuntu
+            dist/jestronaut-windows.exe
