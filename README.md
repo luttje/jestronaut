@@ -36,9 +36,6 @@ Jestronaut allows you to assert, mock, and spy on your code with ease. It includ
 2. Create a test file inside your project, for example:
     ```lua
     -- tests/my_test.lua
-
-    require "jestronaut":withGlobals()
-
     describe("my test", function()
       it("should pass", function()
         expect(1 + 1):toBe(2)
@@ -54,7 +51,7 @@ Then you can choose one of two ways to run the tests with Jestronaut:
 
 1. Create a test runner file in the root of your project named `test.lua`:
     ```lua
-    local jestronaut = require "jestronaut"
+    require "jestronaut":withGlobals()
 
     jestronaut
       :configure({
