@@ -33,6 +33,8 @@ jobs:
           sudo chmod +x /usr/local/bin/lit
           sudo cp luvit /usr/local/bin/luvit
           sudo chmod +x /usr/local/bin/luvit
+          sudo cp luvi /usr/local/bin/luvi
+          sudo chmod +x /usr/local/bin/luvi
       - name: Build the Lit binary
         run: npm run build:lit
       - name: Rename the Lit binary
