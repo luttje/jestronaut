@@ -48,7 +48,7 @@ jestronaut
     package.path = package.path .. ";./?.lua;./?/init.lua"
 
     for _, root in pairs(config.roots) do
-      require(root:gsub("^%./",""):gsub("/","."):gsub("%.lua",""))
+      require(root:gsub("^%./",""):gsub("\\","/"):gsub("%.lua",""))
     end
   end)
   :runTests()

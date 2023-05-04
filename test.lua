@@ -1,5 +1,5 @@
 package.path = "./libs/?.lua;" .. package.path -- Try our local version first
-local jestronaut = require "jestronaut"
+require "jestronaut":withGlobals()
 
 jestronaut
   :configure({

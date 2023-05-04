@@ -1,5 +1,3 @@
-require "jestronaut":withGlobals()
-
 describe('readme examples', function()
   describe("test organization into suites", function()
     it("should confirm basic math", function()

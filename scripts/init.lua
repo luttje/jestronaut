@@ -1,5 +1,3 @@
-require "jestronaut":withGlobals()
-
 -- Search for modules relative to this file
 package.path = package.path .. ";./tests/generated/?.lua"
 

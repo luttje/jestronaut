@@ -19,11 +19,11 @@ local function getMatcher(key)
     return customMatchers[key]
   end
 
-  local modulePath = 'jestronaut.expect.matchers.' .. key
+  local modulePath = 'jestronaut/expect/matchers/' .. key
   local success, matcherOrError = pcall(require, modulePath)
 
   if not success then
-    if not (matcherOrError:find("^module '" .. modulePath .. "' not found")) then
+    if not (matcherOrError:find("module '" .. modulePath .. "' not found")) then
       error(matcherOrError)
     end
 
@@ -35,11 +35,11 @@ end
 
 
 local function getAsymmetricMatcher(key)
-  local modulePath = 'jestronaut.expect.asymmetricmatchers.' .. key
+  local modulePath = 'jestronaut/expect/asymmetricmatchers/' .. key
   local success, matcherOrError = pcall(require, modulePath)
 
   if not success then
-    if not (matcherOrError:find("^module '" .. modulePath .. "' not found")) then
+    if not (matcherOrError:find("module '" .. modulePath .. "' not found")) then
       error(matcherOrError)
     end
 

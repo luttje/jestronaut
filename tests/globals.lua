@@ -1,5 +1,3 @@
-require "jestronaut":withGlobals()
-
 it('exported globals', function()
   expect(_G):toHaveProperty('it')
   expect(_G):toHaveProperty('describe')

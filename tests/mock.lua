@@ -1,5 +1,3 @@
-require "jestronaut":withGlobals()
-
 describe('mocks', function()
   describe('function mocks', function()
     it('can be created', function()

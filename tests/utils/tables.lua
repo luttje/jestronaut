@@ -1,4 +1,4 @@
-local tablesLib = require "jestronaut.utils.tables"
+local tablesLib = require "jestronaut/utils/tables"
 
 describe('table utils', function()
   it('equals', function()

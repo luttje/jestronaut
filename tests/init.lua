@@ -1,1 +1,1 @@
-require "tests.all"
+require "tests/all"

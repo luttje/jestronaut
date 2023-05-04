@@ -1,4 +1,4 @@
-local stringsLib = require "jestronaut.utils.strings"
+local stringsLib = require "jestronaut/utils/strings"
 
 describe('strings utils', function()
   it('split', function()

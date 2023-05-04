@@ -1,5 +1,3 @@
-require "jestronaut":withGlobals()
-
 describe('expect simple', function()
   it('has an expect function', function()
     expect('expect'):toEqual('expect')
