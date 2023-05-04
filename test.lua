@@ -1,4 +1,4 @@
-package.path = "./src/?.lua;" .. package.path -- Try our local version first
+package.path = "./libs/?.lua;" .. package.path -- Try our local version first
 local jestronaut = require "jestronaut"
 
 jestronaut

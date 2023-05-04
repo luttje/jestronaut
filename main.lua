@@ -1,7 +1,5 @@
-package.path = "./src/?.lua;" .. package.path -- Try our local version first
-local jestronaut = require "jestronaut"
-local args = {...}
-
+package.path = "./libs/?.lua;" .. package.path -- Try our local version first
+require "jestronaut":withGlobals()
 local config = {}
 
 for _, arg in ipairs(args) do
