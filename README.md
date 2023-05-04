@@ -79,12 +79,16 @@ This binary is a standalone executable that can be used to run Jestronaut tests 
 3. Run the tests with `jestronaut`, for example:
 
     ```bash
-    jestronaut \
+    MSYS_NO_PATHCONV=1 jestronaut \
       --roots=./tests/generated \
       --roots=./tests \
-      --testPathIgnorePatterns=\"/tests/generated/ExpectAPI/toBeCloseTo.lua$/\" \
-      --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test.lua$/\"
+      --testPathIgnorePatterns="/tests/generated/ExpectAPI/toBeCloseTo.lua$/" \
+      --testPathIgnorePatterns="/tests/generated/GlobalAPI/test.lua$/"
     ```
+
+    > **Note**
+    > 
+    > The variable `MSYS_NO_PATHCONV=1` is only required on Windows when using MSYS2 (for example with Git for Windows). It prevents the path from being converted to a Windows path, which would result in an incorrect path.
 
 ## 🧪 API
 
