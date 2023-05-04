@@ -25,6 +25,20 @@ Jestronaut allows you to assert, mock, and spy on your code with ease. It includ
 
 ## 🚀 Getting Started
 
+First create a test file inside your project, for example:
+```lua
+-- tests/my_test.lua
+describe("my test", function()
+  it("should pass", function()
+    expect(1 + 1):toBe(2)
+  end)
+end)
+```
+
+Then you can choose one of two ways to run the tests with Jestronaut, either [run it with LuaRocks](#run-in-project-with-luarocks) OR [download the standalone binary and run tests anywhere](#running-tests-with-lit-binary).
+
+### Run in project with LuaRocks
+
 > **Note**
 > Before continuing, make sure you have installed [LuaRocks](https://luarocks.org/) with at least [Lua 5.1](https://www.lua.org/).
 
@@ -33,23 +47,7 @@ Jestronaut allows you to assert, mock, and spy on your code with ease. It includ
     luarocks install jestronaut
     ```
 
-2. Create a test file inside your project, for example:
-    ```lua
-    -- tests/my_test.lua
-    describe("my test", function()
-      it("should pass", function()
-        expect(1 + 1):toBe(2)
-      end)
-    end)
-    ```
-
-Then you can choose one of two ways to run the tests with Jestronaut:
-1. [Run in project with LuaRocks](#run-in-project-with-luarocks)
-2. [Download the binary and run tests anywhere](#running-tests-with-lit-binary)
-
-### Run in project with LuaRocks
-
-1. Create a test runner file in the root of your project named `test.lua`:
+2. Create a test runner file in the root of your project named `test.lua`:
     ```lua
     require "jestronaut":withGlobals()
 
@@ -66,15 +64,15 @@ Then you can choose one of two ways to run the tests with Jestronaut:
       :runTests()
     ```
 
-4. In the root of your project, start your tests using LuaRocks: `luarocks test` or with plain Lua: `lua test.lua`.
+3. In the root of your project, start your tests using LuaRocks: `luarocks test` or with plain Lua: `lua test.lua`.
 
 ### Running tests with lit binary
 
-This binary is a standalone executable that can be used to run Jestronaut tests anywhere. It is built with [lit](https://luvit.io/).
+This binary is a standalone executable that can be used to run Jestronaut tests anywhere.
 
-1. Download the latest binary from the [releases page](https://github.com/luttje/jestronaut/releases)
+1. Download the latest binary from the [releases page](https://github.com/luttje/jestronaut/releases).
 
-2. Install the binary somewhere in your PATH and rename it to `jestronaut` (or `jestronaut.exe` on Windows)
+2. Install the binary somewhere in your PATH and make sure it's named `jestronaut` (or `jestronaut.exe` on Windows)
 
 3. Run the tests with `jestronaut`, for example:
 
