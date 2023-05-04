@@ -6,9 +6,11 @@
     license = "MIT",
     author = { name = "luttje", email = "2738114+luttje@users.noreply.github.com" },
     homepage = "https://github.com/luttje/jestronaut",
-    dependencies = {},
+    dependencies = {
+      "luvit/require",
+    },
     files = {
-      "src/**.lua",
+      "libs/**.lua",
       "main.lua",
       "package.lua"
     }
