@@ -9,7 +9,7 @@
     "copy-api-tests": "rm -rf ./tests/generated && cp -r ./cache/tests ./tests/generated",
     "generate-tests": "npm run download-api && npm run extract-api && npm run copy-api-tests",
     "generate-rockspec": "node ./scripts/generate-rockspec.js ./libs",
-    "test": "npx cross-env ./dist/jestronaut --roots=./tests/generated --roots=./tests --testPathIgnorePatterns=\"/tests/generated/ExpectAPI/toBeCloseTo.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/useFakeTimers.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/useRealTimers.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/retryTimes.lua$/\" --testPathIgnorePatterns=\"/tests/generated/MockFunctionAPI/mockFn/mockName.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test/failing.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test/failing/each.lua$/\"",
+    "test": "cross-env ./dist/jestronaut --roots=./tests/generated --roots=./tests --testPathIgnorePatterns=\"/tests/generated/ExpectAPI/toBeCloseTo.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/useFakeTimers.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/useRealTimers.lua$/\" --testPathIgnorePatterns=\"/tests/generated/JestObjectAPI/jest/retryTimes.lua$/\" --testPathIgnorePatterns=\"/tests/generated/MockFunctionAPI/mockFn/mockName.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test/failing.lua$/\" --testPathIgnorePatterns=\"/tests/generated/GlobalAPI/test/failing/each.lua$/\"",
     "clear-coverage": "rm -rf luacov.stats.out && rm -rf luacov.report.out",
     "ci:test": "npm run clear-coverage && npm run test -- --coverage=true && luacov -r lcov",
     "build:lit": "([ -d dist ] || mkdir dist) && lit make . ./dist/jestronaut",
@@ -18,7 +18,7 @@
   },
   "author": "Luttje",
   "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "cross-env": "^7.0.3",
     "dotenv": "^16.0.3",
     "node-fetch": "^3.3.1",
