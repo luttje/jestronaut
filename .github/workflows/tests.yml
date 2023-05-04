@@ -26,11 +26,7 @@ jobs:
           luaVersion: ${{ matrix.luaVersion }}
       - uses: leafo/gh-actions-luarocks@v4
       - name: Install Luvit
-        uses: nick-fields/retry@v2 # The Luvit services often fail
-        with:
-          timeout_seconds: 15
-          max_attempts: 3
-          command: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
+        run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
       - name: Make lit and luvit available and executable
         run: |
           sudo cp lit /usr/local/bin/lit

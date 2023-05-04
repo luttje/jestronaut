@@ -26,11 +26,7 @@ jobs:
       - name: Publish the rock
         run: npm run ci:publish
       - name: Install Luvit
-        uses: nick-fields/retry@v2  # The Luvit services often fail
-        with:
-          timeout_seconds: 5
-          max_attempts: 3
-          command: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
+        run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
       - name: Make lit and luvit available and executable
         run: |
           sudo cp lit /usr/local/bin/lit
@@ -55,12 +51,8 @@ jobs:
         with:
           node-version: '18'
       - name: Install Luvit
-        uses: nick-fields/retry@v2
-        with:
-          timeout_seconds: 5
-          max_attempts: 3 
-          shell: pwsh
-          command: "[Net.ServicePointManager]::SecurityProtocol = 'Tls12'; iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))"
+        shell: pwsh
+        run: "[Net.ServicePointManager]::SecurityProtocol = 'Tls12'; iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))"
       - name: Install dependencies
         run: npm ci
       - name: Build the Lit binary
