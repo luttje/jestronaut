@@ -3,14 +3,15 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   publish_rock_and_build_ubuntu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
 
@@ -52,7 +53,7 @@ jobs:
         run: mv ./dist/jestronaut ./dist/jestronaut-ubuntu
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jestronaut-ubuntu
           path: dist/jestronaut-ubuntu
@@ -60,9 +61,9 @@ jobs:
   build_windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
 
@@ -80,7 +81,7 @@ jobs:
         run: mv ./dist/jestronaut.exe ./dist/jestronaut-windows.exe
 
       - name: Upload binary artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jestronaut-windows
           path: dist/jestronaut-windows.exe
@@ -88,9 +89,9 @@ jobs:
   build_gmod_addon:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
 
@@ -101,7 +102,7 @@ jobs:
         run: npm run build:gmod
 
       - name: Upload GMod addon artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jestronaut-gmod
           path: dist/gmod-addon.zip
@@ -112,19 +113,19 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create dist directory
         run: mkdir -p dist
 
       - name: Download binary artifact from publish_rock_and_build_ubuntu
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: jestronaut-ubuntu
           path: dist
 
       - name: Download binary artifact from build_windows
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: jestronaut-windows
           path: dist
