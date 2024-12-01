@@ -1,3 +1,5 @@
+local require = require
+
 --- @param testRoots string[]
 --- @param coverageDirectory string
 --- @param coverageProvider string
@@ -17,7 +19,11 @@ local function setupCoverage(testRoots, coverageDirectory, coverageProvider)
     error("Coverage directory is not supported yet.")
   end
 
+  -- Pass modified require's on through
+  local oldRequire = _G.require
+  _G.require = require
   local success, luacov = pcall(require, 'luacov.runner')
+  _G.require = oldRequire
 
   if not success then
     error("Could not load luacov. Make sure it is installed and available in your package.path or avoid using the --coverage option.")

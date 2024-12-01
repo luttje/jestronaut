@@ -1,3 +1,4 @@
+local require = require
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
 local functionLib = require "jestronaut/utils/functions"
 local stringsLib = require "jestronaut/utils/strings"
@@ -46,7 +47,7 @@ local function getTestFilePath(test)
   while true do
     local info = debug.getinfo(i, "Sl")
 
-    if not info then
+    if (not info) then
       error("Could not find the test file path. Please make sure options.roots is set to the directories where your tests are located.")
       break
     end
@@ -516,7 +517,11 @@ end
 --- Runs all registered tests.
 --- @param runnerOptions RunnerOptions
 local function runTests(runnerOptions)
+  -- Pass modified require's on through
+  local oldRequire = _G.require
+  _G.require = require
   local reporter = runnerOptions.reporter or (require "jestronaut/reporter".DefaultReporter)
+  _G.require = oldRequire
 
   reporter.isVerbose = runnerOptions.verbose
   
