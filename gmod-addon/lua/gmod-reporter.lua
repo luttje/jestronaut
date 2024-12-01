@@ -18,6 +18,19 @@ local function getIndentations(describeOrTest)
   return string.rep("  ", describeOrTest.indentationLevel)
 end
 
+--- Ensures the text is always the given amount of characters long.
+--- Truncates the text if it's too long, or pads it with spaces if it's too short.
+--- @param text string
+--- @param length number
+--- @return string
+local function ensureLength(text, length)
+  if text:len() > length then
+    return text:sub(1, length)
+  end
+
+  return text .. (" "):rep(length - text:len())
+end
+
 --- @param filePath string
 function GmodReporter:getFileByPath(filePath)
   for _, file in ipairs(self.describesByFilePath) do
@@ -94,7 +107,7 @@ function GmodReporter:testStarting(describeOrTest)
   local summary = styledText.new(nil, STYLING_DISABLED)
       :plain(drawDescribeOrTest(describeOrTest))
     
-  originalPrint("STARTED:\n", tostring(summary))
+  originalPrint(ensureLength("STARTED:", 10) .. tostring(summary))
 end
 
 --- Prints the result of the test and returns whether it passed.
@@ -129,7 +142,7 @@ function GmodReporter:testFinished(describeOrTest, success, ...)
   local summary = styledText.new(nil, STYLING_DISABLED)
       :plain(drawDescribeOrTest(describeOrTest))
     
-  originalPrint("FINISHED:\n", tostring(summary))
+  originalPrint(ensureLength("FINISHED:", 10) .. tostring(summary))
 end
 
 --- Prints the skip message of the test.
@@ -144,7 +157,7 @@ function GmodReporter:testSkipped(describeOrTest)
   local summary = styledText.new(nil, STYLING_DISABLED)
       :plain(drawDescribeOrTest(describeOrTest))
     
-  originalPrint("SKIPPED:\n", tostring(summary))
+  originalPrint(ensureLength("SKIPPED:", 10) .. tostring(summary))
 end
 
 --- Prints the retry message of the test.

@@ -1,7 +1,7 @@
 include("gmod-jestronaut.lua"):withGlobals()
 
 local simplifiedReporter = callWithRequireCompat(function()
-  return require "jestronaut/reporter-gmod".GmodReporter
+  return require "gmod-reporter".GmodReporter
 end)
 
 jestronaut
