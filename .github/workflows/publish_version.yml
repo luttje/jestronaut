@@ -124,12 +124,17 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Store the latest tag in a variable
+        id: get_tag
+        run: echo "LATEST_TAG=$(git describe --abbrev=0 --tags)" >> $GITHUB_OUTPUT
+
       - name: Create a new release
         id: create_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LATEST_TAG: ${{ steps.get_tag.outputs.LATEST_TAG }}
         run: |
-          gh release create latest \
+          gh release create $LATEST_TAG \
             --prerelease \
             --title "Latest (automatic build)" \
             dist/jestronaut-ubuntu \
