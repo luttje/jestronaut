@@ -4,7 +4,7 @@ local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTab
 
 --- @class Describe
 local DESCRIBE_META = {
-  isDescribe = true,
+    isDescribe = true,
 }
 
 extendMetaTableIndex(DESCRIBE_META, DESCRIBE_OR_TEST_META)
@@ -15,28 +15,28 @@ extendMetaTableIndex(DESCRIBE_META, DESCRIBE_OR_TEST_META)
 --- @param options DescribeOptions
 --- @return Describe
 local function _internalDescribe(name, fn, options)
-  if(type(name) ~= "string") then
-    error("describe name must be a string")
-  end
+    if (type(name) ~= "string") then
+        error("describe name must be a string")
+    end
 
-  local describe = {
-    name = name,
-    fn = fn,
+    local describe = {
+        name = name,
+        fn = fn,
 
-    children = {},
-    childrenLookup = {},
-  }
+        children = {},
+        childrenLookup = {},
+    }
 
-  if options then
-    describe.isOnlyToRun = options.isOnlyToRun
-    describe.toSkip = options.toSkip
-  end
+    if options then
+        describe.isOnlyToRun = options.isOnlyToRun
+        describe.toSkip = options.toSkip
+    end
 
-  setmetatable(describe, DESCRIBE_META)
+    setmetatable(describe, DESCRIBE_META)
 
-  registerDescribeOrTest(describe)
+    registerDescribeOrTest(describe)
 
-  return describe
+    return describe
 end
 
 --- Creates a new describe.
@@ -44,7 +44,7 @@ end
 --- @param fn function
 --- @return Describe
 local function describe(name, fn)
-  return _internalDescribe(name, fn)
+    return _internalDescribe(name, fn)
 end
 
 --- Creates a new describe that is the only one that will run.
@@ -53,11 +53,11 @@ end
 --- @param fn function
 --- @return Describe
 local function describeOnly(self, name, fn)
-  local _describe = _internalDescribe(name, fn, {
-    isOnlyToRun = true,
-  })
+    local _describe = _internalDescribe(name, fn, {
+        isOnlyToRun = true,
+    })
 
-  return _describe
+    return _describe
 end
 
 --- Creates a new describe that will be skipped.
@@ -66,19 +66,19 @@ end
 --- @param fn function
 --- @return Describe
 local function describeSkip(self, name, fn)
-  local _describe = _internalDescribe(name, fn, {
-    toSkip = true,
-  })
+    local _describe = _internalDescribe(name, fn, {
+        toSkip = true,
+    })
 
-  return _describe
+    return _describe
 end
 
 return {
-  describe = describe,
+    describe = describe,
 
-  describeOnly = describeOnly,
-  fdescribe = describeOnly,
+    describeOnly = describeOnly,
+    fdescribe = describeOnly,
 
-  describeSkip = describeSkip,
-  xdescribe = describeSkip,
+    describeSkip = describeSkip,
+    xdescribe = describeSkip,
 }

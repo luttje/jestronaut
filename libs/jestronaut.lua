@@ -10,91 +10,93 @@ setupModuleMocking()
 
 --- @class Jestronaut
 local JESTRONAUT = {
-  runnerOptions = {},
+    runnerOptions = {},
 }
 
 --- @param runnerOptions RunnerOptions
 --- @return Jestronaut
 function JESTRONAUT:configure(runnerOptions)
-  environmentLib.resetEnvironment()
+    environmentLib.resetEnvironment()
 
-  -- Setup the root describe
-  describeLib.describe("root", function() end)
+    -- Setup the root describe
+    describeLib.describe("root", function() end)
 
-  runnerOptions = optionsLib.merge(runnerOptions)
+    runnerOptions = optionsLib.merge(runnerOptions)
 
-  self.runnerOptions = runnerOptions
+    self.runnerOptions = runnerOptions
 
-  if not runnerOptions.roots then
-    error("No roots found in config. Provide at least one root that points to a directory where tests will be run from.")
-  end
+    if not runnerOptions.roots then
+        error(
+        "No roots found in config. Provide at least one root that points to a directory where tests will be run from.")
+    end
 
-  environmentLib.setRoots(runnerOptions.roots)
+    environmentLib.setRoots(runnerOptions.roots)
 
-  if runnerOptions.coverage == true then
-    coverageLib.setupCoverage(runnerOptions.roots, runnerOptions.coverageDirectory, runnerOptions.coverageProvider)
-  end
+    if runnerOptions.coverage == true then
+        coverageLib.setupCoverage(runnerOptions.roots, runnerOptions.coverageDirectory, runnerOptions.coverageProvider)
+    end
 
-  return self
+    return self
 end
 
 --- Registers the tests. This is done by calling the given function.
 --- @param testRegistrar function
 --- @return Jestronaut
 function JESTRONAUT:registerTests(testRegistrar)
-  if not self.runnerOptions then
-    error("No options found. You must setup jestronaut (with jestronaut:configure(options)) before registering tests.")
-  end
+    if not self.runnerOptions then
+        error(
+        "No options found. You must setup jestronaut (with jestronaut:configure(options)) before registering tests.")
+    end
 
-  environmentLib.registerTests(testRegistrar)
+    environmentLib.registerTests(testRegistrar)
 
-  return self
+    return self
 end
 
 --- Runs the tests.
 --- @param onFinishedCallback? fun()
 --- @return Jestronaut
 function JESTRONAUT:runTests(onFinishedCallback)
-  if not self.runnerOptions then
-    error("No options found. You must setup jestronaut (with jestronaut:configure(options)) before running tests.")
-  end
+    if not self.runnerOptions then
+        error("No options found. You must setup jestronaut (with jestronaut:configure(options)) before running tests.")
+    end
 
-  environmentLib.runTests(self.runnerOptions)
+    environmentLib.runTests(self.runnerOptions)
 
-  if onFinishedCallback then
-    onFinishedCallback()
-  end
+    if onFinishedCallback then
+        onFinishedCallback()
+    end
 
-  return self
+    return self
 end
 
 function JESTRONAUT:retryTimes(numRetries, options)
-  environmentLib.retryTimes(numRetries, options)
+    environmentLib.retryTimes(numRetries, options)
 end
 
 function JESTRONAUT:setTimeout(timeout)
-  environmentLib.setTimeout(timeout)
+    environmentLib.setTimeout(timeout)
 end
 
 function JESTRONAUT:getGlobals()
-  local globals = {}
+    local globals = {}
 
-  expectLib.exposeTo(globals)
-  environmentLib.exposeTo(globals)
+    expectLib.exposeTo(globals)
+    environmentLib.exposeTo(globals)
 
-  globals.jestronaut = self
+    globals.jestronaut = self
 
-  mockLib.exposeTo(globals.jestronaut)
+    mockLib.exposeTo(globals.jestronaut)
 
-  return globals
+    return globals
 end
 
 function JESTRONAUT:withGlobals()
-  local globals = self:getGlobals()
+    local globals = self:getGlobals()
 
-  for key, value in pairs(globals) do
-    _G[key] = value
-  end
+    for key, value in pairs(globals) do
+        _G[key] = value
+    end
 end
 
 package.loaded['@jestronaut_globals'] = JESTRONAUT:getGlobals()

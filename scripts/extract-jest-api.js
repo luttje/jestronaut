@@ -6,13 +6,13 @@ const cacheDirectory = 'cache';
 
 /**
  * Converts a markdown file to an API object.
- * 
+ *
  * @param {file} file
  * @returns {object}
  */
 function objectFromMarkdownFile(file) {
   const markdown = fs.readFileSync(file, 'utf8');
-  
+
   return {
     file: path.basename(file),
     ...objectFromGlobalApiMarkdown(markdown)
@@ -40,7 +40,7 @@ function objectFromGlobalApiMarkdown(markdown) {
       const description = exampleMatch.groups.description;
       const descriptionAfter = exampleMatch.groups.descriptionAfter;
       const attributes = {};
-      
+
       const attributeMatches = [...example.split('\n')[0].matchAll(attributeRegex)];
 
       attributeMatches.forEach(attributeMatch => {
@@ -80,7 +80,7 @@ function objectFromGlobalApiMarkdown(markdown) {
 
 /**
  * Collects all API pages from the cache and returns them as objects.
- * 
+ *
  * @param {string} cacheDirectory
  * @returns {object[]}
  */
@@ -98,10 +98,10 @@ function getApi(cacheDirectory) {
 
 /**
  * Prefixes each line in a string with a prefix.
- * 
+ *
  * @param {string} string
  * @param {string} prefix
- * 
+ *
  * @returns {string}
  */
 function prefixLines(string, prefix) {
@@ -142,10 +142,10 @@ function transpileString(main) {
 
 /**
  * Builds a Lua test from an examples.
- * 
+ *
  * @param {object} example
  * @param {string} testDirectory
- * 
+ *
  * @returns {string}
  */
 function luaTestFromExample(example, testDirectory) {
@@ -174,10 +174,10 @@ function luaTestFromExample(example, testDirectory) {
 /**
  * Workarounds for code related to specific methods.
  * In most cases Regex fixes because TypescriptToLua doesn't transpile them for us.
- * 
+ *
  * @param {object} method
  * @param {string} luaTest
- * 
+ *
  * @returns {string}
  */
 function applyMethodWorkarounds(method, luaTest) {
@@ -192,12 +192,12 @@ function applyMethodWorkarounds(method, luaTest) {
     // expect(essayOnTheBestFlavor()).toMatch(/grapefruit/);
     // expect(essayOnTheBestFlavor()).toMatch(new RegExp('grapefruit'));
     lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(nil)': 'expect(essayOnTheBestFlavor()):toMatch("grapefruit")' });
-    lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(__TS__New(RegExp, "grapefruit"))': '' }); // This line is not needed. 
+    lineReplacements.push({ 'expect(essayOnTheBestFlavor()):toMatch(__TS__New(RegExp, "grapefruit"))': '' }); // This line is not needed.
   } else if (method.name === '.toMatchObject') {
     // JS: wallColor: expect.stringMatching(/white|yellow/)
     lineReplacements.push({ 'wallColor = expect:stringMatching(nil)': 'wallColor = expect:stringMatching("white")' }); // There is no OR in Lua Patterns.
   } else if (method.name === '.toHaveProperty') {
-    // JS: 
+    // JS:
     // - expect(houseForSale).toHaveProperty(['kitchen', 'amenities', 0], 'oven');
     // - expect(houseForSale).toHaveProperty('livingroom.amenities[0].couch[0][1].dimensions[0]', 20 );
     // - expect(houseForSale).toHaveProperty(['ceiling.height'], 'tall'); // mistake in the jest docs, should be 2
@@ -207,7 +207,7 @@ function applyMethodWorkarounds(method, luaTest) {
   } else if (method.name === '.toBeInstanceOf') {
     lineReplacements.push({ 'expect(__TS__New(A)):toBeInstanceOf(Function)': '' }); // Only Javascript objects are also Functions, this is not the case in Lua.
   } else if (method.name === '.toThrow') {
-    // JS: 
+    // JS:
     // - expect(drinkOctopus).toThrow(/yuck/);
     // - expect(drinkOctopus).toThrow(/^yuck, octopus flavor$/);
     lineReplacements.push({ 'expect(drinkOctopus):toThrow(nil)': 'expect(drinkOctopus):toThrow("yuck")' });
@@ -225,7 +225,7 @@ function applyMethodWorkarounds(method, luaTest) {
     // JS: expect(utils.isAuthorized('not wizard')).toBe(true);
     lineReplacements.push({ 'expect(utils:isAuthorized("not wizard")):toBe(true)': 'expect(utils.isAuthorized("not wizard")):toBe(true)' });
   }
-    
+
   for (const lineReplacement of lineReplacements) {
     const [from, to] = Object.entries(lineReplacement)[0];
     luaTest = luaTest.replace(from, to);
@@ -236,15 +236,15 @@ function applyMethodWorkarounds(method, luaTest) {
 
 /**
  * Builds Lua tests from a list of examples.
- * 
+ *
  * @param {object} method
  * @param {string} testDirectory
- * 
+ *
  * @returns {string}
  */
 function luaTestsFromMethod(method, testDirectory) {
   let packagePreLoads = '';
-  
+
   let tests = method.examples.map((example, index) => {
     const luaTestBase = luaTestFromExample(example, testDirectory);
     let luaTest = luaTestBase;
@@ -256,8 +256,8 @@ function luaTestsFromMethod(method, testDirectory) {
     const containsExportRegex = /____module_0|module/g;
     // Match both test and it (followed by .*( so it also matches test.only and it.failing.each, etc)
     const containsTestRegex = /(test|it)(\s|\.\*)?\(/;
-    const allMatches = [ ...luaTest.matchAll(returnRegex) ];
-    
+    const allMatches = [...luaTest.matchAll(returnRegex)];
+
     for (const match of allMatches) {
       const { code, return: returnCode } = match.groups;
       let fullCode = prefixLines(`${code}${returnCode}`, '\t');
@@ -267,17 +267,17 @@ function luaTestsFromMethod(method, testDirectory) {
 
       if (!fullCode.match(containsTestRegex))
         fullCode = fullCode.replace(code, prefixLines(`test("${method.name} ${index}", function()\n${fullCode}\n\nend);\n`, '\t'));
-      
+
       luaTest = luaTest.replace(code, `(function()\n${fullCode}\n\nend)(),\n`);
     }
 
     // If there were no returns matches in allMatches, wrap the whole test in a function that is immediately called.
     if (allMatches.length === 0) {
       luaTest = prefixLines(luaTest, '\t');
-      
+
       if (!luaTest.match(containsTestRegex))
         luaTest = prefixLines(`test("${method.name} ${index}", function()\n${luaTest}\n\nend);\n`, '\t');
-      
+
       luaTest = `(function()\n${luaTest}\n\nend)(),\n`;
     }
 
@@ -286,7 +286,7 @@ function luaTestsFromMethod(method, testDirectory) {
       const title = example.attributes['title'];
       let luaTestWithExport = luaTestBase;
       const match = luaTestWithExport.match(containsExportRegex)
-      
+
       // If it has an export, add a return that returns that export
       if (match) {
         luaTestWithExport = luaTestWithExport.replaceAll(/local ____module_0 = module/g, 'local exports = {}');
@@ -300,7 +300,7 @@ function luaTestsFromMethod(method, testDirectory) {
           && !luaTestWithExport.trimEnd().endsWith('return ____exports') && !luaTestWithExport.trimEnd().endsWith('return ____exports;'))
           luaTestWithExport += `\nreturn exports`;
       }
-      
+
       luaTestWithExport = applyMethodWorkarounds(method, luaTestWithExport);
 
       packagePreLoads += `generatedTestPreLoad('${title}', function()\n${prefixLines(luaTestWithExport, '\t')}\nend)\n\n`;
@@ -337,7 +337,7 @@ function main(cacheDirectory) {
   // Clear the testDirectory we have only the latest version.
   if (fs.existsSync(testDirectory))
     fs.rmSync(testDirectory, { force: true, recursive: true });
-  
+
   fs.mkdirSync(testDirectory, { recursive: true });
 
   fs.copyFileSync(path.resolve('scripts', 'init.lua'), path.join(testDirectory, 'init.lua'));
@@ -368,7 +368,7 @@ function main(cacheDirectory) {
 
       if (!fs.existsSync(path.dirname(testsFile)))
         fs.mkdirSync(path.dirname(testsFile), { recursive: true });
-      
+
       fs.writeFileSync(testsFile, `-- ${name}\n\n${tests}`);
       fs.appendFileSync(allTestsFilePath, `require "${apiDirectoryPath}.${name}"\n`);
     });

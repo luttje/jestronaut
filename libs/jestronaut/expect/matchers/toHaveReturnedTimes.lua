@@ -1,15 +1,15 @@
 --- @param expect Expect
 local function toHaveReturnedTimes(expect, times)
-  local actual = expect.actual
+    local actual = expect.actual
 
-  if not expect:checkEquals(true, actual:hasReturnedTimes(times)) then
-    error("Expected " .. tostring(actual) .. " to have returned " .. tostring(times) .. " times")
-  end
+    if not expect:checkEquals(true, actual:hasReturnedTimes(times)) then
+        error("Expected " .. tostring(actual) .. " to have returned " .. tostring(times) .. " times")
+    end
 
-  return true
+    return true
 end
 
 return {
-  toHaveReturnedTimes = toHaveReturnedTimes,
-  default = toHaveReturnedTimes,
+    toHaveReturnedTimes = toHaveReturnedTimes,
+    default = toHaveReturnedTimes,
 }

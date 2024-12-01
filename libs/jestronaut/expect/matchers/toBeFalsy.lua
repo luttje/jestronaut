@@ -1,15 +1,15 @@
---- 
+---
 --- @param expect Expect
 --- @return boolean
 local function toBeFalsy(expect)
-  if not expect:checkEquals(true, not expect.actual) then
-    error("Expected " .. tostring(expect.actual) .. " to be falsy")
-  end
+    if not expect:checkEquals(true, not expect.actual) then
+        error("Expected " .. tostring(expect.actual) .. " to be falsy")
+    end
 
-  return true
+    return true
 end
 
 return {
-  toBeFalsy = toBeFalsy,
-  default = toBeFalsy,
+    toBeFalsy = toBeFalsy,
+    default = toBeFalsy,
 }

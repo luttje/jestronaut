@@ -1,15 +1,15 @@
 --- @param expect Expect
 local function toHaveReturned(expect)
-  local actual = expect.actual
+    local actual = expect.actual
 
-  if not expect:checkEquals(true, actual:hasReturned()) then
-    error("Expected " .. tostring(actual) .. " to have returned something")
-  end
+    if not expect:checkEquals(true, actual:hasReturned()) then
+        error("Expected " .. tostring(actual) .. " to have returned something")
+    end
 
-  return true
+    return true
 end
 
 return {
-  toHaveReturned = toHaveReturned,
-  default = toHaveReturned,
+    toHaveReturned = toHaveReturned,
+    default = toHaveReturned,
 }

@@ -3,18 +3,18 @@
 --]]
 
 jestronaut
-  :configure({
-    roots = {
-      "addons/jestronaut/lua/tests/",
-      "addons/jestronaut/lua/tests/generated/",
-    },
+    :configure({
+        roots = {
+            "addons/jestronaut/lua/tests/",
+            "addons/jestronaut/lua/tests/generated/",
+        },
 
-    reporter = GmodReporter
-  })
-  :registerTests(function()
-    jestronaut.callWithRequireCompat(function()
-      -- require "tests/generated/init" -- TODO: fails atm
-      require "tests/init"
+        reporter = GmodReporter
+    })
+    :registerTests(function()
+        jestronaut.callWithRequireCompat(function()
+            -- require "tests/generated/init" -- TODO: fails atm
+            require "tests/init"
+        end)
     end)
-  end)
-  :runTests()
+    :runTests()

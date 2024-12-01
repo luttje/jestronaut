@@ -4,7 +4,7 @@
   "description": "Meta scripts to help test Jestronaut. Jestronaut is a Lua testing library working similar to JestJS.",
   "type": "module",
   "scripts": {
-    "download-api": "node ./scripts/download-jest-api.js v29.5.0",
+    "download-api": "node ./scripts/download-jest-api.js v29.7.0",
     "extract-api": "node ./scripts/extract-jest-api.js",
     "copy-api-tests": "rm -rf ./tests/generated && cp -r ./cache/tests ./tests/generated",
     "generate-tests": "npm run download-api && npm run extract-api && npm run copy-api-tests",

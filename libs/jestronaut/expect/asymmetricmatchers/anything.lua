@@ -4,34 +4,34 @@ local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTab
 --- @class Anything
 local ANYTHING_META
 ANYTHING_META = {
-  new = function(sample, inverse)
-    local instance = {
-      sample = sample,
-      inverse = inverse or false,
-    }
+    new = function(sample, inverse)
+        local instance = {
+            sample = sample,
+            inverse = inverse or false,
+        }
 
-    setmetatable(instance, ANYTHING_META)
-    return instance
-  end,
+        setmetatable(instance, ANYTHING_META)
+        return instance
+    end,
 
-  asymmetricMatch = function(self, actual)
-    return actual ~= nil
-  end,
+    asymmetricMatch = function(self, actual)
+        return actual ~= nil
+    end,
 
-  __tostring = function(self)
-    return 'Anything'
-  end,
+    __tostring = function(self)
+        return 'Anything'
+    end,
 
-  getExpectedType = function(self)
-    return 'any'
-  end,
+    getExpectedType = function(self)
+        return 'any'
+    end,
 }
 
 extendMetaTableIndex(ANYTHING_META, ASYMMETRIC_MATCHER_META)
 
 return {
-  ANYTHING_META = ANYTHING_META,
-  default = function(expect, sample)
-    return ANYTHING_META.new(sample, expect.inverse)
-  end,
+    ANYTHING_META = ANYTHING_META,
+    default = function(expect, sample)
+        return ANYTHING_META.new(sample, expect.inverse)
+    end,
 }

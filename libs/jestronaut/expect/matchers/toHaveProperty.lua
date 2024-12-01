@@ -8,37 +8,43 @@ local stringLib = require "jestronaut/utils/strings"
 --- @param value any
 --- @return boolean
 local function toHaveProperty(expect, propertyPath, value)
-  local actual = expect.actual
+    local actual = expect.actual
 
-  if (type(actual) ~= 'table') then
-    error("Expected " .. tostring(actual) .. " to be a table")
-  end
-  
-  if (type(propertyPath) == 'string') then
-    propertyPath = stringLib.split(propertyPath, '.')
-  elseif (type(propertyPath) ~= 'table') then
-    error("Expected " .. tostring(propertyPath) .. " to be a string or table")
-  end
-
-  local propertyString = stringLib.implodePath(propertyPath)
-
-  if tableLib.accessByPath(actual, propertyPath) then
-    if value then
-      local foundValue = type(value) == 'table' and tableLib.equals(value, tableLib.accessByPath(actual, propertyPath)) 
-        or value == tableLib.accessByPath(actual, propertyPath)
-
-      if not expect:checkEquals(foundValue, true) then
-        error("Expected " .. tostring(actual) .. " to have property " .. propertyString .. " with value " .. tostring(value) .. " but it was " .. tostring(tableLib.accessByPath(actual, propertyPath)))
-      end
+    if (type(actual) ~= 'table') then
+        error("Expected " .. tostring(actual) .. " to be a table")
     end
-  elseif not expect:checkEquals(true) then
-    error("Expected " .. tostring(actual) .. " to have property " .. propertyString)
-  end
 
-  return true
+    if (type(propertyPath) == 'string') then
+        propertyPath = stringLib.split(propertyPath, '.')
+    elseif (type(propertyPath) ~= 'table') then
+        error("Expected " .. tostring(propertyPath) .. " to be a string or table")
+    end
+
+    local propertyString = stringLib.implodePath(propertyPath)
+
+    if tableLib.accessByPath(actual, propertyPath) then
+        if value then
+            local foundValue = type(value) == 'table' and
+                tableLib.equals(value, tableLib.accessByPath(actual, propertyPath))
+                or value == tableLib.accessByPath(actual, propertyPath)
+
+            if not expect:checkEquals(foundValue, true) then
+                error("Expected " ..
+                tostring(actual) ..
+                " to have property " ..
+                propertyString ..
+                " with value " ..
+                tostring(value) .. " but it was " .. tostring(tableLib.accessByPath(actual, propertyPath)))
+            end
+        end
+    elseif not expect:checkEquals(true) then
+        error("Expected " .. tostring(actual) .. " to have property " .. propertyString)
+    end
+
+    return true
 end
 
 return {
-  toHaveProperty = toHaveProperty,
-  default = toHaveProperty,
+    toHaveProperty = toHaveProperty,
+    default = toHaveProperty,
 }

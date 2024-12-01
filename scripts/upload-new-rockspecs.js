@@ -27,7 +27,7 @@ rockspecs.forEach(rockspec => {
 
 if (uploadQueue.length) {
   console.log('Uploading...');
-  
+
   uploadQueue.forEach(rockspecPath => {
     console.log(`Uploading ${rockspecPath}`);
     execSync(`luarocks upload ${rockspecPath} --api-key=${luarocks_api_key}`);

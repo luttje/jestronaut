@@ -4,9 +4,9 @@ local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTab
 
 --- @class Test
 local TEST_META = {
-  isTest = true,
+    isTest = true,
 
-  timeout = 5000,
+    timeout = 5000,
 }
 
 extendMetaTableIndex(TEST_META, DESCRIBE_OR_TEST_META)
@@ -17,27 +17,27 @@ extendMetaTableIndex(TEST_META, DESCRIBE_OR_TEST_META)
 --- @param timeout number
 --- @return Test
 local function _internalTest(name, fn, timeout, options)
-  if(type(name) ~= "string") then
-    error("describe name must be a string")
-  end
+    if (type(name) ~= "string") then
+        error("describe name must be a string")
+    end
 
-  local test = {
-    name = name,
-    fn = fn,
-    timeout = timeout,
-  }
+    local test = {
+        name = name,
+        fn = fn,
+        timeout = timeout,
+    }
 
-  if options then
-    test.isOnlyToRun = options.isOnlyToRun
-    test.toSkip = options.toSkip
-    test.expectFail = options.expectFail
-  end
+    if options then
+        test.isOnlyToRun = options.isOnlyToRun
+        test.toSkip = options.toSkip
+        test.expectFail = options.expectFail
+    end
 
-  setmetatable(test, TEST_META)
+    setmetatable(test, TEST_META)
 
-  registerDescribeOrTest(test)
+    registerDescribeOrTest(test)
 
-  return test
+    return test
 end
 
 --- Creates a new test.
@@ -46,7 +46,7 @@ end
 --- @param timeout number
 --- @return Test
 local function test(name, fn, timeout)
-  return _internalTest(name, fn, timeout)
+    return _internalTest(name, fn, timeout)
 end
 
 --- Creates a new test that is the only one that will run.
@@ -56,11 +56,11 @@ end
 --- @param timeout number
 --- @return Test
 local function testOnly(self, name, fn, timeout)
-  local _test = _internalTest(name, fn, timeout, {
-    isOnlyToRun = true,
-  })
+    local _test = _internalTest(name, fn, timeout, {
+        isOnlyToRun = true,
+    })
 
-  return _test
+    return _test
 end
 
 --- Creates a new test that will be skipped.
@@ -70,11 +70,11 @@ end
 --- @param timeout number
 --- @return Test
 local function testSkip(self, name, fn, timeout)
-  local _test = _internalTest(name, fn, timeout, {
-    toSkip = true,
-  })
+    local _test = _internalTest(name, fn, timeout, {
+        toSkip = true,
+    })
 
-  return _test
+    return _test
 end
 
 --- Creates a new test that will run concurrently.
@@ -85,8 +85,8 @@ end
 --- @return Test
 --- @private
 local function testConcurrent(self, name, fn, timeout)
-  --- @Not yet implemented
-  return {}
+    --- @Not yet implemented
+    return {}
 end
 
 --- Creates a new test that will run concurrently and is the only one that will run.
@@ -97,7 +97,7 @@ end
 --- @return Test
 --- @private
 local function testConcurrentOnly(self, name, fn, timeout)
-  --- @Not yet implemented
+    --- @Not yet implemented
 end
 
 --- Creates a new test that will run concurrently and will be skipped.
@@ -108,7 +108,7 @@ end
 --- @return Test
 --- @private
 local function testConcurrentSkip(self, name, fn, timeout)
-  --- @Not yet implemented
+    --- @Not yet implemented
 end
 
 --- Creates a new test that will fail.
@@ -119,11 +119,11 @@ end
 --- @return Test
 --- @private
 local function testFailing(self, name, fn, timeout)
-  local _test = _internalTest(name, fn, timeout, {
-    expectFail = true,
-  })
+    local _test = _internalTest(name, fn, timeout, {
+        expectFail = true,
+    })
 
-  return _test
+    return _test
 end
 
 --- Creates a new test that will fail and is the only one that will run.
@@ -134,12 +134,12 @@ end
 --- @return Test
 --- @private
 local function testFailingOnly(self, name, fn, timeout)
-  local _test = _internalTest(name, fn, timeout, {
-    expectFail = true,
-    isOnlyToRun = true,
-  })
+    local _test = _internalTest(name, fn, timeout, {
+        expectFail = true,
+        isOnlyToRun = true,
+    })
 
-  return _test
+    return _test
 end
 
 --- Creates a new test that will fail and will be skipped.
@@ -150,12 +150,12 @@ end
 --- @return Test
 --- @private
 local function testFailingSkip(self, name, fn, timeout)
-  local _test = _internalTest(name, fn, timeout, {
-    expectFail = true,
-    toSkip = true,
-  })
+    local _test = _internalTest(name, fn, timeout, {
+        expectFail = true,
+        toSkip = true,
+    })
 
-  return _test
+    return _test
 end
 
 --- Indicates this test is yet to be written.
@@ -165,40 +165,40 @@ end
 --- @return Test
 --- @private
 local function testTodo(self, name, fn)
-  if fn ~= nil then
-    error("test.todo cannot have an implementation")
-  end
+    if fn ~= nil then
+        error("test.todo cannot have an implementation")
+    end
 
-  local test = {
-    name = name,
-  }
+    local test = {
+        name = name,
+    }
 
-  test.toSkip = true
-  test.isTodo = true
+    test.toSkip = true
+    test.isTodo = true
 
-  setmetatable(test, TEST_META)
+    setmetatable(test, TEST_META)
 
-  registerDescribeOrTest(test)
+    registerDescribeOrTest(test)
 
-  return test
+    return test
 end
 
 return {
-  test = test,
+    test = test,
 
-  testOnly = testOnly,
-  ftest = testOnly,
+    testOnly = testOnly,
+    ftest = testOnly,
 
-  testSkip = testSkip,
-  xtest = testSkip,
+    testSkip = testSkip,
+    xtest = testSkip,
 
-  testConcurrent = testConcurrent,
-  testConcurrentOnly = testConcurrentOnly,
-  testConcurrentSkip = testConcurrentSkip,
+    testConcurrent = testConcurrent,
+    testConcurrentOnly = testConcurrentOnly,
+    testConcurrentSkip = testConcurrentSkip,
 
-  testFailing = testFailing,
-  testFailingOnly = testFailingOnly,
-  testFailingSkip = testFailingSkip,
+    testFailing = testFailing,
+    testFailingOnly = testFailingOnly,
+    testFailingSkip = testFailingSkip,
 
-  testTodo = testTodo,
+    testTodo = testTodo,
 }

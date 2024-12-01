@@ -8,14 +8,14 @@ local require = require
 --- @vararg any
 --- @return any
 local function callRespectingRequireOverride(callback, ...)
-  local oldRequire = _G.require
-  _G.require = require
-  local results = {callback(...)}
-  _G.require = oldRequire
+    local oldRequire = _G.require
+    _G.require = require
+    local results = { callback(...) }
+    _G.require = oldRequire
 
-  return unpack(results)
+    return unpack(results)
 end
 
 return {
-  callRespectingRequireOverride = callRespectingRequireOverride,
+    callRespectingRequireOverride = callRespectingRequireOverride,
 }

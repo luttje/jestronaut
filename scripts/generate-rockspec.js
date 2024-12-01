@@ -24,7 +24,7 @@ function walkBuildModules(dir) {
 
     return (statA.isDirectory() && !statB.isDirectory()) ? 1
       : (!statA.isDirectory() && statB.isDirectory()) ? -1
-      : 0;
+        : 0;
   });
 
   return files.reduce((acc, file) => {

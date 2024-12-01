@@ -2,17 +2,17 @@
 --- @param fn fun(...): any
 --- @param callback fun(success: boolean, ...): void
 local function makeFunctionShim(fn, callback)
-  return function(...)
-    local success, result = pcall(fn, ...)
+    return function(...)
+        local success, result = pcall(fn, ...)
 
-    callback(success, ...)
+        callback(success, ...)
 
-    if not success then
-      error(result, 2)
+        if not success then
+            error(result, 2)
+        end
+
+        return result
     end
-
-    return result
-  end
 end
 
 --- Captures the vararg results of a (x)pcall function call into a table.
@@ -20,16 +20,16 @@ end
 --- @vararg any
 --- @return boolean, table
 local function captureSafeCallInTable(success, ...)
-  local output = {}
-  
-  for key, value in ipairs({...}) do
-    output[key] = value
-  end
+    local output = {}
 
-  return success, output
+    for key, value in ipairs({ ... }) do
+        output[key] = value
+    end
+
+    return success, output
 end
 
 return {
-  makeFunctionShim = makeFunctionShim,
-  captureSafeCallInTable = captureSafeCallInTable,
+    makeFunctionShim = makeFunctionShim,
+    captureSafeCallInTable = captureSafeCallInTable,
 }
