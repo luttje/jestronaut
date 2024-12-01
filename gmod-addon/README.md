@@ -1,9 +1,17 @@
-# Jestronaut - Garry's Mod Addon`
+# Jestronaut - Garry's Mod Addon
+
+This addon provides a way to run Jestronaut tests in Garry's Mod. It includes the Jestronaut library and a reporter for Garry's Mod.
+
+> [!WARNING]
+> The addon has quite a hacky implementation surrounding `require`.
+> This is done to make `require` return values from modules it requires.
+>
+> If you find that this causes issues, feel free to open an issue.
 
 ## Installation
 
-1. Download the addon from the latest Jestronaut release from the 
-[releases page](https://github.com/luttje/jestronaut/releases).
+1. Download the addon from the assets of the latest Jestronaut release from the 
+[releases page](https://github.com/luttje/jestronaut/releases). The file is named `gmod-addon.zip`.
 
 2. Extract the contents of the `gmod-addon.zip` file to your Garry's Mod `addons` folder.
 
@@ -53,8 +61,13 @@
 
 3. Run the runner script in Garry's Mod:
 
-    ```
+    ```bash
     lua_openscript run-all-tests.lua
+    ```
+
+    *The output should look like this:*
+
+    ```
     Running script run-all-tests.lua...
     🚀 Starting 2 tests at 17:26:02...
 
@@ -80,3 +93,11 @@
     ```
 
     *Note that the emoji icons are displayed as `□□` in the Garry's Mod console due to insufficient Unicode support.*
+
+## Testing if Jestronaut is working
+
+Jestronaut's own tests are included in the addon. To run them in Garry's Mod use the following command:
+
+```bash
+lua_openscript gmod-test.lua
+```
