@@ -353,7 +353,10 @@ function main(cacheDirectory) {
       fs.mkdirSync(apiDirectory, { recursive: true });
 
     api.methods.forEach(method => {
-      const { name } = method;
+      let { name } = method;
+
+      // Remove the . from the beginning of the name.
+      name = name.replace(/^\./, '');
 
       // Not supported due to problems with C - Lua interop. For example 'require' cant be called in an async function.
       if (name.endsWith('Async'))
@@ -370,7 +373,7 @@ function main(cacheDirectory) {
         fs.mkdirSync(path.dirname(testsFile), { recursive: true });
 
       fs.writeFileSync(testsFile, `-- ${name}\n\n${tests}`);
-      fs.appendFileSync(allTestsFilePath, `require "${apiDirectoryPath}.${name}"\n`);
+      fs.appendFileSync(allTestsFilePath, `require "${apiDirectoryPath}/${name}"\n`);
     });
   });
 

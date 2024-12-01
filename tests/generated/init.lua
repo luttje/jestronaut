@@ -285,4 +285,4 @@ process = {
     },
 }
 
-require "tests/generated/all"
+require "tests.generated.all"

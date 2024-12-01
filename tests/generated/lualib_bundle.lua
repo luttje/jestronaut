@@ -3,7 +3,7 @@ local function __TS__ArrayIsArray(value)
 end
 
 local function __TS__ArrayConcat(self, ...)
-    local items = { ... }
+    local items = {...}
     local result = {}
     local len = 0
     for i = 1, #self do
@@ -27,15 +27,12 @@ end
 
 local __TS__Symbol, Symbol
 do
-    local symbolMetatable = {
-        __tostring = function(self)
-            return ("Symbol(" .. (self.description or "")) .. ")"
-        end
-    }
+    local symbolMetatable = {__tostring = function(self)
+        return ("Symbol(" .. (self.description or "")) .. ")"
+    end}
     function __TS__Symbol(description)
-        return setmetatable({ description = description }, symbolMetatable)
+        return setmetatable({description = description}, symbolMetatable)
     end
-
     Symbol = {
         iterator = __TS__Symbol("Symbol.iterator"),
         hasInstance = __TS__Symbol("Symbol.hasInstance"),
@@ -51,7 +48,7 @@ local function __TS__ArrayEntries(array)
             return self
         end,
         next = function(self)
-            local result = { done = array[key + 1] == nil, value = { key, array[key + 1] } }
+            local result = {done = array[key + 1] == nil, value = {key, array[key + 1]}}
             key = key + 1
             return result
         end
@@ -240,7 +237,7 @@ local function __TS__ArrayMap(self, callbackfn, thisArg)
 end
 
 local function __TS__ArrayPush(self, ...)
-    local items = { ... }
+    local items = {...}
     local len = #self
     for i = 1, #items do
         len = len + 1
@@ -324,7 +321,7 @@ local function __TS__ArrayReverse(self)
 end
 
 local function __TS__ArrayUnshift(self, ...)
-    local items = { ... }
+    local items = {...}
     local numItemsToInsert = #items
     if numItemsToInsert == 0 then
         return #self
@@ -396,7 +393,7 @@ local function __TS__ArraySome(self, callbackfn, thisArg)
 end
 
 local function __TS__ArraySplice(self, ...)
-    local args = { ... }
+    local args = {...}
     local len = #self
     local actualArgumentCount = __TS__CountVarargs(...)
     local start = args[1]
@@ -562,7 +559,7 @@ local function __TS__New(target, ...)
 end
 
 local function __TS__Class(self)
-    local c = { prototype = {} }
+    local c = {prototype = {}}
     c.prototype.__index = c.prototype
     c.prototype.constructor = c
     return c
@@ -571,9 +568,9 @@ end
 local __TS__Unpack = table.unpack or unpack
 
 local function __TS__FunctionBind(fn, ...)
-    local boundArgs = { ... }
+    local boundArgs = {...}
     return function(____, ...)
-        local args = { ... }
+        local args = {...}
         __TS__ArrayUnshift(
             args,
             __TS__Unpack(boundArgs)
@@ -594,7 +591,7 @@ do
                 reject = rej
             end
         )
-        return { promise = promise, resolve = resolve, reject = reject }
+        return {promise = promise, resolve = resolve, reject = reject}
     end
     local function isPromiseLike(self, thing)
         return __TS__InstanceOf(thing, __TS__Promise)
@@ -622,7 +619,6 @@ do
             end
         end
     end
-
     function __TS__Promise.resolve(data)
         local promise = __TS__New(
             __TS__Promise,
@@ -633,7 +629,6 @@ do
         promise.value = data
         return promise
     end
-
     function __TS__Promise.reject(reason)
         local promise = __TS__New(
             __TS__Promise,
@@ -644,7 +639,6 @@ do
         promise.rejectionReason = reason
         return promise
     end
-
     __TS__Promise.prototype["then"] = function(self, onFulfilled, onRejected)
         local ____promiseDeferred_result_0 = promiseDeferred(nil)
         local promise = ____promiseDeferred_result_0.promise
@@ -685,7 +679,6 @@ do
     function __TS__Promise.prototype.catch(self, onRejected)
         return self["then"](self, nil, onRejected)
     end
-
     function __TS__Promise.prototype.finally(self, onFinally)
         if onFinally then
             local ____self_finallyCallbacks_5 = self.finallyCallbacks
@@ -696,7 +689,6 @@ do
         end
         return self
     end
-
     function __TS__Promise.prototype.resolve(self, data)
         if __TS__InstanceOf(data, __TS__Promise) then
             data["then"](
@@ -717,7 +709,6 @@ do
             end
         end
     end
-
     function __TS__Promise.prototype.reject(self, reason)
         if self.state == 0 then
             self.state = 2
@@ -730,7 +721,6 @@ do
             end
         end
     end
-
     function __TS__Promise.prototype.createPromiseResolvingCallback(self, f, resolve, reject)
         return function(____, value)
             do
@@ -750,7 +740,6 @@ do
             end
         end
     end
-
     function __TS__Promise.prototype.handleCallbackData(self, data, resolve, reject)
         if isPromiseLike(nil, data) then
             local nextpromise = data
@@ -775,7 +764,6 @@ local function __TS__AsyncAwaiter(generator)
             function adopt(self, value)
                 return __TS__InstanceOf(value, __TS__Promise) and value or __TS__Promise.resolve(value)
             end
-
             function fulfilled(self, value)
                 local success, resultOrError = coroutine.resume(asyncCoroutine, value)
                 if success then
@@ -784,7 +772,6 @@ local function __TS__AsyncAwaiter(generator)
                     reject(nil, resultOrError)
                 end
             end
-
             function step(self, result)
                 if resolved then
                     return
@@ -796,7 +783,6 @@ local function __TS__AsyncAwaiter(generator)
                     ____self_0["then"](____self_0, fulfilled, reject)
                 end
             end
-
             resolved = false
             asyncCoroutine = coroutine.create(generator)
             local success, resultOrError = coroutine.resume(
@@ -821,7 +807,7 @@ end
 
 local function __TS__ClassExtends(target, base)
     target.____super = base
-    local staticMetatable = setmetatable({ __index = base }, base)
+    local staticMetatable = setmetatable({__index = base}, base)
     setmetatable(target, staticMetatable)
     local baseMetatable = getmetatable(base)
     if baseMetatable then
@@ -857,7 +843,7 @@ local function __TS__CloneDescriptor(____bindingPattern0)
     set = ____bindingPattern0.set
     writable = ____bindingPattern0.writable
     value = ____bindingPattern0.value
-    local descriptor = { enumerable = enumerable == true, configurable = configurable == true }
+    local descriptor = {enumerable = enumerable == true, configurable = configurable == true}
     local hasGetterOrSetter = get ~= nil or set ~= nil
     local hasValueOrWritableAttribute = writable ~= nil or value ~= nil
     if hasGetterOrSetter and hasValueOrWritableAttribute then
@@ -874,7 +860,7 @@ local function __TS__CloneDescriptor(____bindingPattern0)
 end
 
 local function __TS__ObjectAssign(target, ...)
-    local sources = { ... }
+    local sources = {...}
     for i = 1, #sources do
         local source = sources[i]
         for key in pairs(source) do
@@ -933,8 +919,7 @@ do
                     else
                         if descriptor.writable == false then
                             error(
-                                ((("Cannot assign to read only property '" .. key) .. "' of object '") .. tostring(self)) ..
-                                "'",
+                                ((("Cannot assign to read only property '" .. key) .. "' of object '") .. tostring(self)) .. "'",
                                 0
                             )
                         end
@@ -987,11 +972,9 @@ local function __TS__Decorate(decorators, target, key, desc)
                     result = decorator(nil, result)
                 elseif desc == true then
                     local value = rawget(target, key)
-                    local descriptor = __TS__ObjectGetOwnPropertyDescriptor(target, key) or
-                    ({ configurable = true, writable = true, value = value })
+                    local descriptor = __TS__ObjectGetOwnPropertyDescriptor(target, key) or ({configurable = true, writable = true, value = value})
                     local desc = decorator(nil, target, key, descriptor) or descriptor
-                    local isSimpleValue = desc.configurable == true and desc.writable == true and not desc.get and
-                    not desc.set
+                    local isSimpleValue = desc.configurable == true and desc.writable == true and not desc.get and not desc.set
                     if isSimpleValue then
                         rawset(target, key, desc.value)
                     else
@@ -1064,7 +1047,7 @@ do
         Type.name = name
         return setmetatable(
             Type,
-            { __call = function(____, _self, message) return __TS__New(Type, message) end }
+            {__call = function(____, _self, message) return __TS__New(Type, message) end}
         )
     end
     local ____initErrorClass_1 = initErrorClass
@@ -1083,11 +1066,9 @@ do
             metatable.__tostring = wrapErrorToString(nil, metatable.__tostring)
         end
     end
-
     function ____class_0.prototype.__tostring(self)
         return self.message ~= "" and (self.name .. ": ") .. self.message or self.name
     end
-
     Error = ____initErrorClass_1(nil, ____class_0, "Error")
     local function createErrorClass(self, name)
         local ____initErrorClass_3 = initErrorClass
@@ -1098,7 +1079,6 @@ do
             ____class_2.____super.prototype.____constructor(self, ...)
             self.name = name
         end
-
         return ____initErrorClass_3(nil, ____class_2, name)
     end
     RangeError = createErrorClass(nil, "RangeError")
@@ -1185,7 +1165,7 @@ do
     local function generatorNext(self, ...)
         local co = self.____coroutine
         if coroutine.status(co) == "dead" then
-            return { done = true }
+            return {done = true}
         end
         local status, value = coroutine.resume(co, ...)
         if not status then
@@ -1198,7 +1178,7 @@ do
     end
     function __TS__Generator(fn)
         return function(...)
-            local args = { ... }
+            local args = {...}
             local argsLength = __TS__CountVarargs(...)
             return {
                 ____coroutine = coroutine.create(function() return fn(__TS__Unpack(args, 1, argsLength)) end),
@@ -1218,7 +1198,7 @@ local function __TS__LuaIteratorSpread(self, state, firstKey)
     local results = {}
     local key, value = self(state, firstKey)
     while key do
-        results[#results + 1] = { key, value }
+        results[#results + 1] = {key, value}
         key, value = self(state, key)
     end
     return __TS__Unpack(results)
@@ -1255,7 +1235,6 @@ do
             end
         end
     end
-
     function Map.prototype.clear(self)
         self.items = {}
         self.nextKey = {}
@@ -1264,7 +1243,6 @@ do
         self.lastKey = nil
         self.size = 0
     end
-
     function Map.prototype.delete(self, key)
         local contains = self:has(key)
         if contains then
@@ -1290,21 +1268,17 @@ do
         self.items[key] = nil
         return contains
     end
-
     function Map.prototype.forEach(self, callback)
         for ____, key in __TS__Iterator(self:keys()) do
             callback(nil, self.items[key], key, self)
         end
     end
-
     function Map.prototype.get(self, key)
         return self.items[key]
     end
-
     function Map.prototype.has(self, key)
         return self.nextKey[key] ~= nil or self.lastKey == key
     end
-
     function Map.prototype.set(self, key, value)
         local isNewValue = not self:has(key)
         if isNewValue then
@@ -1321,7 +1295,6 @@ do
         end
         return self
     end
-
     Map.prototype[Symbol.iterator] = function(self)
         return self:entries()
     end
@@ -1334,13 +1307,12 @@ do
                 return self
             end,
             next = function(self)
-                local result = { done = not key, value = { key, items[key] } }
+                local result = {done = not key, value = {key, items[key]}}
                 key = nextKey[key]
                 return result
             end
         }
     end
-
     function Map.prototype.keys(self)
         local nextKey = self.nextKey
         local key = self.firstKey
@@ -1349,13 +1321,12 @@ do
                 return self
             end,
             next = function(self)
-                local result = { done = not key, value = key }
+                local result = {done = not key, value = key}
                 key = nextKey[key]
                 return result
             end
         }
     end
-
     function Map.prototype.values(self)
         local items = self.items
         local nextKey = self.nextKey
@@ -1365,13 +1336,12 @@ do
                 return self
             end,
             next = function(self)
-                local result = { done = not key, value = items[key] }
+                local result = {done = not key, value = items[key]}
                 key = nextKey[key]
                 return result
             end
         }
     end
-
     Map[Symbol.species] = Map
 end
 
@@ -1543,7 +1513,7 @@ local function __TS__ObjectEntries(obj)
     local len = 0
     for key in pairs(obj) do
         len = len + 1
-        result[len] = { key, obj[key] }
+        result[len] = {key, obj[key]}
     end
     return result
 end
@@ -1635,15 +1605,13 @@ do
             local hexMatch = __TS__Match(numberString, "^%s*-?0[xX]")
             if hexMatch ~= nil then
                 base = 16
-                numberString = __TS__Match(hexMatch, "-") and "-" .. __TS__StringSubstring(numberString, #hexMatch) or
-                __TS__StringSubstring(numberString, #hexMatch)
+                numberString = __TS__Match(hexMatch, "-") and "-" .. __TS__StringSubstring(numberString, #hexMatch) or __TS__StringSubstring(numberString, #hexMatch)
             end
         end
         if base < 2 or base > 36 then
             return 0 / 0
         end
-        local allowedDigits = base <= 10 and __TS__StringSubstring(parseIntBasePattern, 0, base) or
-        __TS__StringSubstring(parseIntBasePattern, 0, 10 + 2 * (base - 10))
+        local allowedDigits = base <= 10 and __TS__StringSubstring(parseIntBasePattern, 0, base) or __TS__StringSubstring(parseIntBasePattern, 0, 10 + 2 * (base - 10))
         local pattern = ("^%s*(-?[" .. allowedDigits) .. "]*)"
         local number = tonumber(
             __TS__Match(numberString, pattern),
@@ -1713,15 +1681,15 @@ local function __TS__PromiseAllSettled(iterable)
     for ____, item in __TS__Iterator(iterable) do
         if __TS__InstanceOf(item, __TS__Promise) then
             if item.state == 1 then
-                results[i + 1] = { status = "fulfilled", value = item.value }
+                results[i + 1] = {status = "fulfilled", value = item.value}
             elseif item.state == 2 then
-                results[i + 1] = { status = "rejected", reason = item.rejectionReason }
+                results[i + 1] = {status = "rejected", reason = item.rejectionReason}
             else
                 numToResolve = numToResolve + 1
                 toResolve[i] = item
             end
         else
-            results[i + 1] = { status = "fulfilled", value = item }
+            results[i + 1] = {status = "fulfilled", value = item}
         end
         i = i + 1
     end
@@ -1735,14 +1703,14 @@ local function __TS__PromiseAllSettled(iterable)
                 promise["then"](
                     promise,
                     function(____, data)
-                        results[index + 1] = { status = "fulfilled", value = data }
+                        results[index + 1] = {status = "fulfilled", value = data}
                         numToResolve = numToResolve - 1
                         if numToResolve == 0 then
                             resolve(nil, results)
                         end
                     end,
                     function(____, reason)
-                        results[index + 1] = { status = "rejected", reason = reason }
+                        results[index + 1] = {status = "rejected", reason = reason}
                         numToResolve = numToResolve - 1
                         if numToResolve == 0 then
                             resolve(nil, results)
@@ -1787,7 +1755,7 @@ local function __TS__PromiseAny(iterable)
                         rejections[#rejections + 1] = reason
                         numResolved = numResolved + 1
                         if numResolved == #pending then
-                            reject(nil, { name = "AggregateError", message = "All Promises rejected", errors = rejections })
+                            reject(nil, {name = "AggregateError", message = "All Promises rejected", errors = rejections})
                         end
                     end
                 )
@@ -1854,7 +1822,6 @@ do
             end
         end
     end
-
     function Set.prototype.add(self, value)
         local isNewValue = not self:has(value)
         if isNewValue then
@@ -1870,7 +1837,6 @@ do
         end
         return self
     end
-
     function Set.prototype.clear(self)
         self.nextKey = {}
         self.previousKey = {}
@@ -1878,7 +1844,6 @@ do
         self.lastKey = nil
         self.size = 0
     end
-
     function Set.prototype.delete(self, value)
         local contains = self:has(value)
         if contains then
@@ -1903,17 +1868,14 @@ do
         end
         return contains
     end
-
     function Set.prototype.forEach(self, callback)
         for ____, key in __TS__Iterator(self:keys()) do
             callback(nil, key, key, self)
         end
     end
-
     function Set.prototype.has(self, value)
         return self.nextKey[value] ~= nil or self.lastKey == value
     end
-
     Set.prototype[Symbol.iterator] = function(self)
         return self:values()
     end
@@ -1925,13 +1887,12 @@ do
                 return self
             end,
             next = function(self)
-                local result = { done = not key, value = { key, key } }
+                local result = {done = not key, value = {key, key}}
                 key = nextKey[key]
                 return result
             end
         }
     end
-
     function Set.prototype.keys(self)
         local nextKey = self.nextKey
         local key = self.firstKey
@@ -1940,13 +1901,12 @@ do
                 return self
             end,
             next = function(self)
-                local result = { done = not key, value = key }
+                local result = {done = not key, value = key}
                 key = nextKey[key]
                 return result
             end
         }
     end
-
     function Set.prototype.values(self)
         local nextKey = self.nextKey
         local key = self.firstKey
@@ -1955,24 +1915,23 @@ do
                 return self
             end,
             next = function(self)
-                local result = { done = not key, value = key }
+                local result = {done = not key, value = key}
                 key = nextKey[key]
                 return result
             end
         }
     end
-
     Set[Symbol.species] = Set
 end
 
 local function __TS__SparseArrayNew(...)
-    local sparseArray = { ... }
+    local sparseArray = {...}
     sparseArray.sparseLength = __TS__CountVarargs(...)
     return sparseArray
 end
 
 local function __TS__SparseArrayPush(sparseArray, ...)
-    local args = { ... }
+    local args = {...}
     local argsLen = __TS__CountVarargs(...)
     local listLen = sparseArray.sparseLength
     for i = 1, argsLen do
@@ -1993,7 +1952,7 @@ do
     function WeakMap.prototype.____constructor(self, entries)
         self[Symbol.toStringTag] = "WeakMap"
         self.items = {}
-        setmetatable(self.items, { __mode = "k" })
+        setmetatable(self.items, {__mode = "k"})
         if entries == nil then
             return
         end
@@ -2014,26 +1973,21 @@ do
             end
         end
     end
-
     function WeakMap.prototype.delete(self, key)
         local contains = self:has(key)
         self.items[key] = nil
         return contains
     end
-
     function WeakMap.prototype.get(self, key)
         return self.items[key]
     end
-
     function WeakMap.prototype.has(self, key)
         return self.items[key] ~= nil
     end
-
     function WeakMap.prototype.set(self, key, value)
         self.items[key] = value
         return self
     end
-
     WeakMap[Symbol.species] = WeakMap
 end
 
@@ -2044,7 +1998,7 @@ do
     function WeakSet.prototype.____constructor(self, values)
         self[Symbol.toStringTag] = "WeakSet"
         self.items = {}
-        setmetatable(self.items, { __mode = "k" })
+        setmetatable(self.items, {__mode = "k"})
         if values == nil then
             return
         end
@@ -2064,22 +2018,18 @@ do
             end
         end
     end
-
     function WeakSet.prototype.add(self, value)
         self.items[value] = true
         return self
     end
-
     function WeakSet.prototype.delete(self, value)
         local contains = self:has(value)
         self.items[value] = nil
         return contains
     end
-
     function WeakSet.prototype.has(self, value)
         return self.items[value] == true
     end
-
     WeakSet[Symbol.species] = WeakSet
 end
 
@@ -2246,8 +2196,7 @@ do
             return source
         end
         local before = sub(source, 1, startPos - 1)
-        local replacement = type(replaceValue) == "string" and replaceValue or
-        replaceValue(nil, searchValue, startPos - 1, source)
+        local replacement = type(replaceValue) == "string" and replaceValue or replaceValue(nil, searchValue, startPos - 1, source)
         local after = sub(source, endPos + 1)
         return (before .. replacement) .. after
     end
@@ -2396,7 +2345,6 @@ do
         end
         return symbolRegistry[key]
     end
-
     function __TS__SymbolRegistryKeyFor(sym)
         for key in pairs(symbolRegistry) do
             if symbolRegistry[key] == sym then
@@ -2419,112 +2367,112 @@ local function __TS__TypeOf(value)
 end
 
 return {
-    __TS__ArrayConcat = __TS__ArrayConcat,
-    __TS__ArrayEntries = __TS__ArrayEntries,
-    __TS__ArrayEvery = __TS__ArrayEvery,
-    __TS__ArrayFilter = __TS__ArrayFilter,
-    __TS__ArrayForEach = __TS__ArrayForEach,
-    __TS__ArrayFind = __TS__ArrayFind,
-    __TS__ArrayFindIndex = __TS__ArrayFindIndex,
-    __TS__ArrayFrom = __TS__ArrayFrom,
-    __TS__ArrayIncludes = __TS__ArrayIncludes,
-    __TS__ArrayIndexOf = __TS__ArrayIndexOf,
-    __TS__ArrayIsArray = __TS__ArrayIsArray,
-    __TS__ArrayJoin = __TS__ArrayJoin,
-    __TS__ArrayMap = __TS__ArrayMap,
-    __TS__ArrayPush = __TS__ArrayPush,
-    __TS__ArrayPushArray = __TS__ArrayPushArray,
-    __TS__ArrayReduce = __TS__ArrayReduce,
-    __TS__ArrayReduceRight = __TS__ArrayReduceRight,
-    __TS__ArrayReverse = __TS__ArrayReverse,
-    __TS__ArrayUnshift = __TS__ArrayUnshift,
-    __TS__ArraySort = __TS__ArraySort,
-    __TS__ArraySlice = __TS__ArraySlice,
-    __TS__ArraySome = __TS__ArraySome,
-    __TS__ArraySplice = __TS__ArraySplice,
-    __TS__ArrayToObject = __TS__ArrayToObject,
-    __TS__ArrayFlat = __TS__ArrayFlat,
-    __TS__ArrayFlatMap = __TS__ArrayFlatMap,
-    __TS__ArraySetLength = __TS__ArraySetLength,
-    __TS__AsyncAwaiter = __TS__AsyncAwaiter,
-    __TS__Await = __TS__Await,
-    __TS__Class = __TS__Class,
-    __TS__ClassExtends = __TS__ClassExtends,
-    __TS__CloneDescriptor = __TS__CloneDescriptor,
-    __TS__CountVarargs = __TS__CountVarargs,
-    __TS__Decorate = __TS__Decorate,
-    __TS__DecorateParam = __TS__DecorateParam,
-    __TS__Delete = __TS__Delete,
-    __TS__DelegatedYield = __TS__DelegatedYield,
-    Error = Error,
-    RangeError = RangeError,
-    ReferenceError = ReferenceError,
-    SyntaxError = SyntaxError,
-    TypeError = TypeError,
-    URIError = URIError,
-    __TS__FunctionBind = __TS__FunctionBind,
-    __TS__Generator = __TS__Generator,
-    __TS__InstanceOf = __TS__InstanceOf,
-    __TS__InstanceOfObject = __TS__InstanceOfObject,
-    __TS__Iterator = __TS__Iterator,
-    __TS__LuaIteratorSpread = __TS__LuaIteratorSpread,
-    Map = Map,
-    __TS__Match = __TS__Match,
-    __TS__MathAtan2 = __TS__MathAtan2,
-    __TS__MathModf = __TS__MathModf,
-    __TS__MathSign = __TS__MathSign,
-    __TS__New = __TS__New,
-    __TS__Number = __TS__Number,
-    __TS__NumberIsFinite = __TS__NumberIsFinite,
-    __TS__NumberIsNaN = __TS__NumberIsNaN,
-    __TS__NumberToString = __TS__NumberToString,
-    __TS__NumberToFixed = __TS__NumberToFixed,
-    __TS__ObjectAssign = __TS__ObjectAssign,
-    __TS__ObjectDefineProperty = __TS__ObjectDefineProperty,
-    __TS__ObjectEntries = __TS__ObjectEntries,
-    __TS__ObjectFromEntries = __TS__ObjectFromEntries,
-    __TS__ObjectGetOwnPropertyDescriptor = __TS__ObjectGetOwnPropertyDescriptor,
-    __TS__ObjectGetOwnPropertyDescriptors = __TS__ObjectGetOwnPropertyDescriptors,
-    __TS__ObjectKeys = __TS__ObjectKeys,
-    __TS__ObjectRest = __TS__ObjectRest,
-    __TS__ObjectValues = __TS__ObjectValues,
-    __TS__ParseFloat = __TS__ParseFloat,
-    __TS__ParseInt = __TS__ParseInt,
-    __TS__Promise = __TS__Promise,
-    __TS__PromiseAll = __TS__PromiseAll,
-    __TS__PromiseAllSettled = __TS__PromiseAllSettled,
-    __TS__PromiseAny = __TS__PromiseAny,
-    __TS__PromiseRace = __TS__PromiseRace,
-    Set = Set,
-    __TS__SetDescriptor = __TS__SetDescriptor,
-    __TS__SparseArrayNew = __TS__SparseArrayNew,
-    __TS__SparseArrayPush = __TS__SparseArrayPush,
-    __TS__SparseArraySpread = __TS__SparseArraySpread,
-    WeakMap = WeakMap,
-    WeakSet = WeakSet,
-    __TS__SourceMapTraceBack = __TS__SourceMapTraceBack,
-    __TS__Spread = __TS__Spread,
-    __TS__StringAccess = __TS__StringAccess,
-    __TS__StringCharAt = __TS__StringCharAt,
-    __TS__StringCharCodeAt = __TS__StringCharCodeAt,
-    __TS__StringEndsWith = __TS__StringEndsWith,
-    __TS__StringIncludes = __TS__StringIncludes,
-    __TS__StringPadEnd = __TS__StringPadEnd,
-    __TS__StringPadStart = __TS__StringPadStart,
-    __TS__StringReplace = __TS__StringReplace,
-    __TS__StringReplaceAll = __TS__StringReplaceAll,
-    __TS__StringSlice = __TS__StringSlice,
-    __TS__StringSplit = __TS__StringSplit,
-    __TS__StringStartsWith = __TS__StringStartsWith,
-    __TS__StringSubstr = __TS__StringSubstr,
-    __TS__StringSubstring = __TS__StringSubstring,
-    __TS__StringTrim = __TS__StringTrim,
-    __TS__StringTrimEnd = __TS__StringTrimEnd,
-    __TS__StringTrimStart = __TS__StringTrimStart,
-    __TS__Symbol = __TS__Symbol,
-    Symbol = Symbol,
-    __TS__SymbolRegistryFor = __TS__SymbolRegistryFor,
-    __TS__SymbolRegistryKeyFor = __TS__SymbolRegistryKeyFor,
-    __TS__TypeOf = __TS__TypeOf,
-    __TS__Unpack = __TS__Unpack
+  __TS__ArrayConcat = __TS__ArrayConcat,
+  __TS__ArrayEntries = __TS__ArrayEntries,
+  __TS__ArrayEvery = __TS__ArrayEvery,
+  __TS__ArrayFilter = __TS__ArrayFilter,
+  __TS__ArrayForEach = __TS__ArrayForEach,
+  __TS__ArrayFind = __TS__ArrayFind,
+  __TS__ArrayFindIndex = __TS__ArrayFindIndex,
+  __TS__ArrayFrom = __TS__ArrayFrom,
+  __TS__ArrayIncludes = __TS__ArrayIncludes,
+  __TS__ArrayIndexOf = __TS__ArrayIndexOf,
+  __TS__ArrayIsArray = __TS__ArrayIsArray,
+  __TS__ArrayJoin = __TS__ArrayJoin,
+  __TS__ArrayMap = __TS__ArrayMap,
+  __TS__ArrayPush = __TS__ArrayPush,
+  __TS__ArrayPushArray = __TS__ArrayPushArray,
+  __TS__ArrayReduce = __TS__ArrayReduce,
+  __TS__ArrayReduceRight = __TS__ArrayReduceRight,
+  __TS__ArrayReverse = __TS__ArrayReverse,
+  __TS__ArrayUnshift = __TS__ArrayUnshift,
+  __TS__ArraySort = __TS__ArraySort,
+  __TS__ArraySlice = __TS__ArraySlice,
+  __TS__ArraySome = __TS__ArraySome,
+  __TS__ArraySplice = __TS__ArraySplice,
+  __TS__ArrayToObject = __TS__ArrayToObject,
+  __TS__ArrayFlat = __TS__ArrayFlat,
+  __TS__ArrayFlatMap = __TS__ArrayFlatMap,
+  __TS__ArraySetLength = __TS__ArraySetLength,
+  __TS__AsyncAwaiter = __TS__AsyncAwaiter,
+  __TS__Await = __TS__Await,
+  __TS__Class = __TS__Class,
+  __TS__ClassExtends = __TS__ClassExtends,
+  __TS__CloneDescriptor = __TS__CloneDescriptor,
+  __TS__CountVarargs = __TS__CountVarargs,
+  __TS__Decorate = __TS__Decorate,
+  __TS__DecorateParam = __TS__DecorateParam,
+  __TS__Delete = __TS__Delete,
+  __TS__DelegatedYield = __TS__DelegatedYield,
+  Error = Error,
+  RangeError = RangeError,
+  ReferenceError = ReferenceError,
+  SyntaxError = SyntaxError,
+  TypeError = TypeError,
+  URIError = URIError,
+  __TS__FunctionBind = __TS__FunctionBind,
+  __TS__Generator = __TS__Generator,
+  __TS__InstanceOf = __TS__InstanceOf,
+  __TS__InstanceOfObject = __TS__InstanceOfObject,
+  __TS__Iterator = __TS__Iterator,
+  __TS__LuaIteratorSpread = __TS__LuaIteratorSpread,
+  Map = Map,
+  __TS__Match = __TS__Match,
+  __TS__MathAtan2 = __TS__MathAtan2,
+  __TS__MathModf = __TS__MathModf,
+  __TS__MathSign = __TS__MathSign,
+  __TS__New = __TS__New,
+  __TS__Number = __TS__Number,
+  __TS__NumberIsFinite = __TS__NumberIsFinite,
+  __TS__NumberIsNaN = __TS__NumberIsNaN,
+  __TS__NumberToString = __TS__NumberToString,
+  __TS__NumberToFixed = __TS__NumberToFixed,
+  __TS__ObjectAssign = __TS__ObjectAssign,
+  __TS__ObjectDefineProperty = __TS__ObjectDefineProperty,
+  __TS__ObjectEntries = __TS__ObjectEntries,
+  __TS__ObjectFromEntries = __TS__ObjectFromEntries,
+  __TS__ObjectGetOwnPropertyDescriptor = __TS__ObjectGetOwnPropertyDescriptor,
+  __TS__ObjectGetOwnPropertyDescriptors = __TS__ObjectGetOwnPropertyDescriptors,
+  __TS__ObjectKeys = __TS__ObjectKeys,
+  __TS__ObjectRest = __TS__ObjectRest,
+  __TS__ObjectValues = __TS__ObjectValues,
+  __TS__ParseFloat = __TS__ParseFloat,
+  __TS__ParseInt = __TS__ParseInt,
+  __TS__Promise = __TS__Promise,
+  __TS__PromiseAll = __TS__PromiseAll,
+  __TS__PromiseAllSettled = __TS__PromiseAllSettled,
+  __TS__PromiseAny = __TS__PromiseAny,
+  __TS__PromiseRace = __TS__PromiseRace,
+  Set = Set,
+  __TS__SetDescriptor = __TS__SetDescriptor,
+  __TS__SparseArrayNew = __TS__SparseArrayNew,
+  __TS__SparseArrayPush = __TS__SparseArrayPush,
+  __TS__SparseArraySpread = __TS__SparseArraySpread,
+  WeakMap = WeakMap,
+  WeakSet = WeakSet,
+  __TS__SourceMapTraceBack = __TS__SourceMapTraceBack,
+  __TS__Spread = __TS__Spread,
+  __TS__StringAccess = __TS__StringAccess,
+  __TS__StringCharAt = __TS__StringCharAt,
+  __TS__StringCharCodeAt = __TS__StringCharCodeAt,
+  __TS__StringEndsWith = __TS__StringEndsWith,
+  __TS__StringIncludes = __TS__StringIncludes,
+  __TS__StringPadEnd = __TS__StringPadEnd,
+  __TS__StringPadStart = __TS__StringPadStart,
+  __TS__StringReplace = __TS__StringReplace,
+  __TS__StringReplaceAll = __TS__StringReplaceAll,
+  __TS__StringSlice = __TS__StringSlice,
+  __TS__StringSplit = __TS__StringSplit,
+  __TS__StringStartsWith = __TS__StringStartsWith,
+  __TS__StringSubstr = __TS__StringSubstr,
+  __TS__StringSubstring = __TS__StringSubstring,
+  __TS__StringTrim = __TS__StringTrim,
+  __TS__StringTrimEnd = __TS__StringTrimEnd,
+  __TS__StringTrimStart = __TS__StringTrimStart,
+  __TS__Symbol = __TS__Symbol,
+  Symbol = Symbol,
+  __TS__SymbolRegistryFor = __TS__SymbolRegistryFor,
+  __TS__SymbolRegistryKeyFor = __TS__SymbolRegistryKeyFor,
+  __TS__TypeOf = __TS__TypeOf,
+  __TS__Unpack = __TS__Unpack
 }

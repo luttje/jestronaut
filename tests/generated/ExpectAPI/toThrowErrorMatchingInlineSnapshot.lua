@@ -1,10 +1,10 @@
--- .toThrowErrorMatchingInlineSnapshot
+-- toThrowErrorMatchingInlineSnapshot
 
 
 
 local tests = {
 
-
+	
 
 }
 
