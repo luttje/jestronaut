@@ -9,13 +9,14 @@ function callWithRequireCompat(func)
   require = function(path)
     if (alreadyRequired[path] == nil) then
       if (file.Exists(path .. ".lua", "LUA")) then
-        alreadyRequired[path] = include(path .. ".lua") or true
+        alreadyRequired[path] = {include(path .. ".lua")}
       else
-        print("Could not find file: " .. path)
+        Msg("Could not find file: " .. path)
+        return false
       end
     end
 
-    return alreadyRequired[path]
+    return unpack(alreadyRequired[path])
   end
 
   local result = func()
@@ -26,7 +27,11 @@ function callWithRequireCompat(func)
 end
 
 local jestronaut = callWithRequireCompat(function()
-  return include("jestronaut.lua")
+  local jestronaut = include("jestronaut.lua")
+
+  GmodReporter = include("gmod-reporter.lua").GmodReporter
+
+  return jestronaut
 end)
 
 return jestronaut

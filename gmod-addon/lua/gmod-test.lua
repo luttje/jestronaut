@@ -1,8 +1,8 @@
-include("gmod-jestronaut.lua"):withGlobals()
+--[[
+  Self-test for the Jestronaut Garry's Mod addon.
+--]]
 
-local simplifiedReporter = callWithRequireCompat(function()
-  return require "gmod-reporter".GmodReporter
-end)
+include("gmod-jestronaut.lua"):withGlobals()
 
 jestronaut
   :configure({
@@ -11,7 +11,7 @@ jestronaut
       "addons/jestronaut/lua/tests/generated/",
     },
 
-    reporter = simplifiedReporter
+    reporter = GmodReporter
   })
   :registerTests(function()
     callWithRequireCompat(function()

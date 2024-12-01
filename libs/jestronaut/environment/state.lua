@@ -1,4 +1,4 @@
-local require = require
+local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
 local functionLib = require "jestronaut/utils/functions"
 local stringsLib = require "jestronaut/utils/strings"
@@ -518,10 +518,9 @@ end
 --- @param runnerOptions RunnerOptions
 local function runTests(runnerOptions)
   -- Pass modified require's on through
-  local oldRequire = _G.require
-  _G.require = require
-  local reporter = runnerOptions.reporter or (require "jestronaut/reporter".DefaultReporter)
-  _G.require = oldRequire
+  local reporter = callRespectingRequireOverride(function()
+    return runnerOptions.reporter or (require "jestronaut/reporter".DefaultReporter)
+  end)
 
   reporter.isVerbose = runnerOptions.verbose
   
