@@ -1,4 +1,13 @@
-# Jestronaut - Garry's Mod Addon
+# Jestronaut - Garry's Mod Addon`
+
+## Installation
+
+1. Download the addon from the latest Jestronaut release from the 
+[releases page](https://github.com/luttje/jestronaut/releases).
+
+2. Extract the contents of the `gmod-addon.zip` file to your Garry's Mod `addons` folder.
+
+3. Restart Garry's Mod if it was running.
 
 ## Usage
 
