@@ -1,6 +1,15 @@
+<div align="center">
+
+<img src="./logo-with-gmod.png" alt="Jestronaut logo showing a jester in a space helmet" width="200" />
+
 # Jestronaut - Garry's Mod Addon
 
-This addon provides a way to run Jestronaut tests in Garry's Mod. It includes the Jestronaut library and a reporter for Garry's Mod.
+[![License](https://img.shields.io/github/license/luttje/jestronaut)](https://github.com/luttje/jestronaut/blob/main/LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/luttje/jestronaut)](https://github.com/luttje/jestronaut/releases)
+
+</div>
+
+This addon provides a way to run [Jestronaut](https://github.com/luttje/jestronaut) tests in Garry's Mod. It includes the Jestronaut library and a reporter for Garry's Mod.
 
 > [!WARNING]
 > The addon has quite a hacky implementation surrounding `require`.
