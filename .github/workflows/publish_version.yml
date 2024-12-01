@@ -104,7 +104,7 @@ jobs:
       - name: Upload GMod addon artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jestronaut-gmod
+          name: gmod-addon
           path: dist/gmod-addon.zip
 
   publish_github:
@@ -118,16 +118,9 @@ jobs:
       - name: Create dist directory
         run: mkdir -p dist
 
-      - name: Download binary artifact from publish_rock_and_build_ubuntu
+      - name: Download artifacts from publish_rock_and_build_ubuntu, build_windows, and build_gmod_addon
         uses: actions/download-artifact@v4
         with:
-          name: jestronaut-ubuntu
-          path: dist
-
-      - name: Download binary artifact from build_windows
-        uses: actions/download-artifact@v4
-        with:
-          name: jestronaut-windows
           path: dist
 
       - name: Install GitHub CLI
