@@ -83,7 +83,7 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jestronaut-windows
+          name: jestronaut-windows.exe
           path: dist/jestronaut-windows.exe
 
   build_gmod_addon:
@@ -104,7 +104,7 @@ jobs:
       - name: Upload GMod addon artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gmod-addon
+          name: gmod-addon.zip
           path: dist/gmod-addon.zip
 
   publish_github:
