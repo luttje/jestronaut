@@ -9,24 +9,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
+
       - name: Install Lua
         uses: leafo/gh-actions-lua@v10
+
       - name: Install LuaRocks
         uses: leafo/gh-actions-luarocks@v4
+
       - run: luarocks install dkjson
+
       - name: Install dependencies
         run: npm ci
+
       - name: Create .env file
         run: |
           touch .env
           echo LUAROCKS_API_KEY=${{ secrets.LUAROCKS_API_KEY }} >> .env
+
       - name: Publish the rock
         run: npm run ci:publish
+
       - name: Install Luvit
         run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
+
       - name: Make lit and luvit available and executable
         run: |
           sudo cp lit /usr/local/bin/lit
@@ -35,10 +44,13 @@ jobs:
           sudo chmod +x /usr/local/bin/luvit
           sudo cp luvi /usr/local/bin/luvi
           sudo chmod +x /usr/local/bin/luvi
+
       - name: Build the Lit binary
         run: npm run build:lit
+
       - name: Rename the Lit binary
         run: mv ./dist/jestronaut ./dist/jestronaut-ubuntu
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
@@ -49,18 +61,24 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
+
       - name: Install Luvit
         shell: pwsh
         run: "[Net.ServicePointManager]::SecurityProtocol = 'Tls12'; iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))"
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build the Lit binary
         run: npm run build:lit
+
       - name: Rename the Lit binary
         run: mv ./dist/jestronaut.exe ./dist/jestronaut-windows.exe
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v3
         with:
@@ -71,13 +89,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build the GMod addon
         run: npm run build:gmod
+
       - name: Upload GMod addon artifact
         uses: actions/upload-artifact@v3
         with:
@@ -91,26 +113,36 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v3
+
       - name: Create dist directory
         run: mkdir -p dist
+
       - name: Download binary artifact from publish_rock_and_build_ubuntu
         uses: actions/download-artifact@v2
         with:
           name: jestronaut-ubuntu
           path: dist
+
       - name: Download binary artifact from build_windows
         uses: actions/download-artifact@v2
         with:
           name: jestronaut-windows
           path: dist
+
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
       - name: Create a new release
-        uses: "marvinpinto/action-automatic-releases@v1.2.1"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
-          title: "Latest (automatic build)"
-          files: |
-            dist/jestronaut-ubuntu
-            dist/jestronaut-windows.exe
+        id: create_release
+        run: |
+          gh release create latest \
+            --prerelease \
+            --title "Latest (automatic build)" \
+            dist/jestronaut-ubuntu \
+            dist/jestronaut-windows.exe \
             dist/gmod-addon.zip
