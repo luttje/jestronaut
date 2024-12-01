@@ -38,28 +38,28 @@ local textStylesCodeMap = {
 --- ANSI Cursor controls
 local cursorCodesMap = {
   home = "H",
-  moveToLineAndColumn = "%d;%dH", -- line #, column #
-  moveUpLines = "%dA", -- # lines
-  moveDownLines = "%dB", -- # lines
-  moveForwardColumns = "%dC", -- # columns
-  moveBackwardColumns = "%dD", -- # columns
+  moveToLineAndColumn = "%d;%dH",        -- line #, column #
+  moveUpLines = "%dA",                   -- # lines
+  moveDownLines = "%dB",                 -- # lines
+  moveForwardColumns = "%dC",            -- # columns
+  moveBackwardColumns = "%dD",           -- # columns
 
-  moveToBeginningOfNextLine = "%dE", -- # lines
+  moveToBeginningOfNextLine = "%dE",     -- # lines
   moveToBeginningOfPreviousLine = "%dF", -- # lines
 
-  moveToColumn = "%dG", -- column #
+  moveToColumn = "%dG",                  -- column #
 
-  requestCursorPosition = "6n", -- response: ESC[#row;#columnR
+  requestCursorPosition = "6n",          -- response: ESC[#row;#columnR
 
-  moveCursorUpOneLineWithScroll = "M", -- Scrolls if needed
+  moveCursorUpOneLineWithScroll = "M",   -- Scrolls if needed
 
-  saveCursorPosition = "7", -- DEC
-  restoreCursorPosition = "8", -- DEC
+  saveCursorPosition = "7",              -- DEC
+  restoreCursorPosition = "8",           -- DEC
 }
 
 --- ANSI Erase commands
---- Note: Erasing the line won't move the cursor, meaning that the cursor will stay at 
---- the last position it was at before the line was erased. You can use \r after erasing 
+--- Note: Erasing the line won't move the cursor, meaning that the cursor will stay at
+--- the last position it was at before the line was erased. You can use \r after erasing
 --- the line, to return the cursor to the start of the current line.
 local eraseCodesMap = {
   eraseBelow = "J",
@@ -82,8 +82,9 @@ local STYLED_TEXT_META = {}
 STYLED_TEXT_META.__index = STYLED_TEXT_META
 
 function STYLED_TEXT_META:addText(text, code)
-  if code then
-    self.parts[#self.parts + 1] = startFunction .. code .. endFunction .. (text or "") .. startFunction .. resetColorsCode .. endFunction
+  if (code and not self.isStylingDisabled) then
+    self.parts[#self.parts + 1] = startFunction ..
+    code .. endFunction .. (text or "") .. startFunction .. resetColorsCode .. endFunction
   elseif text then
     self.parts[#self.parts + 1] = text
   end
@@ -92,6 +93,10 @@ function STYLED_TEXT_META:addText(text, code)
 end
 
 function STYLED_TEXT_META:addCommand(code)
+  if (self.isStylingDisabled) then
+    return self
+  end
+
   self.parts[#self.parts + 1] = startFunction .. code .. "\r"
   return self
 end
@@ -153,8 +158,9 @@ end
 
 --- Creates a new styled text object
 --- @param text string|StyledText
+--- @param overrideStylingDisabled? boolean
 --- @return StyledText
-local function new(text)
+local function new(text, overrideStylingDisabled)
   if text == nil then
     text = ""
   elseif type(text) ~= "string" then
@@ -163,12 +169,13 @@ local function new(text)
 
   return setmetatable({
     parts = { text },
+    isStylingDisabled = overrideStylingDisabled or false,
   }, STYLED_TEXT_META)
 end
 
 return {
   STYLED_TEXT_META = STYLED_TEXT_META,
-  
+
   new = new,
 
   foregroundColors = foregroundColorsCodeMap,

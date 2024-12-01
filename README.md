@@ -88,6 +88,10 @@ This binary is a standalone executable that can be used to run Jestronaut tests 
     > 
     > The variable `MSYS_NO_PATHCONV=1` is only required on Windows when using MSYS2 (for example with Git for Windows). It prevents the path from being converted to a Windows path, which would result in an incorrect path.
 
+### Running tests in Garry's Mod
+
+See [the Jestronaut Garry's Mod addon README](./gmod-addon/README.md) for more information.
+
 ## 🧪 API
 
 Jestronaut tries to match [the API of Jest](https://jestjs.io/docs/api) as closely as possible. Here are some examples of how to use it:

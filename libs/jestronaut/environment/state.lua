@@ -1,3 +1,4 @@
+local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
 local functionLib = require "jestronaut/utils/functions"
 local stringsLib = require "jestronaut/utils/strings"
@@ -46,7 +47,7 @@ local function getTestFilePath(test)
   while true do
     local info = debug.getinfo(i, "Sl")
 
-    if not info then
+    if (not info) then
       error("Could not find the test file path. Please make sure options.roots is set to the directories where your tests are located.")
       break
     end
@@ -516,7 +517,10 @@ end
 --- Runs all registered tests.
 --- @param runnerOptions RunnerOptions
 local function runTests(runnerOptions)
-  local reporter = runnerOptions.reporter or (require "jestronaut/reporter".DefaultReporter)
+  -- Pass modified require's on through
+  local reporter = callRespectingRequireOverride(function()
+    return runnerOptions.reporter or (require "jestronaut/reporter".DefaultReporter)
+  end)
 
   reporter.isVerbose = runnerOptions.verbose
   

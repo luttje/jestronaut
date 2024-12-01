@@ -1,3 +1,4 @@
+local require = require
 local mockFunctionLib = require "jestronaut/mock/mockfunction"
 
 local preloadedModules = {}

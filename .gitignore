@@ -5,3 +5,8 @@ lua_modules
 
 /luacov.stats.out
 /luacov.report.out
+
+# Do not include the symlinked/copied lib files in the addon
+/gmod-addon/lua/tests
+/gmod-addon/lua/jestronaut/
+/gmod-addon/lua/jestronaut.lua

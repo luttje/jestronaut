@@ -3,7 +3,7 @@ on:
   push:
     tags:
       - 'v*'
-      
+
 jobs:
   publish_rock_and_build_ubuntu:
     runs-on: ubuntu-latest
@@ -67,6 +67,23 @@ jobs:
           name: jestronaut-windows
           path: dist/jestronaut-windows.exe
 
+  build_gmod_addon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build the GMod addon
+        run: npm run build:gmod
+      - name: Upload GMod addon artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: jestronaut-gmod
+          path: dist/gmod-addon.zip
+
   publish_github:
     runs-on: ubuntu-latest
     needs: [publish_rock_and_build_ubuntu, build_windows]
@@ -96,3 +113,4 @@ jobs:
           files: |
             dist/jestronaut-ubuntu
             dist/jestronaut-windows.exe
+            dist/gmod-addon.zip

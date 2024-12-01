@@ -76,6 +76,7 @@ function JESTRONAUT:getGlobals()
   environmentLib.exposeTo(globals)
 
   globals.jestronaut = self
+
   mockLib.exposeTo(globals.jestronaut)
 
   return globals

@@ -1,3 +1,5 @@
+local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
+
 --- @param testRoots string[]
 --- @param coverageDirectory string
 --- @param coverageProvider string
@@ -17,7 +19,10 @@ local function setupCoverage(testRoots, coverageDirectory, coverageProvider)
     error("Coverage directory is not supported yet.")
   end
 
-  local success, luacov = pcall(require, 'luacov.runner')
+  -- Pass modified require's on through
+  local success, luacov = callRespectingRequireOverride(function()
+    return pcall(require, 'luacov.runner')
+  end)
 
   if not success then
     error("Could not load luacov. Make sure it is installed and available in your package.path or avoid using the --coverage option.")

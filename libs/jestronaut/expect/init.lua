@@ -1,4 +1,5 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching".wrapAndTagVarargsOrReturn
+local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
 local makeIndexableFunction = require "jestronaut/utils/metatables".makeIndexableFunction
 local functionLib = require "jestronaut/utils/functions"
 local stateLib = require "jestronaut/environment/state"
@@ -20,7 +21,9 @@ local function getMatcher(key)
   end
 
   local modulePath = 'jestronaut/expect/matchers/' .. key
-  local success, matcherOrError = pcall(require, modulePath)
+  local success, matcherOrError = callRespectingRequireOverride(function()
+    return pcall(require, modulePath)
+  end)
 
   if not success then
     if not (matcherOrError:find("module '" .. modulePath .. "' not found")) then
@@ -36,7 +39,9 @@ end
 
 local function getAsymmetricMatcher(key)
   local modulePath = 'jestronaut/expect/asymmetricmatchers/' .. key
-  local success, matcherOrError = pcall(require, modulePath)
+  local success, matcherOrError = callRespectingRequireOverride(function()
+    return pcall(require, modulePath)
+  end)
 
   if not success then
     if not (matcherOrError:find("module '" .. modulePath .. "' not found")) then
