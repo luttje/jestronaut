@@ -3,9 +3,15 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'libs/**'
+      - 'tests/**'
   pull_request:
     branches:
       - '**'
+    paths:
+      - 'libs/**'
+      - 'tests/**'
 jobs:
   test:
     runs-on: ubuntu-latest

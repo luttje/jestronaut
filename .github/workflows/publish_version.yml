@@ -127,7 +127,7 @@ jobs:
       - name: Store the latest tag in a variable
         id: get_tag
         run: |
-          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          git fetch --prune --unshallow --tags
           latest_tag=$(git describe --abbrev=0 --tags)
           echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
           echo "Latest tag is $LATEST_TAG"
