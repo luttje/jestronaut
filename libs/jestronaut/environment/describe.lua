@@ -33,7 +33,7 @@ local function _internalDescribe(name, fn, options)
   end
 
   setmetatable(describe, DESCRIBE_META)
-  
+
   registerDescribeOrTest(describe)
 
   return describe

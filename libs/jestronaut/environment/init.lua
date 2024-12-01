@@ -58,6 +58,8 @@ local function exposeTo(targetEnvironment)
 end
 
 return {
+  resetEnvironment = stateLib.resetEnvironment,
+
   setRoots = stateLib.setRoots,
   registerTests = stateLib.registerTests,
   runTests = stateLib.runTests,

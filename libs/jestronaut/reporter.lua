@@ -3,11 +3,12 @@ local styledText = require "jestronaut/utils/styledtexts"
 local originalPrint = print
 
 --- @class Reporter
-local DefaultReporter = {
+local REPORTER = {
   isVerbose = false,
 
   width = 75,
 }
+REPORTER.__index = REPORTER
 
 --- Gets the indentations.
 --- @param describeOrTest DescribeOrTest
@@ -17,7 +18,7 @@ local function getIndentations(describeOrTest)
 end
 
 --- @param filePath string
-function DefaultReporter:getFileByPath(filePath)
+function REPORTER:getFileByPath(filePath)
   for _, file in ipairs(self.describesByFilePath) do
     if filePath == file.filePath then
       return file
@@ -43,7 +44,7 @@ local function drawDescribeOrTest(describeOrTest)
   end
 
   summary:plain(" " .. describeOrTest.name .. "\n")
-  
+
   if (describeOrTest.isRunning and describeOrTest.children) then
     for _, describeOrTest in ipairs(describeOrTest.children) do
       if describeOrTest.isDescribe then
@@ -113,7 +114,7 @@ local function getSummary(header, describesByFilePath, verbose)
     else
       summary:colored(" RUNS ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
       summary:plain(filePathForShowing)
-      
+
       if verbose and file.isRunning then
         for _, describeOrTest in ipairs(describesOrTests) do
           summary:plain(drawDescribeOrTest(describeOrTest))
@@ -127,7 +128,7 @@ end
 
 --- Redraws the summary lines, clearing the previous ones.
 --- @param verbose boolean
-function DefaultReporter:redrawSummary(verbose)
+function REPORTER:redrawSummary(verbose)
   local summary, lineCount = getSummary(self.summaryHeader, self.describesByFilePath, verbose)
   local summaryText = tostring(summary)
 
@@ -147,7 +148,7 @@ end
 
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
-function DefaultReporter:testStarting(describeOrTest)
+function REPORTER:testStarting(describeOrTest)
   -- Override print so there's no interference with the test output.
   print = function() end -- TODO: Store the print and output it at the end of the test.
 
@@ -166,7 +167,7 @@ end
 --- @param success boolean
 --- @param ... any
 --- @return boolean
-function DefaultReporter:testFinished(describeOrTest, success, ...)
+function REPORTER:testFinished(describeOrTest, success, ...)
   print = originalPrint
 
   local file = self:getFileByPath(describeOrTest.filePath)
@@ -181,9 +182,9 @@ function DefaultReporter:testFinished(describeOrTest, success, ...)
 
       self.lastFile = file
     end
-    
+
     file.isRunning = true
-    
+
     if not success then
       file.hasRun = true
       file.success = false
@@ -195,7 +196,7 @@ end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
-function DefaultReporter:testSkipped(describeOrTest)
+function REPORTER:testSkipped(describeOrTest)
   local file = self:getFileByPath(describeOrTest.filePath)
 
   if file then
@@ -210,13 +211,13 @@ end
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
-function DefaultReporter:testRetrying(describeOrTest, retryCount)
+function REPORTER:testRetrying(describeOrTest, retryCount)
   self:redrawSummary(self.isVerbose)
 end
 
 --- Prints text centered, using the reporter width.
 --- @param text string
-function DefaultReporter:printCentered(text)
+function REPORTER:printCentered(text)
   local textLength = text:len()
   local leftPadding = math.floor((self.width - textLength) * .5)
   local rightPadding = self.width - textLength - leftPadding
@@ -226,7 +227,7 @@ end
 
 --- Creates a horizontal line using the reporter width.
 --- @param char string
-function DefaultReporter:printHorizontalLine(char)
+function REPORTER:printHorizontalLine(char)
   char = char or "─"
 
   originalPrint(char:rep(self.width))
@@ -234,7 +235,7 @@ end
 
 --- Creates some space by printing a new line.
 --- @param count number
-function DefaultReporter:printNewline(count)
+function REPORTER:printNewline(count)
   count = count or 1
 
   for i = 1, count do
@@ -245,7 +246,7 @@ end
 --- Stores the tests that will be run and prints the summary with header.
 --- @param rootDescribe Describe
 --- @param describesByFilePath table
-function DefaultReporter:startTestSet(rootDescribe, describesByFilePath)
+function REPORTER:startTestSet(rootDescribe, describesByFilePath)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
 
   self.summaryHeader = styledText.new()
@@ -264,7 +265,7 @@ end
 --- @param failedTestCount number
 --- @param skippedTestCount number
 --- @param duration number
-function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCount, duration)
+function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, duration)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local notRunCount = failedTestCount + skippedTestCount
   local relativeSuccess = 1 - (notRunCount / totalTestCount)
@@ -325,7 +326,7 @@ function DefaultReporter:printEnd(rootDescribe, failedTestCount, skippedTestCoun
       end
     end
   end
-  
+
   for _, file in ipairs(self.describesByFilePath) do
     findTodos(file, file.describesOrTests)
   end
@@ -346,7 +347,7 @@ end
 --- Prints the bail message of the test.
 --- @param rootDescribe Describe
 --- @param bailError string
-function DefaultReporter:printBailed(rootDescribe, bailError)
+function REPORTER:printBailed(rootDescribe, bailError)
   self:printNewline(2)
   self:printCentered("🚨 Bailed out of tests!")
   self:printNewline(2)
@@ -356,9 +357,9 @@ end
 
 --- Prints the progress of the test.
 --- @param relativeSuccess number
-function DefaultReporter:printProgress(relativeSuccess)
+function REPORTER:printProgress(relativeSuccess)
   local suffix = math.floor(relativeSuccess * 100) .. "% of tests succeeded"
-  
+
   local progressBar = "["
   local progressBarLength = self.width - suffix:len() - 3
   local progressBarSuccessLength = math.floor(progressBarLength * relativeSuccess)
@@ -373,6 +374,14 @@ function DefaultReporter:printProgress(relativeSuccess)
   self:printHorizontalLine()
 end
 
+--- Creates a new default reporter.
+--- @return Reporter
+local function newDefaultReporter()
+  local reporter = setmetatable({}, REPORTER)
+
+  return reporter
+end
+
 return {
-  DefaultReporter = DefaultReporter,
+  newDefaultReporter = newDefaultReporter,
 }

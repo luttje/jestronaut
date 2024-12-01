@@ -1,6 +1,6 @@
 -- Gmod's require doesn't return any values, so we replace require with include while loading jestronaut
 -- This is a hacky way to make jestronaut work with Gmod
-function callWithRequireCompat(func)
+local function callWithRequireCompat(func)
   local oldRequire = require
   local alreadyRequired = {}
 
@@ -29,9 +29,11 @@ end
 local jestronaut = callWithRequireCompat(function()
   local jestronaut = include("jestronaut.lua")
 
-  GmodReporter = include("gmod-reporter.lua").GmodReporter
+  GmodReporter = include("sh_jestronaut_gmod_reporter.lua").GmodReporter
 
   return jestronaut
 end)
 
-return jestronaut
+jestronaut.callWithRequireCompat = callWithRequireCompat
+
+jestronaut:withGlobals()

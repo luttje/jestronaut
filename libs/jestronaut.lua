@@ -8,9 +8,6 @@ local setupModuleMocking = mockLib.setupModuleMocking
 
 setupModuleMocking()
 
--- Setup the root describe
-describeLib.describe("root", function() end)
-
 --- @class Jestronaut
 local JESTRONAUT = {
   runnerOptions = {},
@@ -19,6 +16,11 @@ local JESTRONAUT = {
 --- @param runnerOptions RunnerOptions
 --- @return Jestronaut
 function JESTRONAUT:configure(runnerOptions)
+  environmentLib.resetEnvironment()
+
+  -- Setup the root describe
+  describeLib.describe("root", function() end)
+
   runnerOptions = optionsLib.merge(runnerOptions)
 
   self.runnerOptions = runnerOptions
@@ -50,13 +52,18 @@ function JESTRONAUT:registerTests(testRegistrar)
 end
 
 --- Runs the tests.
+--- @param onFinishedCallback? fun()
 --- @return Jestronaut
-function JESTRONAUT:runTests()
+function JESTRONAUT:runTests(onFinishedCallback)
   if not self.runnerOptions then
     error("No options found. You must setup jestronaut (with jestronaut:configure(options)) before running tests.")
   end
 
   environmentLib.runTests(self.runnerOptions)
+
+  if onFinishedCallback then
+    onFinishedCallback()
+  end
 
   return self
 end

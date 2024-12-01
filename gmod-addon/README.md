@@ -48,9 +48,7 @@ This addon provides a way to run [Jestronaut](https://github.com/luttje/jestrona
 2. Create a runner script in your project, for example:
 
     ```lua
-    -- lua/run-all-tests.lua
-
-    include("gmod-jestronaut.lua"):withGlobals()
+    -- lua/run_all_tests.lua
 
     jestronaut
       :configure({
@@ -108,5 +106,5 @@ This addon provides a way to run [Jestronaut](https://github.com/luttje/jestrona
 Jestronaut's own tests are included in the addon. To run them in Garry's Mod use the following command:
 
 ```bash
-lua_openscript gmod-test.lua
+lua_openscript sh_jestronaut_gmod_test.lua
 ```

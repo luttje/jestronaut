@@ -2,8 +2,6 @@
   Self-test for the Jestronaut Garry's Mod addon.
 --]]
 
-include("gmod-jestronaut.lua"):withGlobals()
-
 jestronaut
   :configure({
     roots = {
@@ -14,7 +12,7 @@ jestronaut
     reporter = GmodReporter
   })
   :registerTests(function()
-    callWithRequireCompat(function()
+    jestronaut.callWithRequireCompat(function()
       -- require "tests/generated/init" -- TODO: fails atm
       require "tests/init"
     end)

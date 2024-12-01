@@ -6,6 +6,7 @@ local stringsLib = require "jestronaut/utils/strings"
 local rootFilePaths
 
 --- @class DescribeOrTest
+--- @type DescribeOrTest?
 local currentDescribeOrTest = nil
 
 --- @class LocalState
@@ -20,11 +21,18 @@ local LOCAL_STATE_META = {}
 --- @type LocalState[]
 local testLocalStates = {}
 
---- @type DescribeOrTest
+--- @type DescribeOrTest?
 local currentParent = nil
 
 local function getCurrentDescribeOrTest()
   return currentDescribeOrTest
+end
+
+local function resetEnvironment()
+  currentDescribeOrTest = nil
+  rootFilePaths = nil
+  currentParent = nil
+  testLocalStates = {}
 end
 
 --- Sets where Jestronaut should look for tests. This is used to determine the test file path.
@@ -125,7 +133,7 @@ local function getAssertionCount()
   if not currentDescribeOrTest then
     error("Cannot get the assertion count outside of a test or describe block", 2)
   end
-  
+
   return currentDescribeOrTest.assertionCount
 end
 
@@ -141,7 +149,7 @@ local function getExpectedAssertionCount()
   if not currentDescribeOrTest then
     error("Cannot get the expected assertion count outside of a test or describe block", 2)
   end
-  
+
   return currentDescribeOrTest.expectedAssertionCount
 end
 
@@ -266,14 +274,14 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
 
   if(runnerOptions.slowDown) then -- For debugging terminal output
     local slowDown = runnerOptions.slowDown * 0.001
-    
+
     local startTime = os.clock()
     local endTime = startTime + slowDown
 
     -- Start a loop to freeze for the specified amount of milliseconds
     while os.clock() < endTime do end
   end
-  
+
   reporter:testStarting(self)
   self.isRunning = true
 
@@ -333,7 +341,7 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
     if #self.children > 0 then
       self.isRunning = true
 
-      for _, child in pairs(self.children) do
+      for _, child in ipairs(self.children) do
         local childFailedCount = child:run(reporter, runnerOptions)
 
         failedTestCount = failedTestCount + childFailedCount
@@ -387,7 +395,7 @@ local function makeDescribeOrTestForRun(describeOrTest, runnerOptions)
     for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
       local plain = not pattern:find("^/.*/$") -- Only enable pattern matching if the pattern doesn't start and end with a slash
       pattern = plain and pattern or pattern:sub(2, -2) -- Remove the slashes if pattern matching is enabled
-      
+
       if describeOrTestForRun.filePath:find(pattern, nil, plain) then
         describeOrTestForRun.toSkip = true
       end
@@ -455,11 +463,11 @@ local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
 
     table.insert(describesByFilePath[fileIndex].describesOrTests, child)
   end
-  
+
   if describeOrTest.isDescribe then
     for _, child in pairs(describeOrTest.children) do
       local child, childDescribesByFilePath, childSkippedCount = copyDescribeOrTestForRun(child, runnerOptions)
-        
+
       describeOrTestForRun:addChild(child)
 
       skippedTestCount = skippedTestCount + childSkippedCount
@@ -480,7 +488,7 @@ end
 --- @param describeOrTest DescribeOrTest
 local function registerDescribeOrTest(describeOrTest)
   local filePath, lineNumber = getTestFilePath(describeOrTest)
-  
+
   describeOrTest.filePath = filePath
   describeOrTest.lineNumber = lineNumber
 
@@ -510,7 +518,7 @@ local function registerTests(testRegistrar)
   if not rootFilePaths then
     error("No root directory paths have been set. Configure options.roots using jestronaut:config(options) before registering tests.")
   end
-  
+
   testRegistrar()
 end
 
@@ -519,11 +527,11 @@ end
 local function runTests(runnerOptions)
   -- Pass modified require's on through
   local reporter = callRespectingRequireOverride(function()
-    return runnerOptions.reporter or (require "jestronaut/reporter".DefaultReporter)
+    return runnerOptions.reporter or (require "jestronaut/reporter".newDefaultReporter())
   end)
 
   reporter.isVerbose = runnerOptions.verbose
-  
+
   -- currentParent is the root describe at this point
   local testSetRoot, describesByFilePath, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
 
@@ -549,6 +557,9 @@ end
 return {
   DESCRIBE_OR_TEST_META = DESCRIBE_OR_TEST_META,
   DESCRIBE_OR_TEST_FOR_RUN_META = DESCRIBE_OR_TEST_FOR_RUN_META,
+
+  resetEnvironment = resetEnvironment,
+
   getCurrentDescribeOrTest = getCurrentDescribeOrTest,
   getDescribeOrTestForRun = copyDescribeOrTestForRun,
 
@@ -570,3 +581,4 @@ return {
   beforeAll = beforeAll,
   beforeEach = beforeEach,
 }
+

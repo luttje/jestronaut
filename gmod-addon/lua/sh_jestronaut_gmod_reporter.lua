@@ -58,7 +58,7 @@ local function drawDescribeOrTest(describeOrTest)
   end
 
   summary:plain(" " .. describeOrTest.name .. "\n")
-  
+
   if (describeOrTest.isRunning and describeOrTest.children) then
     for _, describeOrTest in ipairs(describeOrTest.children) do
       if describeOrTest.isDescribe then
@@ -106,7 +106,7 @@ function GmodReporter:testStarting(describeOrTest)
 
   local summary = styledText.new(nil, STYLING_DISABLED)
       :plain(drawDescribeOrTest(describeOrTest))
-    
+
   originalPrint(ensureLength("STARTED:", 10) .. tostring(summary))
 end
 
@@ -130,9 +130,9 @@ function GmodReporter:testFinished(describeOrTest, success, ...)
 
       self.lastFile = file
     end
-    
+
     file.isRunning = true
-    
+
     if not success then
       file.hasRun = true
       file.success = false
@@ -141,7 +141,7 @@ function GmodReporter:testFinished(describeOrTest, success, ...)
 
   local summary = styledText.new(nil, STYLING_DISABLED)
       :plain(drawDescribeOrTest(describeOrTest))
-    
+
   originalPrint(ensureLength("FINISHED:", 10) .. tostring(summary))
 end
 
@@ -156,7 +156,7 @@ function GmodReporter:testSkipped(describeOrTest)
 
   local summary = styledText.new(nil, STYLING_DISABLED)
       :plain(drawDescribeOrTest(describeOrTest))
-    
+
   originalPrint(ensureLength("SKIPPED:", 10) .. tostring(summary))
 end
 
@@ -209,7 +209,7 @@ function GmodReporter:startTestSet(rootDescribe, describesByFilePath)
     :plain("...\n\n")
 
   self.describesByFilePath = describesByFilePath
-  
+
   originalPrint(tostring(self.summaryHeader))
 end
 
@@ -228,7 +228,7 @@ function GmodReporter:printEnd(rootDescribe, failedTestCount, skippedTestCount, 
     self.lastFile.hasRun = true
     self.lastFile.success = true -- TODO: Check if all tests passed?
   end
-  
+
   self:printNewline()
 
   if(relativeSuccess == 1) then
@@ -261,7 +261,7 @@ function GmodReporter:printEnd(rootDescribe, failedTestCount, skippedTestCount, 
     styledText.new(nil, STYLING_DISABLED)
       :plain("Time:        " .. duration .. "s")
   )
-  
+
   self:printNewline()
 
   originalPrint(
@@ -281,7 +281,7 @@ function GmodReporter:printEnd(rootDescribe, failedTestCount, skippedTestCount, 
       end
     end
   end
-  
+
   for _, file in ipairs(self.describesByFilePath) do
     findTodos(file, file.describesOrTests)
   end
@@ -314,7 +314,7 @@ end
 --- @param relativeSuccess number
 function GmodReporter:printProgress(relativeSuccess)
   local suffix = math.floor(relativeSuccess * 100) .. "% of tests succeeded"
-  
+
   local progressBar = "["
   local progressBarLength = self.width - suffix:len() - 3
   local progressBarSuccessLength = math.floor(progressBarLength * relativeSuccess)
