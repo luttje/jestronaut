@@ -29,7 +29,7 @@ end
 local jestronaut = callWithRequireCompat(function()
   local jestronaut = include("jestronaut.lua")
 
-  GmodReporter = include("sh_jestronaut_gmod_reporter.lua").GmodReporter
+  GmodReporter = include("sh_jestronaut_gmod_reporter.lua").newGmodReporter()
 
   return jestronaut
 end)

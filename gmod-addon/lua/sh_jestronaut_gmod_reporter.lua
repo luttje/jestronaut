@@ -5,11 +5,13 @@ local originalPrint = print
 local STYLING_DISABLED = true
 
 --- @class Reporter
-local GmodReporter = {
+local REPORTER = {
   isVerbose = false,
 
   width = 75,
 }
+
+REPORTER.__index = REPORTER
 
 --- Gets the indentations.
 --- @param describeOrTest DescribeOrTest
@@ -32,7 +34,7 @@ local function ensureLength(text, length)
 end
 
 --- @param filePath string
-function GmodReporter:getFileByPath(filePath)
+function REPORTER:getFileByPath(filePath)
   for _, file in ipairs(self.describesByFilePath) do
     if filePath == file.filePath then
       return file
@@ -94,7 +96,7 @@ end
 
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
-function GmodReporter:testStarting(describeOrTest)
+function REPORTER:testStarting(describeOrTest)
   -- Override print so there's no interference with the test output.
   print = function() end -- TODO: Store the print and output it at the end of the test.
 
@@ -115,7 +117,7 @@ end
 --- @param success boolean
 --- @param ... any
 --- @return boolean
-function GmodReporter:testFinished(describeOrTest, success, ...)
+function REPORTER:testFinished(describeOrTest, success, ...)
   print = originalPrint
 
   local file = self:getFileByPath(describeOrTest.filePath)
@@ -147,7 +149,7 @@ end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
-function GmodReporter:testSkipped(describeOrTest)
+function REPORTER:testSkipped(describeOrTest)
   local file = self:getFileByPath(describeOrTest.filePath)
 
   if file then
@@ -163,13 +165,13 @@ end
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
-function GmodReporter:testRetrying(describeOrTest, retryCount)
+function REPORTER:testRetrying(describeOrTest, retryCount)
   self:redrawSummary(self.isVerbose)
 end
 
 --- Prints text centered, using the reporter width.
 --- @param text string
-function GmodReporter:printCentered(text)
+function REPORTER:printCentered(text)
   local textLength = text:len()
   local leftPadding = math.floor((self.width - textLength) * .5)
   local rightPadding = self.width - textLength - leftPadding
@@ -179,7 +181,7 @@ end
 
 --- Creates a horizontal line using the reporter width.
 --- @param char string
-function GmodReporter:printHorizontalLine(char)
+function REPORTER:printHorizontalLine(char)
   char = char or "─"
 
   originalPrint(char:rep(self.width))
@@ -187,7 +189,7 @@ end
 
 --- Creates some space by printing a new line.
 --- @param count? number
-function GmodReporter:printNewline(count)
+function REPORTER:printNewline(count)
   count = count or 1
 
   for i = 1, count do
@@ -198,7 +200,7 @@ end
 --- Stores the tests that will be run and prints the summary with header.
 --- @param rootDescribe Describe
 --- @param describesByFilePath table
-function GmodReporter:startTestSet(rootDescribe, describesByFilePath)
+function REPORTER:startTestSet(rootDescribe, describesByFilePath)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
 
   self.summaryHeader = styledText.new(nil, STYLING_DISABLED)
@@ -218,7 +220,7 @@ end
 --- @param failedTestCount number
 --- @param skippedTestCount number
 --- @param duration number
-function GmodReporter:printEnd(rootDescribe, failedTestCount, skippedTestCount, duration)
+function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, duration)
   local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
   local notRunCount = failedTestCount + skippedTestCount
   local relativeSuccess = 1 - (notRunCount / totalTestCount)
@@ -302,7 +304,7 @@ end
 --- Prints the bail message of the test.
 --- @param rootDescribe Describe
 --- @param bailError string
-function GmodReporter:printBailed(rootDescribe, bailError)
+function REPORTER:printBailed(rootDescribe, bailError)
   self:printNewline(2)
   self:printCentered("🚨 Bailed out of tests!")
   self:printNewline(2)
@@ -312,7 +314,7 @@ end
 
 --- Prints the progress of the test.
 --- @param relativeSuccess number
-function GmodReporter:printProgress(relativeSuccess)
+function REPORTER:printProgress(relativeSuccess)
   local suffix = math.floor(relativeSuccess * 100) .. "% of tests succeeded"
 
   local progressBar = "["
@@ -329,6 +331,14 @@ function GmodReporter:printProgress(relativeSuccess)
   self:printHorizontalLine()
 end
 
+--- Creates a new gmod reporter.
+--- @return Reporter
+local function newGmodReporter()
+  local reporter = setmetatable({}, REPORTER)
+
+  return reporter
+end
+
 return {
-  GmodReporter = GmodReporter,
+  newGmodReporter = newGmodReporter,
 }
