@@ -1,4 +1,4 @@
-> **Warning**
+> [!WARNING]
 > Jestronaut is still in early development.
 
 <div align="center">
@@ -43,7 +43,7 @@ Then you can choose one of several ways to run the tests with Jestronaut:
 
 ### Run in project with LuaRocks
 
-> **Note**
+> [!NOTE]
 > Before continuing, make sure you have installed [LuaRocks](https://luarocks.org/) with at least [Lua 5.1](https://www.lua.org/).
 
 1. Install Jestronaut as a LuaRocks module in your project
@@ -100,9 +100,8 @@ This binary is a standalone executable that can be used to run Jestronaut tests 
       --testPathIgnorePatterns="/tests/generated/GlobalAPI/test.lua$/"
     ```
 
-    > **Note**
-    > 
-    > The variable `MSYS_NO_PATHCONV=1` is only required on Windows when using MSYS2 (for example with Git for Windows). It prevents the path from being converted to a Windows path, which would result in an incorrect path.
+> [!NOTE]
+> The variable `MSYS_NO_PATHCONV=1` in the example above is only required on Windows when using MSYS2 (for example with Git for Windows). It prevents the path from being converted to a Windows path, which would result in an incorrect path.
 
 ### Running tests in Garry's Mod
 
