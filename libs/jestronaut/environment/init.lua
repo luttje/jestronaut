@@ -1,5 +1,6 @@
 local makeIndexableFunction = require "jestronaut/utils/metatables".makeIndexableFunction
 local describeLib = require "jestronaut/environment/describe"
+local runnerLib = require "jestronaut/environment/runner"
 local stateLib = require "jestronaut/environment/state"
 local testLib = require "jestronaut/environment/test"
 local eachLib = require "jestronaut/each"
@@ -128,4 +129,6 @@ return {
     exposeTo = exposeTo,
 
     retryTimes = stateLib.retryTimes,
+
+    newRunner = runnerLib.newRunner,
 }

@@ -67,12 +67,12 @@ local function drawDescribeOrTest(describeOrTest)
                 summary:plain(" " .. describeOrTest.name .. "\n")
 
                 if (describeOrTest.hasRun and not describeOrTest.success) then
-                    summary:plain(table.concat(describeOrTest.errors) .. "\n\n")
+                    summary:plain(describeOrTest.errorMessage .. "\n\n")
                 end
             end
         end
     elseif (describeOrTest.hasRun and not describeOrTest.success) then
-        summary:plain(table.concat(describeOrTest.errors) .. "\n\n")
+        summary:plain(describeOrTest.errorMessage .. "\n\n")
     end
 
     return tostring(summary)
@@ -162,12 +162,10 @@ function REPORTER:testStarting(describeOrTest)
     return
 end
 
---- Prints the result of the test and returns whether it passed.
+--- Prints the result of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param success boolean
---- @param ... any
---- @return boolean
-function REPORTER:testFinished(describeOrTest, success, ...)
+function REPORTER:testFinished(describeOrTest, success)
     print = originalPrint
 
     local file = self:getFileByPath(describeOrTest.filePath)

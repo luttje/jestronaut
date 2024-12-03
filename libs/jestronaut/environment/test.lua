@@ -18,10 +18,27 @@ extendMetaTableIndex(TEST_META, DESCRIBE_OR_TEST_META)
 --- @param testFn function
 --- @return AsyncTestFunction
 local function wrapAsyncTest(testFn)
-    return {
+    local testWrapper = {
         isAsync = true,
-        testFn = testFn,
+        isDone = false,
     }
+
+    --- Calls the real test function, passing in a done callback.
+    --- When the done callback is called, the test is marked as complete.
+    --- The runner can check this async wrapper to see if the test is done.
+    function testWrapper:testFn()
+        local function done(errorMessage)
+            self.isDone = true
+
+            if errorMessage then
+                error(errorMessage)
+            end
+        end
+
+        testFn(done)
+    end
+
+    return testWrapper
 end
 
 --- Creates a new test.

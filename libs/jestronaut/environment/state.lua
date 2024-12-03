@@ -1,5 +1,5 @@
-local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
+local runnerLib = require "jestronaut/environment/runner"
 local functionLib = require "jestronaut/utils/functions"
 local stringsLib = require "jestronaut/utils/strings"
 
@@ -229,7 +229,7 @@ end
 
 --- @class DescribeOrTest
 local DESCRIBE_OR_TEST_META = {
-    indentationLevel = 0,
+    indentationLevel = -1, -- Start at -1 so the root describe is at 0
     name = "",
     fn = function() end,
     isOnlyToRun = false,
@@ -261,110 +261,115 @@ function DESCRIBE_OR_TEST_META:addChild(child)
     end
 end
 
---- Runs the test and returns the amount of failed tests.
---- @param reporter Reporter
---- @param runnerOptions RunnerOptions
---- @return number
-function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
-    local failedTestCount = 0
-
-    if self.toSkip then
-        reporter:testSkipped(self)
-
-        return failedTestCount
+function DESCRIBE_OR_TEST_META:flipIfFailExpected(success, errorMessage)
+    if self.expectFail == true then
+        if success then
+            success = false
+            errorMessage = "Error! Expected test to fail, but it succeeded."
+        else
+            success = true
+        end
     end
 
-    if (runnerOptions.slowDown) then -- For debugging terminal output
-        local slowDown = runnerOptions.slowDown * 0.001
-
-        local startTime = os.clock()
-        local endTime = startTime + slowDown
-
-        -- Start a loop to freeze for the specified amount of milliseconds
-        while os.clock() < endTime do end
-    end
-
-    reporter:testStarting(self)
-    self.isRunning = true
-
-    if self.isTest then
-        local testLocalState = getTestLocalState(self.filePath)
-        local retrySettings = testLocalState.retrySettings
-
-        beforeDescribeOrTest(self)
-
-        if (type(self.fn) == "table") then
-            error("TODO: Implement async tests")
-        end
-
-        local success, results = functionLib.captureSafeCallInTable(xpcall(self.fn, function(err)
-            return debug.traceback(err, 2)
-        end))
-
-        if self.expectFail == true then
-            if success then
-                success = false
-                results = { "Error! Expected test to fail, but it succeeded." }
-            else
-                success = true
-            end
-        end
-
-        afterDescribeOrTest(self, success)
-
-        self.success = success
-        self.isRunning = false
-        self.hasRun = true
-
-        if not success then
-            self.errors = results
-        end
-
-        if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
-            reporter:testFinished(self, success, unpack(results))
-        end
-
-        if not success then
-            failedTestCount = failedTestCount + 1
-
-            if retrySettings and retrySettings.timesRemaining then
-                if retrySettings.timesRemaining > 0 then
-                    retrySettings.timesRemaining = retrySettings.timesRemaining - 1
-
-                    reporter:testRetrying(self, retrySettings.timesRemaining + 1)
-
-                    return self:run(reporter, runnerOptions)
-                end
-            end
-
-            if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
-                reporter:testFinished(self, success, unpack(results))
-
-                error("Bail after " ..
-                failedTestCount ..
-                " failed " .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
-            end
-        end
-    else
-        if #self.children > 0 then
-            self.isRunning = true
-
-            for _, child in ipairs(self.children) do
-                local childFailedCount = child:run(reporter, runnerOptions)
-
-                failedTestCount = failedTestCount + childFailedCount
-            end
-
-            self.isRunning = false
-            self.hasRun = true
-            self.success = failedTestCount == 0
-        end
-
-        reporter:testFinished(self, self.success)
-    end
-
-    return failedTestCount
+    return success, errorMessage
 end
+
+-- --- Runs the test and returns the amount of failed tests.
+-- --- @param reporter Reporter
+-- --- @param runnerOptions RunnerOptions
+-- --- @return number
+-- function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
+--     local failedTestCount = 0
+
+--     if self.toSkip then
+--         reporter:testSkipped(self)
+
+--         return failedTestCount
+--     end
+
+--     if (runnerOptions.slowDown) then -- For debugging terminal output
+--         local slowDown = runnerOptions.slowDown * 0.001
+
+--         local startTime = os.clock()
+--         local endTime = startTime + slowDown
+
+--         -- Start a loop to freeze for the specified amount of milliseconds
+--         while os.clock() < endTime do end
+--     end
+
+--     if self.isTest then
+--         reporter:testStarting(self)
+--         self.isRunning = true
+
+--         local testLocalState = getTestLocalState(self.filePath)
+--         local retrySettings = testLocalState.retrySettings
+
+--         beforeDescribeOrTest(self)
+
+--         if (type(self.fn) == "table") then
+--             error("TODO: Implement async tests")
+--         end
+
+--         local success, errorMessage = xpcall(self.fn, debug.traceback)
+
+--         success, errorMessage = self:flipIfFailExpected(success, errorMessage)
+
+--         afterDescribeOrTest(self, success)
+
+--         self.success = success
+--         self.isRunning = false
+--         self.hasRun = true
+
+--         if not success then
+--             self.errorMessage = errorMessage
+--         end
+
+--         if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
+--             reporter:testFinished(self, success)
+--         end
+
+--         if not success then
+--             failedTestCount = failedTestCount + 1
+
+--             if retrySettings and retrySettings.timesRemaining then
+--                 if retrySettings.timesRemaining > 0 then
+--                     retrySettings.timesRemaining = retrySettings.timesRemaining - 1
+
+--                     reporter:testRetrying(self, retrySettings.timesRemaining + 1)
+
+--                     return self:run(reporter, runnerOptions)
+--                 end
+--             end
+
+--             if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
+--                 reporter:testFinished(self, success)
+
+--                 error(
+--                     "Bail after " .. failedTestCount .. " failed "
+--                     .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. errorMessage
+--                 )
+--             end
+--         end
+--     else
+--         if #self.children > 0 then
+--             self.isRunning = true
+
+--             for _, child in ipairs(self.children) do
+--                 local childFailedCount = child:run(reporter, runnerOptions)
+
+--                 failedTestCount = failedTestCount + childFailedCount
+--             end
+
+--             self.isRunning = false
+--             self.hasRun = true
+--             self.success = failedTestCount == 0
+--         end
+
+--         reporter:testFinished(self, self.success)
+--     end
+
+--     return failedTestCount
+-- end
 
 --- @class DescribeOrTestForRun : DescribeOrTest
 local DESCRIBE_OR_TEST_FOR_RUN_META = {
@@ -534,33 +539,43 @@ end
 --- Runs all registered tests.
 --- @param runnerOptions RunnerOptions
 local function runTests(runnerOptions)
-    -- Pass modified require's on through
-    local reporter = callRespectingRequireOverride(function()
-        return runnerOptions.reporter or (require "jestronaut/reporter".newDefaultReporter())
+    assert(currentParent, 'Root describe not set. Use `jestronaut.describe("root", function() end)` to set the root describe.')
+
+    local runner = runnerLib.newTestRunner(runnerOptions)
+
+    runner:setPreTestCallback(function(test)
+        beforeDescribeOrTest(test)
     end)
 
-    reporter.isVerbose = runnerOptions.verbose
+    runner:setModifyTestResultCallback(function(test, success, errorMessage)
+        return test:flipIfFailExpected(success, errorMessage)
+    end)
 
-    -- currentParent is the root describe at this point
+    runner:setPostTestCallback(function(test, success)
+        afterDescribeOrTest(test, success)
+    end)
+
     local testSetRoot, describesByFilePath, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
 
-    reporter:startTestSet(testSetRoot, describesByFilePath)
-
-    local startTime = os.clock()
-    local success, errOrFailedTestCount = pcall(testSetRoot.run, testSetRoot, reporter, runnerOptions)
-    local endTime = os.clock()
-
-    if not success then
-        if not errOrFailedTestCount:find("(.*): Bail after") then
-            -- TODO: Use xpcall as to not lose the stack trace
-            error(errOrFailedTestCount)
+    local function queueTestIfTest(describeOrTest)
+        if describeOrTest.isTest then
+            runner:queueTest(describeOrTest)
         end
-
-        reporter:printBailed(testSetRoot, errOrFailedTestCount)
-        return
     end
 
-    reporter:printEnd(testSetRoot, errOrFailedTestCount, skippedTestCount, endTime - startTime)
+    for _, describeOrTest in ipairs(testSetRoot.children) do
+        queueTestIfTest(describeOrTest)
+
+        if describeOrTest.children then
+            for _, child in ipairs(describeOrTest.children) do
+                queueTestIfTest(child)
+            end
+        end
+    end
+
+    runnerOptions.eventLoopTicker(function()
+        return runner:tick()
+    end)
 end
 
 return {

@@ -8,7 +8,7 @@ describe('async', function()
         expect(1 + 1):toEqual(3)
     end)
 
-    it:failing("should fail Incorrect math", function()
+    it:failing("should fail Incorrect math with other alias", function()
         expect(1 + 1):toEqual(3)
     end)
 
@@ -50,7 +50,8 @@ describe('async', function()
 		-- Simulate an async operation
 		local timer = os.time()
 		while os.time() - timer < 2 do
-			-- Simulate some work
+            -- Simulate some work
+            coroutine.yield()
 		end
 	end, 1)
 end)

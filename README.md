@@ -185,7 +185,7 @@ beforeAll(function()
 end)
 
 it('should run beforeAll for each "it" this checks how many (so far)', function()
-  expect(ranBefore):toEqual(5)
+  expect(ranBefore):toEqual(4)
 end)
 
 it('can spy on a property setter', function()
