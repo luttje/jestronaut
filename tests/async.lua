@@ -1,4 +1,3 @@
--- Run `lua test-tmp.lua` in root
 describe('async', function()
     describe('non-async', function()
         it("should test basic math", function()

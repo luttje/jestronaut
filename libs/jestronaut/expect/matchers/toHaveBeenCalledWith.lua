@@ -26,11 +26,10 @@ local function toHaveBeenCalledWith(expect, ...)
                 " but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", "))
             end
         else
-            PrintTable(actual)
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called with " ..
-            tostring(args) .. " but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", "))
+            error(
+                "Expected " .. tostring(actual) .. " to have been called with " .. tostring(args)
+                .. " but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", ")
+            )
         end
     end
 
