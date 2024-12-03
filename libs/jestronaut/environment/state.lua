@@ -563,14 +563,21 @@ local function runTests(runnerOptions)
         end
     end
 
-    for _, describeOrTest in ipairs(testSetRoot.children) do
+    -- Find all nested describes and tests and add them to the runner queue
+    local i = 1
+
+    while i <= #testSetRoot.children do
+        local describeOrTest = testSetRoot.children[i]
+
         queueTestIfTest(describeOrTest)
 
         if describeOrTest.children then
             for _, child in ipairs(describeOrTest.children) do
-                queueTestIfTest(child)
+                table.insert(testSetRoot.children, i + 1, child)
             end
         end
+
+        i = i + 1
     end
 
     runnerOptions.eventLoopTicker(function()
