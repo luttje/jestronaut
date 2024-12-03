@@ -293,6 +293,10 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
 
         beforeDescribeOrTest(self)
 
+        if (type(self.fn) == "table") then
+            error("TODO: Implement async tests")
+        end
+
         local success, results = functionLib.captureSafeCallInTable(xpcall(self.fn, function(err)
             return debug.traceback(err, 2)
         end))

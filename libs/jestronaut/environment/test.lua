@@ -2,6 +2,9 @@ local DESCRIBE_OR_TEST_META = require "jestronaut/environment/state".DESCRIBE_OR
 local registerDescribeOrTest = require "jestronaut/environment/state".registerDescribeOrTest
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
 
+--- @alias AsyncTestFunction {isAsync: true, testFn: function}
+--- @alias TestFunction fun()|AsyncTestFunction
+
 --- @class Test
 local TEST_META = {
     isTest = true,
@@ -11,14 +14,24 @@ local TEST_META = {
 
 extendMetaTableIndex(TEST_META, DESCRIBE_OR_TEST_META)
 
+--- Wraps a test function to mark it as async.
+--- @param testFn function
+--- @return AsyncTestFunction
+local function wrapAsyncTest(testFn)
+    return {
+        isAsync = true,
+        testFn = testFn,
+    }
+end
+
 --- Creates a new test.
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 local function _internalTest(name, fn, timeout, options)
     if (type(name) ~= "string") then
-        error("describe name must be a string")
+        error("test name must be a string")
     end
 
     local test = {
@@ -42,8 +55,8 @@ end
 
 --- Creates a new test.
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 local function test(name, fn, timeout)
     return _internalTest(name, fn, timeout)
@@ -52,8 +65,8 @@ end
 --- Creates a new test that is the only one that will run.
 --- @param self Test
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 local function testOnly(self, name, fn, timeout)
     local _test = _internalTest(name, fn, timeout, {
@@ -66,8 +79,8 @@ end
 --- Creates a new test that will be skipped.
 --- @param self Test
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 local function testSkip(self, name, fn, timeout)
     local _test = _internalTest(name, fn, timeout, {
@@ -80,8 +93,8 @@ end
 --- Creates a new test that will run concurrently.
 --- @param self Test
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 --- @private
 local function testConcurrent(self, name, fn, timeout)
@@ -92,8 +105,8 @@ end
 --- Creates a new test that will run concurrently and is the only one that will run.
 --- @param self Test
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 --- @private
 local function testConcurrentOnly(self, name, fn, timeout)
@@ -103,8 +116,8 @@ end
 --- Creates a new test that will run concurrently and will be skipped.
 --- @param self Test
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 --- @private
 local function testConcurrentSkip(self, name, fn, timeout)
@@ -114,8 +127,8 @@ end
 --- Creates a new test that will fail.
 --- @param self Test
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 --- @private
 local function testFailing(self, name, fn, timeout)
@@ -129,8 +142,8 @@ end
 --- Creates a new test that will fail and is the only one that will run.
 --- @param self Test
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 --- @private
 local function testFailingOnly(self, name, fn, timeout)
@@ -145,8 +158,8 @@ end
 --- Creates a new test that will fail and will be skipped.
 --- @param self Test
 --- @param name string
---- @param fn function
---- @param timeout number
+--- @param fn TestFunction
+--- @param timeout? number
 --- @return Test
 --- @private
 local function testFailingSkip(self, name, fn, timeout)
@@ -161,7 +174,7 @@ end
 --- Indicates this test is yet to be written.
 --- @param self Test
 --- @param name string
---- @param fn function
+--- @param fn TestFunction
 --- @return Test
 --- @private
 local function testTodo(self, name, fn)
@@ -201,4 +214,6 @@ return {
     testFailingSkip = testFailingSkip,
 
     testTodo = testTodo,
+
+    wrapAsyncTest = wrapAsyncTest,
 }
