@@ -707,23 +707,17 @@ local function runTests(runnerOptions)
         if describeOrTest.isTest then
             runner:queueTest(describeOrTest)
         end
-    end
-
-    -- Find all nested describes and tests and add them to the runner queue
-    local i = 1
-
-    while i <= #testSetRoot.children do
-        local describeOrTest = testSetRoot.children[i]
-
-        queueTestIfTest(describeOrTest)
 
         if describeOrTest.children then
             for _, child in ipairs(describeOrTest.children) do
-                table.insert(testSetRoot.children, i + 1, child)
+                queueTestIfTest(child)
             end
         end
+    end
 
-        i = i + 1
+    -- Find all nested describes and tests and add them to the runner queue
+    for _, describeOrTest in ipairs(testSetRoot.children) do
+        queueTestIfTest(describeOrTest)
     end
 
     runner:start(testSetRoot, describesByFilePath, skippedTestCount)

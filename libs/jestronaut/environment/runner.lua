@@ -70,8 +70,7 @@ function TEST_RUNNER:queueTest(test)
         queuedTest.fn = testFnOrAsyncWrapper
     end
 
-    -- Put in front of the queue, so the tests are run in order
-    table.insert(self.queuedTests, 1, queuedTest)
+    table.insert(self.queuedTests, queuedTest)
 end
 
 function TEST_RUNNER:reset()
@@ -134,7 +133,6 @@ function TEST_RUNNER:runTest(queuedTest)
         testFnParameter = queuedTest.asyncWrapper
     end
 
-    -- local status, errorMessage = pcall(testFn, testFnParameter)
     local status, errorMessage = xpcall(function()
         testFn(testFnParameter)
     end, function(err)

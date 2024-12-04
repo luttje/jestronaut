@@ -1,5 +1,5 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching"
-.wrapAndTagVarargsOrReturn
+    .wrapAndTagVarargsOrReturn
 local asymmetricMatcherLib = require "jestronaut/expect/asymmetricmatchers/asymmetricmatcher"
 local tableLib = require "jestronaut/utils/tables"
 
