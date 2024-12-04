@@ -15,16 +15,16 @@ local function newTestRunner(runnerOptions)
     end)
     self.reporter.isVerbose = runnerOptions.verbose
 
+    self.runnerOptions = runnerOptions
+
     self.queuedTests = {}
     self.processedTests = {}
-
-    self.timeout = 5
-    self.isCompleted = false
-    self.isStarted = false
-
+    self.timeout = runnerOptions.testTimeout or 5000
     self.preTestCallback = nil
     self.modifyTestResultCallback = nil
     self.postTestCallback = nil
+
+    self:reset()
 
     return self
 end
@@ -70,12 +70,14 @@ function TEST_RUNNER:queueTest(test)
         queuedTest.fn = testFnOrAsyncWrapper
     end
 
-    table.insert(self.queuedTests, queuedTest)
+    -- Put in front of the queue, so the tests are run in order
+    table.insert(self.queuedTests, 1, queuedTest)
 end
 
 function TEST_RUNNER:reset()
     self.isCompleted = false
     self.isStarted = false
+    self.failedTestCount = 0
 
 	for _, test in ipairs(self.processedTests) do
 		test.status = "starting"
@@ -98,6 +100,23 @@ function TEST_RUNNER:markFinished(queuedTest, status, err)
         self.reporter:onTestSkipped(queuedTest.test)
     else
         self.reporter:onTestFinished(queuedTest.test, status, err)
+    end
+end
+
+function TEST_RUNNER:handleTestFinished(queuedTest, success, errorMessage)
+    self:markFinished(queuedTest, success, errorMessage)
+
+    if success == false then
+        self.failedTestCount = self.failedTestCount + 1
+    end
+
+    local bailAfter = self.runnerOptions.bail
+
+    if bailAfter ~= nil and self.failedTestCount >= bailAfter then
+        error(
+            "Bail after " .. self.failedTestCount .. " failed "
+            .. (self.failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. errorMessage
+        )
     end
 end
 
@@ -156,12 +175,12 @@ function TEST_RUNNER:tick()
     -- Process queued tests
     for i, queuedTest in ipairs(self.queuedTests) do
         if (queuedTest.shouldSkip) then
-            self:markFinished(queuedTest, "skipped")
+            self:handleTestFinished(queuedTest, nil)
         elseif queuedTest.type == "sync" then
             -- Run sync tests immediately
             local success, errorMessage = self:runTest(queuedTest)
 
-            self:markFinished(queuedTest, success, errorMessage)
+            self:handleTestFinished(queuedTest, success, errorMessage)
         elseif queuedTest.type == "async" then
             -- Start async test if not started
             if queuedTest.status == "starting" then
@@ -172,7 +191,7 @@ function TEST_RUNNER:tick()
 
                 -- Failed even while starting the test
                 if not success then
-					self:markFinished(queuedTest, success, errorMessage)
+					self:handleTestFinished(queuedTest, success, errorMessage)
                 else
                     -- Test started, might need further processing
                     queuedTest.result = queuedTest
@@ -192,7 +211,7 @@ function TEST_RUNNER:tick()
                         status, errorMessage = self.modifyTestResultCallback(queuedTest.test, status, errorMessage)
                     end
 
-					self:markFinished(queuedTest, status, errorMessage)
+					self:handleTestFinished(queuedTest, status, errorMessage)
                 elseif (queuedTest.asyncWrapper.isDone) then
                     local errorMessage = queuedTest.asyncWrapper.errorMessage
                     local success = not errorMessage
@@ -201,7 +220,7 @@ function TEST_RUNNER:tick()
                         success, errorMessage = self.modifyTestResultCallback(queuedTest.test, success, errorMessage)
                     end
 
-                    self:markFinished(queuedTest, success, errorMessage)
+                    self:handleTestFinished(queuedTest, success, errorMessage)
                 else
                     -- Test still in progress
                     table.insert(remainingTests, queuedTest)

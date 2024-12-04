@@ -1,4 +1,9 @@
 describe('readme examples', function()
+    local ranBeforeAll = 0
+    beforeAll(function()
+        ranBeforeAll = ranBeforeAll + 1
+    end)
+
     describe("test organization into suites", function()
         it("should confirm basic math", function()
             expect(1 + 1):toBe(2)
@@ -67,12 +72,16 @@ describe('readme examples', function()
     end)
 
     local ranBefore = 0
-    beforeAll(function()
+    beforeEach(function()
         ranBefore = ranBefore + 1
     end)
 
-    it('should run beforeAll for each "it" this checks how many (so far)', function()
-        expect(ranBefore):toEqual(4)
+    it('should run beforeEach for each "it" this checks how many (so far)', function()
+        expect(ranBefore):toEqual(5) -- 5 because this is the 5th "it" in this file
+    end)
+
+    it('should run beforeAll only once', function()
+        expect(ranBeforeAll):toEqual(1)
     end)
 
     it('can spy on a property setter', function()

@@ -149,9 +149,11 @@ end
 local function beforeDescribeOrTest(describeOrTest)
     currentDescribeOrTest = describeOrTest
 
+    -- TODO: This should not only be local to file, but local to the describe if relevant
     local fileLocalState = getTestLocalState(describeOrTest.filePath)
 
-    if fileLocalState.beforeAll then
+    if fileLocalState.beforeAll and not fileLocalState.beforeAllCalled then
+        fileLocalState.beforeAllCalled = true
         fileLocalState.beforeAll()
     end
 
