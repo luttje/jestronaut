@@ -32,7 +32,7 @@ describe('async', function()
         end)
 
         testAsync("Async test with delayed resolutions should match expected assertion count", function(done)
-            expect.assertions(2)
+            expect:assertions(2)
 
             expect(1 + 1):toEqual(2)
             timerLib.setTimeout(1, function()
@@ -42,7 +42,7 @@ describe('async', function()
         end)
 
         itAsync:failing("Async test with delayed resolution should fail if assertion count is not met", function(done)
-            expect.assertions(2)
+            expect:assertions(2)
 
             expect(1 + 1):toEqual(2)
             timerLib.setTimeout(1, function()

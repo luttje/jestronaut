@@ -129,11 +129,16 @@ function TEST_RUNNER:runTest(queuedTest)
         status, errorMessage = self.modifyTestResultCallback(queuedTest.test, status, errorMessage)
     end
 
+    -- TODO: Should this also run here for async tests? Even though those may not have finished yet?
     if self.postTestCallback then
         self.postTestCallback(queuedTest.test, queuedTest.status == "passed")
     end
 
     return status, errorMessage
+end
+
+function TEST_RUNNER:statusToPassFailText(status)
+    return status and "passed" or "failed"
 end
 
 function TEST_RUNNER:tick()
@@ -149,19 +154,20 @@ function TEST_RUNNER:tick()
             self:markFinished(queuedTest, "skipped")
         elseif queuedTest.type == "sync" then
             -- Run sync tests immediately
-            local status, errorMessage = self:runTest(queuedTest)
+            local success, errorMessage = self:runTest(queuedTest)
 
-            self:markFinished(queuedTest, status and "passed" or "failed", errorMessage)
+            self:markFinished(queuedTest, self:statusToPassFailText(success), errorMessage)
         elseif queuedTest.type == "async" then
             -- Start async test if not started
             if queuedTest.status == "starting" then
                 queuedTest.startTime = os.time()
                 queuedTest.status = "pending"
 
-                local status, errorMessage = self:runTest(queuedTest)
+                local success, errorMessage = self:runTest(queuedTest)
 
-                if not status then
-					self:markFinished(queuedTest, "failed", errorMessage)
+                -- Failed even while starting the test
+                if not success then
+					self:markFinished(queuedTest, self:statusToPassFailText(success), errorMessage)
                 else
                     -- Test started, might need further processing
                     queuedTest.result = queuedTest
@@ -173,9 +179,8 @@ function TEST_RUNNER:tick()
 				-- while the loop already started
                 local elapsedTime = os.time() - queuedTest.startTime
 
-                if (queuedTest.asyncWrapper.isDone) then
-                    self:markFinished(queuedTest, "passed")
-                elseif elapsedTime > queuedTest.timeout then
+                -- We check the timeout first, because even if 'done' is true, if it's late we should fail the test
+                if elapsedTime > queuedTest.timeout then
                     local status, errorMessage = false, "Test timed out after " .. queuedTest.timeout .. " seconds"
 
                     if self.modifyTestResultCallback then
@@ -183,6 +188,15 @@ function TEST_RUNNER:tick()
                     end
 
 					self:markFinished(queuedTest, status and "passed" or "failed", errorMessage)
+                elseif (queuedTest.asyncWrapper.isDone) then
+                    local errorMessage = queuedTest.asyncWrapper.errorMessage
+                    local success = not errorMessage
+
+                    if self.modifyTestResultCallback then
+                        success, errorMessage = self.modifyTestResultCallback(queuedTest.test, success, errorMessage)
+                    end
+
+                    self:markFinished(queuedTest, self:statusToPassFailText(success), errorMessage)
                 else
                     -- Test still in progress
                     table.insert(remainingTests, queuedTest)

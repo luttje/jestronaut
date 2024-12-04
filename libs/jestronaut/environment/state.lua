@@ -21,6 +21,10 @@ local LOCAL_STATE_META = {}
 --- @type LocalState[]
 local testLocalStates = {}
 
+--- All file paths with all tests and describes in the file.
+--- @type table<string, DescribeOrTest[]>
+local testFunctionLookup = {}
+
 --- @type DescribeOrTest?
 local currentParent = nil
 
@@ -33,6 +37,7 @@ local function resetEnvironment()
     rootFilePaths = nil
     currentParent = nil
     testLocalStates = {}
+    testFunctionLookup = {}
 end
 
 --- Sets where Jestronaut should look for tests. This is used to determine the test file path.
@@ -45,15 +50,24 @@ local function setRoots(roots)
     rootFilePaths = roots
 end
 
---- Gets the file path, starting line, and ending line of the test by checking the stack trace until it reaches beyond the root of this package.
+--- Gets the file path, starting line, and ending line of the test by checking the stack trace
+--- until it reaches beyond the root of this package.
 --- @param test DescribeOrTest
 --- @return string, number, number
 local function getTestFilePath(test)
     local filePath, startLineNumber, endLineNumber
     local i = 1
 
+    local testFn = test and test.fn
+
+    if (test and type(testFn) == "table") then
+        -- Async tests are wrapped in a table and have the original function stored
+        -- for this function, so we can get the file path and line number from the original function
+        testFn = testFn.originalFunction
+    end
+
     while true do
-        local info = debug.getinfo(i, "Sl")
+        local info = debug.getinfo(testFn or i, "Sl")
 
         if (not info) then
             error(
@@ -74,7 +88,7 @@ local function getTestFilePath(test)
             for _, rootFilePath in ipairs(rootFilePaths) do
                 if path:sub(1, rootFilePath:len()) == rootFilePath then
                     filePath = path
-                    startLineNumber = info.currentline
+                    startLineNumber = info.linedefined
                     endLineNumber = info.lastlinedefined
                     found = true
                     break
@@ -86,12 +100,16 @@ local function getTestFilePath(test)
             end
         else
             filePath = path
-            startLineNumber = info.currentline
+            startLineNumber = info.linedefined
             endLineNumber = info.lastlinedefined
             break
         end
 
-        i = i + 1
+        if (not testFn) then
+            i = i + 1
+        else
+            testFn = nil
+        end
     end
 
     return filePath, startLineNumber, endLineNumber
@@ -128,46 +146,6 @@ local function retryTimes(numRetries, options)
     }
 end
 
-local function incrementAssertionCount()
-    if not currentDescribeOrTest then
-        error("Cannot increase the assertion count outside of a test or describe block", 2)
-    end
-
-    currentDescribeOrTest.assertionCount = currentDescribeOrTest.assertionCount + 1
-end
-
-local function getAssertionCount()
-    if not currentDescribeOrTest then
-        error("Cannot get the assertion count outside of a test or describe block", 2)
-    end
-
-    return currentDescribeOrTest.assertionCount
-end
-
-local function setExpectAssertion()
-    if not currentDescribeOrTest then
-        error("Cannot set the expect assertion outside of a test or describe block", 2)
-    end
-
-    currentDescribeOrTest.expectAssertion = true
-end
-
-local function getExpectedAssertionCount()
-    if not currentDescribeOrTest then
-        error("Cannot get the expected assertion count outside of a test or describe block", 2)
-    end
-
-    return currentDescribeOrTest.expectedAssertionCount
-end
-
-local function setExpectedAssertionCount(count)
-    if not currentDescribeOrTest then
-        error("Cannot set the expected assertion count outside of a test or describe block", 2)
-    end
-
-    currentDescribeOrTest.expectedAssertionCount = count
-end
-
 local function beforeDescribeOrTest(describeOrTest)
     currentDescribeOrTest = describeOrTest
 
@@ -194,19 +172,6 @@ local function afterDescribeOrTest(describeOrTest, success)
     end
 
     currentDescribeOrTest = nil
-
-    if not success then
-        return
-    end
-
-    if describeOrTest.expectedAssertionCount ~= nil and describeOrTest.expectedAssertionCount ~= describeOrTest.assertionCount then
-        error("Expected " ..
-        describeOrTest.expectedAssertionCount .. " assertions, but " .. describeOrTest.assertionCount .. " were run")
-    end
-
-    if describeOrTest.expectAssertion and describeOrTest.assertionCount == 0 then
-        error("Expected at least one assertion to be run, but none were run")
-    end
 end
 
 local function afterAll(fn, timeout)
@@ -448,10 +413,14 @@ local FILE_FOR_RUN = {
 
 FILE_FOR_RUN.__index = FILE_FOR_RUN
 
---- Recursively copies a Describe or Test to be run, returning the root describe, a table with all describes grouped by file path, and the number of skipped tests.
+--- Recursively copies a Describe or Test to be run, returning the root describe, a table with all describes grouped by file path,
+--- and the number of skipped tests.
+--- TODO: This function is a bit of a mess and could be cleaned up. I don't like the way it's handling the file paths.
+--- TODO: I later added the bit to cache test file paths and line numbers, and I don't think the original describesByFilePath
+--- TODO: table is that useful anymore.
 --- @param describeOrTest DescribeOrTest
 --- @param runnerOptions RunnerOptions
---- @return DescribeOrTestForRun, table, number
+--- @return DescribeOrTestForRun, table, number, table
 local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
     local describeOrTestForRun, skippedTestCount = makeDescribeOrTestForRun(describeOrTest, runnerOptions)
     local describesByFilePath = {}
@@ -465,6 +434,11 @@ local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
                 break
             end
         end
+
+        -- Build the lookup for easily finding tests and describes by file, which
+        -- is used to find test contexts by file path and line number
+        testFunctionLookup[child.filePath] = testFunctionLookup[child.filePath] or {}
+        table.insert(testFunctionLookup[child.filePath], child)
 
         describesByFilePath[fileIndex] = describesByFilePath[fileIndex] or setmetatable({
             filePath = child.filePath,
@@ -532,6 +506,151 @@ local function registerDescribeOrTest(describeOrTest)
     return describeOrTest
 end
 
+--- Gets a test by checking if the given filePath and line number
+--- matches a test function.
+--- @param filePath string
+--- @param lineNumber number
+--- @return DescribeOrTest?
+local function getTestByFilePathAndLineNumber(filePath, lineNumber)
+    filePath = stringsLib.normalizePath(
+        filePath:sub(1, 1) == "@" and filePath:sub(2) or filePath
+    )
+
+    local testsAndDescribes = testFunctionLookup[filePath]
+
+    if not testsAndDescribes then
+        return nil
+    end
+
+    for _, describeOrTest in ipairs(testsAndDescribes) do
+        if describeOrTest.isTest and describeOrTest.startLineNumber <= lineNumber and describeOrTest.endLineNumber >= lineNumber then
+            return describeOrTest
+        end
+    end
+
+    return nil
+end
+
+--- Gets the most nested describe that matches the given line number in a file.
+--- If nested describes are found, the most nested describe is returned.
+--- @param filePath string
+--- @param lineNumber number
+--- @return DescribeOrTest?
+local function getMostNestedDescribeByFilePathAndLineNumber(filePath, lineNumber)
+    local testsAndDescribes = testFunctionLookup[filePath]
+
+    if not testsAndDescribes then
+        return nil
+    end
+
+    local mostNestedDescribe = nil
+
+    for _, describeOrTest in ipairs(testsAndDescribes) do
+        if describeOrTest.isDescribe and describeOrTest.startLineNumber <= lineNumber and describeOrTest.endLineNumber >= lineNumber then
+            -- The last describe will be the most nested
+            mostNestedDescribe = describeOrTest
+        end
+    end
+
+    return mostNestedDescribe
+end
+
+--- Gets information about the caller function, such that we can find the
+--- file path and line number of the caller for tracking which test we're
+--- being called inside of.
+--- @return string, number # The file path and line number of the caller
+local function getCallerFunctionInfo()
+    -- Let's traverse the stack to find the correct caller, starting at 3,
+    -- since those are definetely not the caller we want
+    local i = 3
+
+    while true do
+        local info = debug.getinfo(i, "Sl")
+
+        if (not info) then
+            error("Could not find the caller function line.")
+        end
+
+        local source = stringsLib.normalizePath(
+            info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source
+        )
+
+        if rootFilePaths ~= nil then
+            local found = false
+
+            -- Check if the file path contains the root file path. If it does, then we've found the test
+            for _, rootFilePath in ipairs(rootFilePaths) do
+                if source:sub(1, rootFilePath:len()) == rootFilePath then
+                    return source, info.currentline
+                end
+            end
+        else
+            return source, info.currentline
+        end
+
+        i = i + 1
+    end
+end
+
+--- Gets the test that is being called from the caller function.
+--- @return DescribeOrTest?
+local function getTestFromCallerFunction()
+    local source, lineNumber = getCallerFunctionInfo()
+    local describeOrTest = getTestByFilePathAndLineNumber(source, lineNumber)
+
+    return describeOrTest
+end
+
+local function incrementAssertionCount()
+    local relevantDescribeOrTest = getTestFromCallerFunction()
+
+    if not relevantDescribeOrTest then
+        error("Cannot increase the assertion count outside of a test or describe block", 2)
+    end
+
+    relevantDescribeOrTest.assertionCount = relevantDescribeOrTest.assertionCount + 1
+end
+
+local function getAssertionCount()
+    local relevantDescribeOrTest = getTestFromCallerFunction()
+
+    if not relevantDescribeOrTest then
+        error("Cannot get the assertion count outside of a test or describe block", 2)
+    end
+
+    return relevantDescribeOrTest.assertionCount
+end
+
+local function setExpectAssertion()
+    local relevantDescribeOrTest = getTestFromCallerFunction()
+
+    if not relevantDescribeOrTest then
+        error("Cannot set the expect assertion outside of a test or describe block", 2)
+    end
+
+    relevantDescribeOrTest.expectAssertion = true
+end
+
+local function getExpectedAssertionCount()
+    local relevantDescribeOrTest = getTestFromCallerFunction()
+
+    if not relevantDescribeOrTest then
+        error("Cannot get the expected assertion count outside of a test or describe block", 2)
+    end
+
+    return relevantDescribeOrTest.expectedAssertionCount
+end
+
+local function setExpectedAssertionCount(count)
+    local relevantDescribeOrTest = getTestFromCallerFunction()
+
+    if not relevantDescribeOrTest then
+        error("Cannot set the expected assertion count outside of a test or describe block", 2)
+    end
+
+    relevantDescribeOrTest.expectedAssertionCount = count
+end
+
 --- Registers the tests
 --- @param testRegistrar function
 local function registerTests(testRegistrar)
@@ -555,6 +674,16 @@ local function runTests(runnerOptions)
     end)
 
     runner:setModifyTestResultCallback(function(test, success, errorMessage)
+        if (test.expectedAssertionCount ~= nil and test.expectedAssertionCount ~= test.assertionCount) then
+            success = false
+            errorMessage = "Expected " .. test.expectedAssertionCount .. " assertions, but " .. test.assertionCount .. " were run"
+        end
+
+        if (test.expectAssertion and test.assertionCount == 0) then
+            success = false
+            errorMessage = "Expected at least one assertion to be run, but none were run"
+        end
+
         return test:flipIfFailExpected(success, errorMessage)
     end)
 

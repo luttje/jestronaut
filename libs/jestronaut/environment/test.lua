@@ -21,6 +21,10 @@ local function wrapAsyncTest(testFn)
     local testWrapper = {
         isAsync = true,
         isDone = false,
+        errorMessage = nil,
+
+        -- Keep this, so we can find the file and line numbers for it
+        originalFunction = testFn,
     }
 
     --- Calls the real test function, passing in a done callback.
@@ -29,10 +33,7 @@ local function wrapAsyncTest(testFn)
     function testWrapper:testFn()
         local function done(errorMessage)
             self.isDone = true
-
-            if errorMessage then
-                error(errorMessage)
-            end
+            self.errorMessage = errorMessage
         end
 
         testFn(done)
