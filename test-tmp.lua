@@ -12,6 +12,7 @@ jestronaut
     :registerTests(function()
         -- Setup and register the tests:
         package.path = package.path .. ";./?.lua;./?/init.lua"
+        require "tests.state"
         require "tests.async"
     end)
     :runTests()

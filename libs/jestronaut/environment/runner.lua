@@ -54,6 +54,8 @@ function TEST_RUNNER:queueTest(test)
     local timeout = test.timeout
     local isAsync = type(testFnOrAsyncWrapper) == "table"
 
+    assert(test.registered ~= nil, "Should pass copy to test runner, not the original test registration")
+
     local queuedTest = {
         name = name,
         type = isAsync and "async" or "sync",
@@ -78,22 +80,27 @@ function TEST_RUNNER:reset()
     self.isStarted = false
     self.failedTestCount = 0
 
-	for _, test in ipairs(self.processedTests) do
-		test.status = "starting"
-		test.error = nil
-		test.result = nil
-		test.startTime = nil
-		table.insert(self.queuedTests, test)
+    for _, test in ipairs(self.processedTests) do
+        test.status = "starting"
+        test.error = nil
+        test.result = nil
+        test.startTime = nil
+        table.insert(self.queuedTests, test)
 	end
 
     self.processedTests = {}
 end
 
-function TEST_RUNNER:markFinished(queuedTest, status, err)
+function TEST_RUNNER:markFinished(queuedTest, status, err, retryWithRemainingCount)
     queuedTest.status = status
     queuedTest.error = err
 
-    table.insert(self.processedTests, queuedTest)
+    if (retryWithRemainingCount) then
+        self.reporter:onTestRetrying(queuedTest.test, retryWithRemainingCount)
+        return
+    else
+        table.insert(self.processedTests, queuedTest)
+    end
 
     if (status == nil) then
         self.reporter:onTestSkipped(queuedTest.test)
@@ -103,19 +110,50 @@ function TEST_RUNNER:markFinished(queuedTest, status, err)
 end
 
 function TEST_RUNNER:handleTestFinished(queuedTest, success, errorMessage)
-    self:markFinished(queuedTest, success, errorMessage)
+    if success or success == nil then
+        self:markFinished(queuedTest, success, errorMessage)
+    else
+        queuedTest.firstError = queuedTest.firstError or errorMessage
 
-    if success == false then
-        self.failedTestCount = self.failedTestCount + 1
-    end
+        -- Go up the test context, finding the first place where retrySettings is set
+        local retryWithRemainingCount = queuedTest.test.traverseTestContexts(function(testContext, object)
+            if testContext.retrySettings then
+                local retrySettings = testContext.retrySettings
 
-    local bailAfter = self.runnerOptions.bail
+                if retrySettings.timesRemaining > 0 then
+                    retrySettings.timesRemaining = retrySettings.timesRemaining - 1
 
-    if bailAfter ~= nil and self.failedTestCount >= bailAfter then
-        error(
-            "Bail after " .. self.failedTestCount .. " failed "
-            .. (self.failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. errorMessage
-        )
+                    queuedTest.status = "starting"
+                    queuedTest.error = nil
+                    queuedTest.result = nil
+                    queuedTest.startTime = nil
+
+                    -- Retry it right away, placing it after the current test
+                    table.insert(self.queuedTests, self.currentTestIndex + 1, queuedTest)
+                end
+
+                return retrySettings.timesRemaining
+            end
+        end)
+
+        if (retryWithRemainingCount) then
+            self:markFinished(queuedTest, success, queuedTest.firstError, retryWithRemainingCount)
+        else
+            self:markFinished(queuedTest, success, queuedTest.firstError)
+
+            self.failedTestCount = self.failedTestCount + 1
+
+            local bailAfter = self.runnerOptions.bail
+
+            if bailAfter ~= nil and self.failedTestCount >= bailAfter then
+                error(
+                    "Bail after " .. self.failedTestCount .. " failed "
+                    .. (self.failedTestCount == 1 and "test" or "tests")
+                    .. ". Test '" .. queuedTest.name .. "' (file: " .. queuedTest.test.filePath .. ":"
+                    .. queuedTest.test.startLineNumber .. ") . Test failed with error: \n" .. tostring(queuedTest.firstError)
+                )
+            end
+        end
     end
 end
 
@@ -172,8 +210,10 @@ function TEST_RUNNER:tick()
 
     -- Process queued tests
     for i, queuedTest in ipairs(self.queuedTests) do
+        self.currentTestIndex = i
+
         if (queuedTest.shouldSkip) then
-            self:handleTestFinished(queuedTest, nil)
+            self:handleTestFinished(queuedTest, nil, "Test skipped")
         elseif queuedTest.type == "sync" then
             -- Run sync tests immediately
             local success, errorMessage = self:runTest(queuedTest)

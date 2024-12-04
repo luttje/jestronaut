@@ -158,7 +158,10 @@ end
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
 function REPORTER:onTestRetrying(describeOrTest, retryCount)
-    self:redrawSummary(self.isVerbose)
+    local summary = styledText.new(nil, STYLING_DISABLED)
+        :plain(drawDescribeOrTest(describeOrTest))
+
+    originalPrint(ensureLength("RETRYING:", 10) .. tostring(summary))
 end
 
 --- Prints text centered, using the reporter width.

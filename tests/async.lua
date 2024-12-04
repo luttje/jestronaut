@@ -1,5 +1,3 @@
--- For realistic testing we want some means of delaying functions.
--- Hence this tiny timer library
 local timerLib = require("tests/support/timer")
 JESTRONAUT_TIMER_LIBRARY = timerLib
 
