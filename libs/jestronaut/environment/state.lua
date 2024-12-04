@@ -209,7 +209,9 @@ local DESCRIBE_OR_TEST_META = {
     assertionCount = 0,
     parent = nil,
     childCount = 0,
+    childTestCount = 0,
     grandChildrenCount = 0,
+    grandChildrenTestCount = 0,
 
     --- @type DescribeOrTest[]
     children = nil
@@ -222,6 +224,10 @@ DESCRIBE_OR_TEST_META.__index = DESCRIBE_OR_TEST_META
 function DESCRIBE_OR_TEST_META:addChild(child)
     self.childCount = self.childCount + 1
 
+    if child.isTest then
+        self.childTestCount = self.childTestCount + 1
+    end
+
     self.children[self.childCount] = child
     self.childrenLookup[child.name] = self.childCount
 
@@ -229,6 +235,10 @@ function DESCRIBE_OR_TEST_META:addChild(child)
 
     if self.parent then
         self.parent.grandChildrenCount = self.parent.grandChildrenCount + 1
+
+        if child.isTest then
+            self.parent.grandChildrenTestCount = self.parent.grandChildrenTestCount + 1
+        end
     end
 end
 
@@ -253,7 +263,7 @@ end
 --     local failedTestCount = 0
 
 --     if self.toSkip then
---         reporter:testSkipped(self)
+--         reporter:onTestSkipped(self)
 
 --         return failedTestCount
 --     end
@@ -269,7 +279,7 @@ end
 --     end
 
 --     if self.isTest then
---         reporter:testStarting(self)
+--         reporter:onTestStarting(self)
 --         self.isRunning = true
 
 --         local testLocalState = getTestLocalState(self.filePath)
@@ -296,7 +306,7 @@ end
 --         end
 
 --         if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
---             reporter:testFinished(self, success)
+--             reporter:onTestFinished(self, success)
 --         end
 
 --         if not success then
@@ -306,14 +316,14 @@ end
 --                 if retrySettings.timesRemaining > 0 then
 --                     retrySettings.timesRemaining = retrySettings.timesRemaining - 1
 
---                     reporter:testRetrying(self, retrySettings.timesRemaining + 1)
+--                     reporter:onTestRetrying(self, retrySettings.timesRemaining + 1)
 
 --                     return self:run(reporter, runnerOptions)
 --                 end
 --             end
 
 --             if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
---                 reporter:testFinished(self, success)
+--                 reporter:onTestFinished(self, success)
 
 --                 error(
 --                     "Bail after " .. failedTestCount .. " failed "
@@ -336,7 +346,7 @@ end
 --             self.success = failedTestCount == 0
 --         end
 
---         reporter:testFinished(self, self.success)
+--         reporter:onTestFinished(self, self.success)
 --     end
 
 --     return failedTestCount
@@ -420,7 +430,7 @@ FILE_FOR_RUN.__index = FILE_FOR_RUN
 --- TODO: table is that useful anymore.
 --- @param describeOrTest DescribeOrTest
 --- @param runnerOptions RunnerOptions
---- @return DescribeOrTestForRun, table, number, table
+--- @return DescribeOrTestForRun, table, number
 local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
     local describeOrTestForRun, skippedTestCount = makeDescribeOrTestForRun(describeOrTest, runnerOptions)
     local describesByFilePath = {}
@@ -457,7 +467,7 @@ local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
         table.insert(describesByFilePath[fileIndex].describesOrTests, child)
     end
 
-    if describeOrTest.isDescribe then
+    if describeOrTestForRun.children then
         for _, child in pairs(describeOrTest.children) do
             local child, childDescribesByFilePath, childSkippedCount = copyDescribeOrTestForRun(child, runnerOptions)
 
@@ -465,9 +475,7 @@ local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
 
             skippedTestCount = skippedTestCount + childSkippedCount
         end
-    end
 
-    if describeOrTestForRun.children then
         for _, child in pairs(describeOrTestForRun.children) do
             insertChildWithFile(child)
         end
@@ -716,6 +724,7 @@ local function runTests(runnerOptions)
         i = i + 1
     end
 
+    runner:start(testSetRoot, describesByFilePath, skippedTestCount)
     runnerOptions.eventLoopTicker(function()
         return runner:tick()
     end)

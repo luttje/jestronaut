@@ -20,6 +20,7 @@ local function newTestRunner(runnerOptions)
 
     self.timeout = 5
     self.isCompleted = false
+    self.isStarted = false
 
     self.preTestCallback = nil
     self.modifyTestResultCallback = nil
@@ -74,6 +75,7 @@ end
 
 function TEST_RUNNER:reset()
     self.isCompleted = false
+    self.isStarted = false
 
 	for _, test in ipairs(self.processedTests) do
 		test.status = "starting"
@@ -86,20 +88,17 @@ function TEST_RUNNER:reset()
     self.processedTests = {}
 end
 
-function TEST_RUNNER:markFinished(test, status, err)
-    test.status = status
-    test.error = err
+function TEST_RUNNER:markFinished(queuedTest, status, err)
+    queuedTest.status = status
+    queuedTest.error = err
 
-    -- TODO: Use reporter instead
-    if status == "passed" then
-        print(string.format("✅ PASSED %s", test.name))
-    elseif status == "skipped" then
-        print(string.format("⏭️  SKIPPED %s", test.name))
+    table.insert(self.processedTests, queuedTest)
+
+    if (status == nil) then
+        self.reporter:onTestSkipped(queuedTest.test)
     else
-        print(string.format("❌ FAILED %s - %s", test.name, test.error or "Unknown error"))
+        self.reporter:onTestFinished(queuedTest.test, status, err)
     end
-
-    table.insert(self.processedTests, test)
 end
 
 function TEST_RUNNER:runTest(queuedTest)
@@ -130,21 +129,27 @@ function TEST_RUNNER:runTest(queuedTest)
     end
 
     -- TODO: Should this also run here for async tests? Even though those may not have finished yet?
-    if self.postTestCallback then
-        self.postTestCallback(queuedTest.test, queuedTest.status == "passed")
+    if self.postTestCallback and queuedTest.status ~= nil then
+        self.postTestCallback(queuedTest.test, queuedTest.status == true)
     end
 
     return status, errorMessage
 end
 
-function TEST_RUNNER:statusToPassFailText(status)
-    return status and "passed" or "failed"
+function TEST_RUNNER:start(rootDescribe, describesByFilePath, skippedTestCount)
+    self.isStarted = true
+    self.startTime = os.time()
+    self.reporter:onStartTestSet(rootDescribe, describesByFilePath, skippedTestCount)
 end
 
 function TEST_RUNNER:tick()
     if self.isCompleted then
         return false
 	end
+
+    if not self.isStarted then
+        error("Test runner not started! Did you forget to call `:start()`?")
+    end
 
     local remainingTests = {}
 
@@ -156,7 +161,7 @@ function TEST_RUNNER:tick()
             -- Run sync tests immediately
             local success, errorMessage = self:runTest(queuedTest)
 
-            self:markFinished(queuedTest, self:statusToPassFailText(success), errorMessage)
+            self:markFinished(queuedTest, success, errorMessage)
         elseif queuedTest.type == "async" then
             -- Start async test if not started
             if queuedTest.status == "starting" then
@@ -167,7 +172,7 @@ function TEST_RUNNER:tick()
 
                 -- Failed even while starting the test
                 if not success then
-					self:markFinished(queuedTest, self:statusToPassFailText(success), errorMessage)
+					self:markFinished(queuedTest, success, errorMessage)
                 else
                     -- Test started, might need further processing
                     queuedTest.result = queuedTest
@@ -187,7 +192,7 @@ function TEST_RUNNER:tick()
                         status, errorMessage = self.modifyTestResultCallback(queuedTest.test, status, errorMessage)
                     end
 
-					self:markFinished(queuedTest, status and "passed" or "failed", errorMessage)
+					self:markFinished(queuedTest, status, errorMessage)
                 elseif (queuedTest.asyncWrapper.isDone) then
                     local errorMessage = queuedTest.asyncWrapper.errorMessage
                     local success = not errorMessage
@@ -196,7 +201,7 @@ function TEST_RUNNER:tick()
                         success, errorMessage = self.modifyTestResultCallback(queuedTest.test, success, errorMessage)
                     end
 
-                    self:markFinished(queuedTest, self:statusToPassFailText(success), errorMessage)
+                    self:markFinished(queuedTest, success, errorMessage)
                 else
                     -- Test still in progress
                     table.insert(remainingTests, queuedTest)
@@ -221,32 +226,30 @@ function TEST_RUNNER:finalize()
         return
     end
 
-	self:printResults()
-	self.isCompleted = true
+    local testDuration = os.time() - self.startTime
+
+    self.isCompleted = true
+    self.isStarted = false
+
+	self:printResults(testDuration)
 end
 
-function TEST_RUNNER:printResults()
-    print("\n================================")
-    print("Test Results:")
-
+function TEST_RUNNER:printResults(testDuration)
     local passed = 0
     local failed = 0
     local skipped = 0
 
     for _, test in ipairs(self.processedTests) do
-        if test.status == "passed" then
+        if test.status == true then
             passed = passed + 1
-        elseif test.status == "skipped" then
+        elseif test.status == nil then
             skipped = skipped + 1
         else
             failed = failed + 1
         end
     end
 
-    print(string.format("✅ Passed: %d", passed))
-    print(string.format("⏭️  Skipped: %d", skipped))
-    print(string.format("❌ Failed: %d", failed))
-    print("================================\n")
+    self.reporter:onEndTestSet(self.processedTests, passed, failed, skipped, testDuration)
 end
 
 -- --[[

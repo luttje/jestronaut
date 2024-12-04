@@ -148,7 +148,7 @@ end
 
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
-function REPORTER:testStarting(describeOrTest)
+function REPORTER:onTestStarting(describeOrTest)
     -- Override print so there's no interference with the test output.
     print = function() end -- TODO: Store the print and output it at the end of the test.
 
@@ -165,7 +165,7 @@ end
 --- Prints the result of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param success boolean
-function REPORTER:testFinished(describeOrTest, success)
+function REPORTER:onTestFinished(describeOrTest, success)
     print = originalPrint
 
     local file = self:getFileByPath(describeOrTest.filePath)
@@ -194,7 +194,7 @@ end
 
 --- Prints the skip message of the test.
 --- @param describeOrTest DescribeOrTest
-function REPORTER:testSkipped(describeOrTest)
+function REPORTER:onTestSkipped(describeOrTest)
     local file = self:getFileByPath(describeOrTest.filePath)
 
     if file then
@@ -209,7 +209,7 @@ end
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
-function REPORTER:testRetrying(describeOrTest, retryCount)
+function REPORTER:onTestRetrying(describeOrTest, retryCount)
     self:redrawSummary(self.isVerbose)
 end
 
@@ -244,8 +244,9 @@ end
 --- Stores the tests that will be run and prints the summary with header.
 --- @param rootDescribe Describe
 --- @param describesByFilePath table
-function REPORTER:startTestSet(rootDescribe, describesByFilePath)
-    local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
+--- @param skippedTestCount number
+function REPORTER:onStartTestSet(rootDescribe, describesByFilePath, skippedTestCount)
+    local totalTestCount = rootDescribe.childTestCount + rootDescribe.grandChildrenTestCount + skippedTestCount
 
     self.summaryHeader = styledText.new()
         :plain("🚀 Starting ")
@@ -259,12 +260,13 @@ function REPORTER:startTestSet(rootDescribe, describesByFilePath)
 end
 
 --- Prints the success message of the test.
---- @param rootDescribe Describe
+--- @param processedTests DescribeOrTest[]
+--- @param passedTestCount number
 --- @param failedTestCount number
 --- @param skippedTestCount number
---- @param duration number
-function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, duration)
-    local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
+--- @param testDuration number
+function REPORTER:onEndTestSet(processedTests, passedTestCount, failedTestCount, skippedTestCount, testDuration)
+    local totalTestCount = passedTestCount + failedTestCount + skippedTestCount
     local notRunCount = failedTestCount + skippedTestCount
     local relativeSuccess = 1 - (notRunCount / totalTestCount)
 
@@ -305,7 +307,7 @@ function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, dura
 
     originalPrint(
         styledText.new()
-        :plain("Time:        " .. duration .. "s")
+        :plain("Time:        " .. testDuration .. "s")
     )
     originalPrint(
         styledText.new()
