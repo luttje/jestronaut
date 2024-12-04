@@ -95,6 +95,10 @@ local RUNNER_DEFAULT_OPTIONS = {
         while ticker() do
             -- Prevent tight loop
             os.execute("sleep 0.1")
+
+            if (JESTRONAUT_TIMER_LIBRARY) then
+                JESTRONAUT_TIMER_LIBRARY.update()
+            end
         end
     end
 }

@@ -107,10 +107,11 @@ function TEST_RUNNER:runTest(queuedTest)
         self.preTestCallback(queuedTest.test)
     end
 
+    local isAsync = queuedTest.type == "async"
     local testFn = queuedTest.fn
     local testFnParameter
 
-    if queuedTest.type == "async" then
+    if isAsync then
         testFn = queuedTest.asyncWrapper.testFn
         testFnParameter = queuedTest.asyncWrapper
     end
@@ -122,7 +123,9 @@ function TEST_RUNNER:runTest(queuedTest)
         return debug.traceback(err, 2)
     end)
 
-    if self.modifyTestResultCallback then
+    -- Only modify the test result if the async function fails immediately, or this
+    -- is a sync test
+    if ((not isAsync or not status) and self.modifyTestResultCallback) then
         status, errorMessage = self.modifyTestResultCallback(queuedTest.test, status, errorMessage)
     end
 

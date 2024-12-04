@@ -45,11 +45,11 @@ local function setRoots(roots)
     rootFilePaths = roots
 end
 
---- Gets the file path and line number of the test by checking the stack trace until it reaches beyond the root of this package.
+--- Gets the file path, starting line, and ending line of the test by checking the stack trace until it reaches beyond the root of this package.
 --- @param test DescribeOrTest
---- @return string, number
+--- @return string, number, number
 local function getTestFilePath(test)
-    local filePath, lineNumber
+    local filePath, startLineNumber, endLineNumber
     local i = 1
 
     while true do
@@ -57,11 +57,15 @@ local function getTestFilePath(test)
 
         if (not info) then
             error(
-            "Could not find the test file path. Please make sure options.roots is set to the directories where your tests are located.")
+                "Could not find the test file path. Please make sure options.roots is set to the directories where your tests are located."
+            )
+
             break
         end
 
-        local path = stringsLib.normalizePath(info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source)
+        local path = stringsLib.normalizePath(
+            info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source
+        )
 
         if rootFilePaths ~= nil then
             local found = false
@@ -70,7 +74,8 @@ local function getTestFilePath(test)
             for _, rootFilePath in ipairs(rootFilePaths) do
                 if path:sub(1, rootFilePath:len()) == rootFilePath then
                     filePath = path
-                    lineNumber = info.currentline
+                    startLineNumber = info.currentline
+                    endLineNumber = info.lastlinedefined
                     found = true
                     break
                 end
@@ -81,14 +86,15 @@ local function getTestFilePath(test)
             end
         else
             filePath = path
-            lineNumber = info.currentline
+            startLineNumber = info.currentline
+            endLineNumber = info.lastlinedefined
             break
         end
 
         i = i + 1
     end
 
-    return filePath, lineNumber
+    return filePath, startLineNumber, endLineNumber
 end
 
 --- Returns the state local to the test file.
@@ -109,7 +115,7 @@ end
 --- @param numRetries number
 --- @param options table
 local function retryTimes(numRetries, options)
-    local filePath, lineNumber = getTestFilePath(currentDescribeOrTest)
+    local filePath, startLineNumber, endLineNumber = getTestFilePath(currentDescribeOrTest)
     local testLocalState = getTestLocalState(filePath)
 
     if currentDescribeOrTest and currentDescribeOrTest.isTest then
@@ -500,10 +506,11 @@ end
 --- Must be called once befrore all others with a Describe to set as root.
 --- @param describeOrTest DescribeOrTest
 local function registerDescribeOrTest(describeOrTest)
-    local filePath, lineNumber = getTestFilePath(describeOrTest)
+    local filePath, startLineNumber, endLineNumber = getTestFilePath(describeOrTest)
 
     describeOrTest.filePath = filePath
-    describeOrTest.lineNumber = lineNumber
+    describeOrTest.startLineNumber = startLineNumber
+    describeOrTest.endLineNumber = endLineNumber
 
     if not currentParent then
         currentParent = describeOrTest
