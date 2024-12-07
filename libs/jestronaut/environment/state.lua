@@ -532,6 +532,7 @@ local function registerDescribeOrTest(describeOrTest)
     testFunctionLookupByRegistered[describeOrTest] = testFunctionLookup[filePath][lookupIndex]
 
     if not currentParent then
+        assert(describeOrTest.name == "root", "Root describe not set. Use `jestronaut.describe('root', function() end)` to set the root describe.")
         currentParent = describeOrTest
     else
         currentParent:addChild(describeOrTest)
@@ -626,9 +627,7 @@ local function runTests(runnerOptions)
     local testSetRootCopy, describesByFilePath, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
 
     local function queueTestIfTest(describeOrTestCopy)
-        if describeOrTestCopy.isTest then
-            runner:queueTest(describeOrTestCopy)
-        end
+        runner:queueTest(describeOrTestCopy)
 
         if describeOrTestCopy.children then
             for _, childCopy in ipairs(describeOrTestCopy.children) do

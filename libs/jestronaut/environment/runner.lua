@@ -13,6 +13,7 @@ local function newTestRunner(runnerOptions)
     self.reporter = callRespectingRequireOverride(function()
         return runnerOptions.reporter or (require "jestronaut/reporter".newDefaultReporter())
     end)
+
     self.reporter.isVerbose = runnerOptions.verbose
 
     self.runnerOptions = runnerOptions
@@ -63,7 +64,8 @@ function TEST_RUNNER:queueTest(test)
         status = "starting",
         shouldSkip = test.toSkip,
 
-        test = test,
+        test = not test.isDescribe and test or nil,
+        describe = test.isDescribe and test or nil,
     }
 
     if isAsync then
@@ -89,6 +91,14 @@ function TEST_RUNNER:reset()
 	end
 
     self.processedTests = {}
+    self.describeMap = {}
+
+    -- Map describes and tests, so we can track which ones are done
+    for _, queuedTest in ipairs(self.queuedTests) do
+        if queuedTest.test then
+            self.describeMap[queuedTest.test] = queuedTest
+        end
+    end
 end
 
 function TEST_RUNNER:markFinished(queuedTest, status, err, retryWithRemainingCount)
@@ -106,6 +116,32 @@ function TEST_RUNNER:markFinished(queuedTest, status, err, retryWithRemainingCou
         self.reporter:onTestSkipped(queuedTest.test)
     else
         self.reporter:onTestFinished(queuedTest.test, status, err)
+    end
+
+    self:updateDescribeMap(queuedTest.test)
+end
+
+function TEST_RUNNER:updateDescribeMap(testOrDescribe)
+    -- Remove this test from the map, and check if the describe is done
+    self.describeMap[testOrDescribe] = nil
+
+    local describe = testOrDescribe.parent
+
+    if describe then
+        local describeDone = true
+
+        for _, child in ipairs(describe.children) do
+            if self.describeMap[child] then
+                describeDone = false
+                break
+            end
+        end
+
+        if describeDone then
+            self.reporter:onTestFinished(describe, true)
+
+            self:updateDescribeMap(describe)
+        end
     end
 end
 
@@ -206,13 +242,22 @@ function TEST_RUNNER:tick()
         error("Test runner not started! Did you forget to call `:start()`?")
     end
 
+    local slowDown = self.runnerOptions.slowDown
     local remainingTests = {}
 
     -- Process queued tests
     for i, queuedTest in ipairs(self.queuedTests) do
         self.currentTestIndex = i
 
-        if (queuedTest.shouldSkip) then
+        if (slowDown) then
+            os.execute("sleep " .. (slowDown * .001))
+        end
+
+        self.reporter:onTestStarting(queuedTest.test or queuedTest.describe)
+
+        if (queuedTest.describe) then
+            table.insert(self.processedTests, queuedTest)
+        elseif (queuedTest.shouldSkip) then
             self:handleTestFinished(queuedTest, nil, "Test skipped")
         elseif queuedTest.type == "sync" then
             -- Run sync tests immediately
@@ -296,13 +341,15 @@ function TEST_RUNNER:printResults(testDuration)
     local failed = 0
     local skipped = 0
 
-    for _, test in ipairs(self.processedTests) do
-        if test.status == true then
-            passed = passed + 1
-        elseif test.status == nil then
-            skipped = skipped + 1
-        else
-            failed = failed + 1
+    for _, processedTest in ipairs(self.processedTests) do
+        if processedTest.test then
+            if processedTest.status == true then
+                passed = passed + 1
+            elseif processedTest.status == nil then
+                skipped = skipped + 1
+            else
+                failed = failed + 1
+            end
         end
     end
 

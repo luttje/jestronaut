@@ -3,11 +3,14 @@ require "jestronaut":withGlobals()
 
 jestronaut
     :configure({
+        bail = 1,
         roots = {
             "./tests/",
         },
 
-        reporter = require "jestronaut.reporter-minimal".newMinimalReporter(),
+        -- reporter = require "jestronaut.reporter-minimal".newMinimalReporter(),
+        verbose = true,
+        slowDown = 50,
     })
     :registerTests(function()
         -- Setup and register the tests:

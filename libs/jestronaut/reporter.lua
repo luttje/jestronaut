@@ -45,31 +45,13 @@ local function drawDescribeOrTest(describeOrTest)
 
     summary:plain(" " .. describeOrTest.name .. "\n")
 
+    if (describeOrTest.hasRun and not describeOrTest.success) then
+        summary:plain(describeOrTest.errorMessage .. "\n\n")
+    end
+
     if (describeOrTest.isRunning and describeOrTest.children) then
         for _, describeOrTest in ipairs(describeOrTest.children) do
-            if describeOrTest.isDescribe then
-                summary:plain(drawDescribeOrTest(describeOrTest))
-            else
-                summary:plain(getIndentations(describeOrTest))
-
-                if describeOrTest.hasRun then
-                    if describeOrTest.success then
-                        summary:colored("✓", styledText.foregroundColors.green)
-                    else
-                        summary:colored("✗", styledText.foregroundColors.red)
-                    end
-                elseif describeOrTest.toSkip then
-                    summary:colored("⚠", styledText.foregroundColors.blue)
-                else
-                    summary:colored("o", styledText.foregroundColors.yellow)
-                end
-
-                summary:plain(" " .. describeOrTest.name .. "\n")
-
-                if (describeOrTest.hasRun and not describeOrTest.success) then
-                    summary:plain(describeOrTest.errorMessage .. "\n\n")
-                end
-            end
+            summary:plain(drawDescribeOrTest(describeOrTest))
         end
     elseif (describeOrTest.hasRun and not describeOrTest.success) then
         summary:plain(describeOrTest.errorMessage .. "\n\n")
@@ -158,8 +140,9 @@ function REPORTER:onTestStarting(describeOrTest)
         file.isRunning = true
     end
 
+    describeOrTest.isRunning = true
+
     self:redrawSummary(self.isVerbose)
-    return
 end
 
 --- Prints the result of the test.
@@ -171,23 +154,43 @@ function REPORTER:onTestFinished(describeOrTest, success)
     local file = self:getFileByPath(describeOrTest.filePath)
 
     if file then
-        if not self.lastFile then
-            self.lastFile = file
-        elseif self.lastFile ~= file then
-            self.lastFile.isRunning = false
-            self.lastFile.hasRun = true
-            self.lastFile.success = true -- TODO: Check if all tests passed.
+        -- Commented, since this wont work for async tests. We need
+        -- to keep track if all describes in a file have run instead
+        -- if not self.lastFile then
+        --     self.lastFile = file
+        -- elseif self.lastFile ~= file then
+        --     self.lastFile.isRunning = false
+        --     self.lastFile.hasRun = true
+        --     self.lastFile.success = true -- TODO: Check if all tests passed.
 
-            self.lastFile = file
+        --     self.lastFile = file
+        -- end
+        local allDescribesInFileHaveRun = true
+
+        for _, describe in ipairs(file.describesOrTests) do
+            if not describe.hasRun then
+                allDescribesInFileHaveRun = false
+                break
+            end
         end
 
-        file.isRunning = true
+        if allDescribesInFileHaveRun then
+            file.isRunning = false
+            file.hasRun = true
+            file.success = true
+        else
+            file.isRunning = true
+        end
 
         if not success then
             file.hasRun = true
             file.success = false
         end
     end
+
+    describeOrTest.success = success
+    describeOrTest.hasRun = true
+    describeOrTest.isRunning = false
 
     self:redrawSummary(self.isVerbose)
 end
@@ -270,11 +273,13 @@ function REPORTER:onEndTestSet(processedTests, passedTestCount, failedTestCount,
     local notRunCount = failedTestCount + skippedTestCount
     local relativeSuccess = 1 - (notRunCount / totalTestCount)
 
-    if self.lastFile then
-        self.lastFile.isRunning = false
-        self.lastFile.hasRun = true
-        self.lastFile.success = true -- TODO: Check if all tests passed?
-    end
+    -- Commented, since this wont work for async tests. We need
+    -- to keep track if all describes in a file have run instead
+    -- if self.lastFile then
+    --     self.lastFile.isRunning = false
+    --     self.lastFile.hasRun = true
+    --     self.lastFile.success = true -- TODO: Check if all tests passed?
+    -- end
 
     self:redrawSummary()
     self:printNewline()

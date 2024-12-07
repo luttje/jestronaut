@@ -18,8 +18,8 @@ local JESTRONAUT = {
 function JESTRONAUT:configure(runnerOptions)
     environmentLib.resetEnvironment()
 
-    -- Setup the root describe
-    describeLib.describe("root", function() end)
+    -- Setup the root describe where every other describe and test will be nested under
+    describeLib.describeTransparent("root", function() end)
 
     runnerOptions = optionsLib.merge(runnerOptions)
 
