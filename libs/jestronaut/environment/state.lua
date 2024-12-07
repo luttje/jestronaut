@@ -1,4 +1,5 @@
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
+local contextLib = require "jestronaut/environment/context"
 local runnerLib = require "jestronaut/environment/runner"
 local stringsLib = require "jestronaut/utils/strings"
 local tablesLib = require "jestronaut/utils/tables"
@@ -8,17 +9,6 @@ local rootFilePaths
 --- @class DescribeOrTest
 --- @type DescribeOrTest?
 local currentDescribeOrTest = nil
-
---- @class TestContext
---- @field retrySettings? table
---- @field beforeAll? fun()
---- @field beforeEach? fun()
---- @field afterAll? fun()
---- @field afterEach? fun()
-local LOCAL_STATE_META = {}
-
---- @type TestContext[]
-local testFileContexts = {}
 
 --- All file paths with all tests and describes in the file.
 --- @type table<string, {testCopy: DescribeOrTest, registered: DescribeOrTest}[]>
@@ -34,7 +24,6 @@ local function resetEnvironment()
     currentParent = nil
 
     -- TODO: This messes with resetting tests, since beforeAll and such would have to be seen again (require tests again) to function again.
-    testFileContexts = {}
     testFunctionLookup = {}
     testFunctionLookupByRegistered = {}
 end
@@ -112,20 +101,6 @@ local function getTestFilePath(test)
     end
 
     return filePath, startLineNumber, endLineNumber
-end
-
---- Returns the context local to the test file.
---- @param testFilePath string
---- @return TestContext
-local function getTestFileContext(testFilePath)
-    local fileContext = testFileContexts[testFilePath]
-
-    if not fileContext then
-        fileContext = {}
-        testFileContexts[testFilePath] = fileContext
-    end
-
-    return fileContext
 end
 
 --- Gets a test (or describe, or either) by checking if the given filePath and line number
@@ -248,7 +223,7 @@ local function retryTimes(numRetries, options)
     end
 
     local filePath = getTestFilePath(currentDescribeOrTest)
-    local testFileContext = getTestFileContext(filePath)
+    local testFileContext = contextLib.getTestFileContext(filePath)
 
     testFileContext.retrySettings = {
         timesRemaining = numRetries,
@@ -257,57 +232,14 @@ local function retryTimes(numRetries, options)
     }
 end
 
---- Traverses all test contexts up to the file. Useful for calling beforeAll and beforeEach functions.
---- If the callback returns a non-nil value, the traversal will stop and return that value.
---- @param describeOrTest DescribeOrTest
---- @param callback fun(context: TestContext, object: DescribeOrTest?): boolean?
---- @return boolean? # The result of the callback
-local function traverseTestContexts(describeOrTest, callback)
-    local relevantContexts = {}
-    local parent = describeOrTest.parent
-
-    table.insert(relevantContexts, {
-        context = describeOrTest.context,
-        object = describeOrTest,
-    })
-
-    while parent do
-        if parent.context then
-            table.insert(relevantContexts, {
-                context = parent.context,
-                object = parent,
-            })
-        end
-
-        parent = parent.parent
-    end
-
-    table.insert(relevantContexts, {
-        context = getTestFileContext(describeOrTest.filePath),
-        object = nil,
-    })
-
-    -- Reverse the loop, so outer contexts are called first
-    -- TODO: Is that what Jest does?
-    -- for _, context in ipairs(relevantContexts) do
-    for i = #relevantContexts, 1, -1 do
-        local contextInfo = relevantContexts[i]
-        local result = callback(contextInfo.context, contextInfo.object)
-
-        if result ~= nil then
-            return result
-        end
-    end
-end
-
 local function beforeDescribeOrTest(describeOrTest)
     currentDescribeOrTest = describeOrTest
 
     -- We check all parents, up to and including the file for context conditions
     -- such as beforeAll for each and call them if not already called in
     -- the current test context
-    traverseTestContexts(describeOrTest, function(context)
-        if context.beforeAll and not context.beforeAllCalled then
+    contextLib.traverseTestContexts(describeOrTest, function(context)
+        if (context.beforeAll and not context.beforeAllCalled) then
             context.beforeAllCalled = true
             context.beforeAll()
         end
@@ -319,7 +251,7 @@ local function beforeDescribeOrTest(describeOrTest)
 end
 
 local function afterDescribeOrTest(describeOrTest, success)
-    local fileContext = getTestFileContext(describeOrTest.filePath)
+    local fileContext = contextLib.getTestFileContext(describeOrTest.filePath)
 
     if fileContext.afterEach then
         fileContext.afterEach()
@@ -339,7 +271,7 @@ local function setupBeforeAfterCallback(fn, functionName)
         relevantDescribe[functionName] = fn
     else
         local filePath = getTestFilePath(currentDescribeOrTest)
-        local fileContext = getTestFileContext(filePath)
+        local fileContext = contextLib.getTestFileContext(filePath)
         fileContext[functionName] = fn
     end
 end
@@ -425,103 +357,6 @@ function DESCRIBE_OR_TEST_META:flipIfFailExpected(success, errorMessage)
     return success, errorMessage
 end
 
--- --- Runs the test and returns the amount of failed tests.
--- --- @param reporter Reporter
--- --- @param runnerOptions RunnerOptions
--- --- @return number
--- function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
---     local failedTestCount = 0
-
---     if self.toSkip then
---         reporter:onTestSkipped(self)
-
---         return failedTestCount
---     end
-
---     if (runnerOptions.slowDown) then -- For debugging terminal output
---         local slowDown = runnerOptions.slowDown * 0.001
-
---         local startTime = os.clock()
---         local endTime = startTime + slowDown
-
---         -- Start a loop to freeze for the specified amount of milliseconds
---         while os.clock() < endTime do end
---     end
-
---     if self.isTest then
---         reporter:onTestStarting(self)
---         self.isRunning = true
-
---         local testLocalState = getTestLocalState(self.filePath)
---         local retrySettings = testLocalState.retrySettings
-
---         beforeDescribeOrTest(self)
-
---         if (type(self.fn) == "table") then
---             error("TODO: Implement async tests")
---         end
-
---         local success, errorMessage = xpcall(self.fn, debug.traceback)
-
---         success, errorMessage = self:flipIfFailExpected(success, errorMessage)
-
---         afterDescribeOrTest(self, success)
-
---         self.success = success
---         self.isRunning = false
---         self.hasRun = true
-
---         if not success then
---             self.errorMessage = errorMessage
---         end
-
---         if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
---             reporter:onTestFinished(self, success)
---         end
-
---         if not success then
---             failedTestCount = failedTestCount + 1
-
---             if retrySettings and retrySettings.timesRemaining then
---                 if retrySettings.timesRemaining > 0 then
---                     retrySettings.timesRemaining = retrySettings.timesRemaining - 1
-
---                     reporter:onTestRetrying(self, retrySettings.timesRemaining + 1)
-
---                     return self:run(reporter, runnerOptions)
---                 end
---             end
-
---             if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
---                 reporter:onTestFinished(self, success)
-
---                 error(
---                     "Bail after " .. failedTestCount .. " failed "
---                     .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. errorMessage
---                 )
---             end
---         end
---     else
---         if #self.children > 0 then
---             self.isRunning = true
-
---             for _, child in ipairs(self.children) do
---                 local childFailedCount = child:run(reporter, runnerOptions)
-
---                 failedTestCount = failedTestCount + childFailedCount
---             end
-
---             self.isRunning = false
---             self.hasRun = true
---             self.success = failedTestCount == 0
---         end
-
---         reporter:onTestFinished(self, self.success)
---     end
-
---     return failedTestCount
--- end
-
 --- @class DescribeOrTestForRun : DescribeOrTest
 local DESCRIBE_OR_TEST_FOR_RUN_META = {
     isDescribeOrTestForRun = true,
@@ -571,7 +406,7 @@ local function makeDescribeOrTestForRun(describeOrTest, runnerOptions)
     }
 
     describeOrTestForRun.traverseTestContexts = function(callback)
-        return traverseTestContexts(describeOrTestForRun, callback)
+        return contextLib.traverseTestContexts(describeOrTestForRun, callback)
     end
 
     if runnerOptions.testPathIgnorePatterns then
