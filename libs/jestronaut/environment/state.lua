@@ -28,10 +28,6 @@ local testFunctionLookupByRegistered = {}
 --- @type DescribeOrTest?
 local currentParent = nil
 
-local function getCurrentDescribeOrTest()
-    return currentDescribeOrTest
-end
-
 local function resetEnvironment()
     currentDescribeOrTest = nil
     rootFilePaths = nil
@@ -730,16 +726,6 @@ local function incrementAssertionCount()
     relevantDescribeOrTest.assertionCount = relevantDescribeOrTest.assertionCount + 1
 end
 
-local function getAssertionCount()
-    local relevantDescribeOrTest = getFromCallerFunction()
-
-    if not relevantDescribeOrTest then
-        error("Cannot get the assertion count outside of a test or describe block", 2)
-    end
-
-    return relevantDescribeOrTest.assertionCount
-end
-
 local function setExpectAssertion()
     local relevantDescribeOrTest = getFromCallerFunction()
 
@@ -748,16 +734,6 @@ local function setExpectAssertion()
     end
 
     relevantDescribeOrTest.isExpectingAssertion = true
-end
-
-local function getExpectedAssertionCount()
-    local relevantDescribeOrTest = getFromCallerFunction()
-
-    if not relevantDescribeOrTest then
-        error("Cannot get the expected assertion count outside of a test or describe block", 2)
-    end
-
-    return relevantDescribeOrTest.expectedAssertionCount
 end
 
 local function setExpectedAssertionCount(count)
@@ -843,18 +819,15 @@ return {
 
     resetEnvironment = resetEnvironment,
 
-    getCurrentDescribeOrTest = getCurrentDescribeOrTest,
     getDescribeOrTestForRun = copyDescribeOrTestForRun,
-
     registerDescribeOrTest = registerDescribeOrTest,
+
     setRoots = setRoots,
     registerTests = registerTests,
     runTests = runTests,
 
     incrementAssertionCount = incrementAssertionCount,
-    getAssertionCount = getAssertionCount,
     setExpectAssertion = setExpectAssertion,
-    getExpectedAssertionCount = getExpectedAssertionCount,
     setExpectedAssertionCount = setExpectedAssertionCount,
 
     retryTimes = retryTimes,

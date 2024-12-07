@@ -309,28 +309,6 @@ function TEST_RUNNER:printResults(testDuration)
     self.reporter:onEndTestSet(self.processedTests, passed, failed, skipped, testDuration)
 end
 
--- --[[
--- 	Event-Driven Execution Example for plain Lua
--- --]]
--- local function exampleEventLoop()
---     while runner:tick() do
--- 		-- Prevent tight loop
---         os.execute("sleep 0.1")
---     end
--- end
-
--- exampleEventLoop()
-
---[[
-	Think hook for Garry's Mod
---]]
-
--- runner:reset()
-
--- hook.Add("Think", "AsyncTestRunner", function()
--- 	runner:tick()
--- end)
-
 return {
     newTestRunner = newTestRunner,
 }
