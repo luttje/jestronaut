@@ -17,20 +17,19 @@ local function toHaveBeenCalledWith(expect, ...)
                 error("Expected " ..
                 tostring(actual) ..
                 " to have been called with no arguments but it was called with " ..
-                tableLib.implode(actual:getAllCallArgs(), ", "))
+                tableLib.implode(actual:getCallArgs(), ", "))
             else
                 error("Expected " ..
                 tostring(actual) ..
                 " to have been called with " ..
                 tableLib.implode(args, ", ") ..
-                " but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", "))
+                " but it was called with " .. tableLib.implode(actual:getCallArgs(), ", "))
             end
         else
-            PrintTable(actual)
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called with " ..
-            tostring(args) .. " but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", "))
+            error(
+                "Expected " .. tostring(actual) .. " to have been called with " .. tostring(args)
+                .. " but it was called with " .. tableLib.implode(actual:getCallArgs(), ", ")
+            )
         end
     end
 

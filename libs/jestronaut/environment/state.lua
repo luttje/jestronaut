@@ -1,7 +1,8 @@
-local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
-local functionLib = require "jestronaut/utils/functions"
+local contextLib = require "jestronaut/environment/context"
+local runnerLib = require "jestronaut/environment/runner"
 local stringsLib = require "jestronaut/utils/strings"
+local tablesLib = require "jestronaut/utils/tables"
 
 local rootFilePaths
 
@@ -9,30 +10,22 @@ local rootFilePaths
 --- @type DescribeOrTest?
 local currentDescribeOrTest = nil
 
---- @class LocalState
---- @field notExecuting DescribeOrTest
---- @field retrySettings table
---- @field beforeAll fun(): void
---- @field beforeEach fun(): void
---- @field afterAll fun(): void
---- @field afterEach fun(): void
-local LOCAL_STATE_META = {}
-
---- @type LocalState[]
-local testLocalStates = {}
+--- All file paths with all tests and describes in the file.
+--- @type table<string, {testCopy: DescribeOrTest, registered: DescribeOrTest}[]>
+local testFunctionLookup = {}
+local testFunctionLookupByRegistered = {}
 
 --- @type DescribeOrTest?
 local currentParent = nil
-
-local function getCurrentDescribeOrTest()
-    return currentDescribeOrTest
-end
 
 local function resetEnvironment()
     currentDescribeOrTest = nil
     rootFilePaths = nil
     currentParent = nil
-    testLocalStates = {}
+
+    -- TODO: This messes with resetting tests, since beforeAll and such would have to be seen again (require tests again) to function again.
+    testFunctionLookup = {}
+    testFunctionLookupByRegistered = {}
 end
 
 --- Sets where Jestronaut should look for tests. This is used to determine the test file path.
@@ -45,23 +38,36 @@ local function setRoots(roots)
     rootFilePaths = roots
 end
 
---- Gets the file path and line number of the test by checking the stack trace until it reaches beyond the root of this package.
+--- Gets the file path, starting line, and ending line of the test by checking the stack trace
+--- until it reaches beyond the root of this package.
 --- @param test DescribeOrTest
---- @return string, number
+--- @return string, number, number
 local function getTestFilePath(test)
-    local filePath, lineNumber
+    local filePath, startLineNumber, endLineNumber
     local i = 1
 
+    local testFn = test and test.fn
+
+    if (test and type(testFn) == "table") then
+        -- Async tests are wrapped in a table and have the original function stored
+        -- for this function, so we can get the file path and line number from the original function
+        testFn = testFn.originalFunction
+    end
+
     while true do
-        local info = debug.getinfo(i, "Sl")
+        local info = debug.getinfo(testFn or i, "Sl")
 
         if (not info) then
             error(
-            "Could not find the test file path. Please make sure options.roots is set to the directories where your tests are located.")
+                "Could not find the test file path. Please make sure options.roots is set to the directories where your tests are located."
+            )
+
             break
         end
 
-        local path = stringsLib.normalizePath(info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source)
+        local path = stringsLib.normalizePath(
+            info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source
+        )
 
         if rootFilePaths ~= nil then
             local found = false
@@ -70,7 +76,8 @@ local function getTestFilePath(test)
             for _, rootFilePath in ipairs(rootFilePaths) do
                 if path:sub(1, rootFilePath:len()) == rootFilePath then
                     filePath = path
-                    lineNumber = info.currentline
+                    startLineNumber = info.linedefined
+                    endLineNumber = info.lastlinedefined
                     found = true
                     break
                 end
@@ -81,155 +88,221 @@ local function getTestFilePath(test)
             end
         else
             filePath = path
-            lineNumber = info.currentline
+            startLineNumber = info.linedefined
+            endLineNumber = info.lastlinedefined
             break
+        end
+
+        if (not testFn) then
+            i = i + 1
+        else
+            testFn = nil
+        end
+    end
+
+    return filePath, startLineNumber, endLineNumber
+end
+
+--- Gets a test (or describe, or either) by checking if the given filePath and line number
+--- matches a test function.
+--- It will only return the deepest nested test or describe that matches the line number.
+--- @param filePath string
+--- @param lineNumber number
+--- @param shouldGetTestCopy? boolean Defaults to true
+--- @param matchOnlyOn "test" | "describe" | "both"
+--- @return DescribeOrTest?
+local function getByFilePathAndLineNumber(filePath, lineNumber, shouldGetTestCopy, matchOnlyOn)
+    filePath = stringsLib.normalizePath(
+        filePath:sub(1, 1) == "@" and filePath:sub(2) or filePath
+    )
+
+    local testsAndDescribes = testFunctionLookup[filePath]
+    local foundTestOrDescribe = nil
+
+    if not testsAndDescribes then
+        return nil
+    end
+
+    if (shouldGetTestCopy == nil) then
+        shouldGetTestCopy = true
+    end
+
+    for _, describeOrTestInfo in ipairs(testsAndDescribes) do
+        local match = true
+        local describeOrTest
+
+        if (shouldGetTestCopy) then
+            describeOrTest = describeOrTestInfo.testCopy
+            assert(describeOrTest, "Test copy not found for test or describe")
+        else
+            describeOrTest = describeOrTestInfo.registered
+        end
+
+        if matchOnlyOn == "test" then
+            match = describeOrTest.isTest
+        elseif matchOnlyOn == "describe" then
+            match = describeOrTest.isDescribe
+        end
+
+        if match and describeOrTest.startLineNumber <= lineNumber and describeOrTest.endLineNumber >= lineNumber then
+            -- The last match will be the most nested one, so we'll return that
+            foundTestOrDescribe = describeOrTest
+        end
+    end
+
+    return foundTestOrDescribe
+end
+
+--- Gets information about the caller function, such that we can find the
+--- file path and line number of the caller for tracking which test we're
+--- being called inside of.
+--- @return string, number # The file path and line number of the caller
+local function getCallerFunctionInfo()
+    -- Let's traverse the stack to find the correct caller, starting at 3,
+    -- since those are definetely not the caller we want
+    local i = 3
+
+    while true do
+        local info = debug.getinfo(i, "Sl")
+
+        if (not info) then
+            error("Could not find the caller function line.")
+        end
+
+        local source = stringsLib.normalizePath(
+            info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source
+        )
+
+        if rootFilePaths ~= nil then
+            -- Check if the file path contains the root file path. If it does, then we've found the test
+            for _, rootFilePath in ipairs(rootFilePaths) do
+                if source:sub(1, rootFilePath:len()) == rootFilePath then
+                    return source, info.currentline
+                end
+            end
+        else
+            return source, info.currentline
         end
 
         i = i + 1
     end
-
-    return filePath, lineNumber
 end
 
---- Returns the state local to the test file.
---- @param test DescribeOrTest
---- @return LocalState
-local function getTestLocalState(testFilePath)
-    local testLocalState = testLocalStates[testFilePath]
+--- Gets the test that is being called from the caller function.
+--- Optionally takes a matchOnlyOn parameter to only match on describes, tests, or both.
+--- @param shouldGetTestCopy? boolean Defaults to true
+--- @param matchOnlyOn? "test" | "describe" | "both" Defaults to "test"
+--- @return DescribeOrTest?
+local function getFromCallerFunction(shouldGetTestCopy, matchOnlyOn)
+    local source, lineNumber = getCallerFunctionInfo()
+    local describeOrTest = getByFilePathAndLineNumber(source, lineNumber, shouldGetTestCopy, matchOnlyOn or "test")
 
-    if not testLocalState then
-        testLocalState = {}
-        testLocalStates[testFilePath] = testLocalState
-    end
-
-    return testLocalState
+    return describeOrTest
 end
 
 --- Sets the amount of times tests will be retried. Must be called at the top of a file or describe block.
 --- @param numRetries number
 --- @param options table
 local function retryTimes(numRetries, options)
-    local filePath, lineNumber = getTestFilePath(currentDescribeOrTest)
-    local testLocalState = getTestLocalState(filePath)
+    local relevantDescribe = getFromCallerFunction(false, "describe")
 
-    if currentDescribeOrTest and currentDescribeOrTest.isTest then
-        error("Cannot set the test retries outside of a file or describe block", 2)
+    if relevantDescribe then
+        if relevantDescribe.isTest then
+            error("Cannot set the test retries outside of a file or describe block", 2)
+        end
+
+        relevantDescribe.retrySettings = {
+            timesRemaining = numRetries,
+            numRetries = numRetries,
+            options = options or {},
+        }
+
+        print("Setting retries for describe", relevantDescribe.name, numRetries, relevantDescribe.fn)
+
+        return
     end
 
-    testLocalState.retrySettings = {
+    local filePath = getTestFilePath(currentDescribeOrTest)
+    local testFileContext = contextLib.getTestFileContext(filePath)
+
+    testFileContext.retrySettings = {
         timesRemaining = numRetries,
+        numRetries = numRetries,
         options = options or {},
     }
-end
-
-local function incrementAssertionCount()
-    if not currentDescribeOrTest then
-        error("Cannot increase the assertion count outside of a test or describe block", 2)
-    end
-
-    currentDescribeOrTest.assertionCount = currentDescribeOrTest.assertionCount + 1
-end
-
-local function getAssertionCount()
-    if not currentDescribeOrTest then
-        error("Cannot get the assertion count outside of a test or describe block", 2)
-    end
-
-    return currentDescribeOrTest.assertionCount
-end
-
-local function setExpectAssertion()
-    if not currentDescribeOrTest then
-        error("Cannot set the expect assertion outside of a test or describe block", 2)
-    end
-
-    currentDescribeOrTest.expectAssertion = true
-end
-
-local function getExpectedAssertionCount()
-    if not currentDescribeOrTest then
-        error("Cannot get the expected assertion count outside of a test or describe block", 2)
-    end
-
-    return currentDescribeOrTest.expectedAssertionCount
-end
-
-local function setExpectedAssertionCount(count)
-    if not currentDescribeOrTest then
-        error("Cannot set the expected assertion count outside of a test or describe block", 2)
-    end
-
-    currentDescribeOrTest.expectedAssertionCount = count
 end
 
 local function beforeDescribeOrTest(describeOrTest)
     currentDescribeOrTest = describeOrTest
 
-    local fileLocalState = getTestLocalState(describeOrTest.filePath)
+    -- We check all parents, up to and including the file for context conditions
+    -- such as beforeAll for each and call them if not already called in
+    -- the current test context
+    contextLib.traverseTestContexts(describeOrTest, function(context)
+        if (context.beforeAll and not context.beforeAllCalled) then
+            context.beforeAllCalled = true
+            context.beforeAll()
+        end
 
-    if fileLocalState.beforeAll then
-        fileLocalState.beforeAll()
-    end
-
-    if fileLocalState.beforeEach then
-        fileLocalState.beforeEach()
-    end
+        if context.beforeEach then
+            context.beforeEach()
+        end
+    end)
 end
 
 local function afterDescribeOrTest(describeOrTest, success)
-    local fileLocalState = getTestLocalState(describeOrTest.filePath)
+    local fileContext = contextLib.getTestFileContext(describeOrTest.filePath)
 
-    if fileLocalState.afterEach then
-        fileLocalState.afterEach()
+    if fileContext.afterEach then
+        fileContext.afterEach()
     end
 
-    if fileLocalState.afterAll then
-        fileLocalState.afterAll()
+    if fileContext.afterAll then
+        fileContext.afterAll()
     end
 
     currentDescribeOrTest = nil
+end
 
-    if not success then
-        return
-    end
+local function setupBeforeAfterCallback(fn, functionName)
+    local relevantDescribe = getFromCallerFunction(false, "describe")
 
-    if describeOrTest.expectedAssertionCount ~= nil and describeOrTest.expectedAssertionCount ~= describeOrTest.assertionCount then
-        error("Expected " ..
-        describeOrTest.expectedAssertionCount .. " assertions, but " .. describeOrTest.assertionCount .. " were run")
-    end
-
-    if describeOrTest.expectAssertion and describeOrTest.assertionCount == 0 then
-        error("Expected at least one assertion to be run, but none were run")
+    if (relevantDescribe) then
+        relevantDescribe[functionName] = fn
+    else
+        local filePath = getTestFilePath(currentDescribeOrTest)
+        local fileContext = contextLib.getTestFileContext(filePath)
+        fileContext[functionName] = fn
     end
 end
 
 local function afterAll(fn, timeout)
-    local filePath = getTestFilePath(currentDescribeOrTest)
-    local fileLocalState = getTestLocalState(filePath)
-    fileLocalState.afterAll = fn
+    assert(not timeout, "Timeout is not implemented yet for afterAll")
+
+    setupBeforeAfterCallback(fn, "afterAll")
 end
 
 local function afterEach(fn, timeout)
-    local filePath = getTestFilePath(currentDescribeOrTest)
-    local fileLocalState = getTestLocalState(filePath)
-    fileLocalState.afterEach = fn
+    assert(not timeout, "Timeout is not implemented yet for afterEach")
+
+    setupBeforeAfterCallback(fn, "afterEach")
 end
 
 local function beforeAll(fn, timeout)
-    local filePath = getTestFilePath(currentDescribeOrTest)
-    local fileLocalState = getTestLocalState(filePath)
-    fileLocalState.beforeAll = fn
+    assert(not timeout, "Timeout is not implemented yet for beforeAll")
+
+    setupBeforeAfterCallback(fn, "beforeAll")
 end
 
 local function beforeEach(fn, timeout)
-    local filePath = getTestFilePath(currentDescribeOrTest)
-    local fileLocalState = getTestLocalState(filePath)
-    fileLocalState.beforeEach = fn
+    assert(not timeout, "Timeout is not implemented yet for beforeEach")
+
+    setupBeforeAfterCallback(fn, "beforeEach")
 end
 
 --- @class DescribeOrTest
 local DESCRIBE_OR_TEST_META = {
-    indentationLevel = 0,
+    indentationLevel = -1, -- Start at -1 so the root describe is at 0
     name = "",
     fn = function() end,
     isOnlyToRun = false,
@@ -238,7 +311,9 @@ local DESCRIBE_OR_TEST_META = {
     assertionCount = 0,
     parent = nil,
     childCount = 0,
+    childTestCount = 0,
     grandChildrenCount = 0,
+    grandChildrenTestCount = 0,
 
     --- @type DescribeOrTest[]
     children = nil
@@ -251,6 +326,10 @@ DESCRIBE_OR_TEST_META.__index = DESCRIBE_OR_TEST_META
 function DESCRIBE_OR_TEST_META:addChild(child)
     self.childCount = self.childCount + 1
 
+    if child.isTest then
+        self.childTestCount = self.childTestCount + 1
+    end
+
     self.children[self.childCount] = child
     self.childrenLookup[child.name] = self.childCount
 
@@ -258,108 +337,24 @@ function DESCRIBE_OR_TEST_META:addChild(child)
 
     if self.parent then
         self.parent.grandChildrenCount = self.parent.grandChildrenCount + 1
+
+        if child.isTest then
+            self.parent.grandChildrenTestCount = self.parent.grandChildrenTestCount + 1
+        end
     end
 end
 
---- Runs the test and returns the amount of failed tests.
---- @param reporter Reporter
---- @param runnerOptions RunnerOptions
---- @return number
-function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
-    local failedTestCount = 0
-
-    if self.toSkip then
-        reporter:testSkipped(self)
-
-        return failedTestCount
+function DESCRIBE_OR_TEST_META:flipIfFailExpected(success, errorMessage)
+    if self.expectFail == true then
+        if success then
+            success = false
+            errorMessage = "Error! Expected test to fail, but it succeeded."
+        else
+            success = true
+        end
     end
 
-    if (runnerOptions.slowDown) then -- For debugging terminal output
-        local slowDown = runnerOptions.slowDown * 0.001
-
-        local startTime = os.clock()
-        local endTime = startTime + slowDown
-
-        -- Start a loop to freeze for the specified amount of milliseconds
-        while os.clock() < endTime do end
-    end
-
-    reporter:testStarting(self)
-    self.isRunning = true
-
-    if self.isTest then
-        local testLocalState = getTestLocalState(self.filePath)
-        local retrySettings = testLocalState.retrySettings
-
-        beforeDescribeOrTest(self)
-
-        local success, results = functionLib.captureSafeCallInTable(xpcall(self.fn, function(err)
-            return debug.traceback(err, 2)
-        end))
-
-        if self.expectFail == true then
-            if success then
-                success = false
-                results = { "Error! Expected test to fail, but it succeeded." }
-            else
-                success = true
-            end
-        end
-
-        afterDescribeOrTest(self, success)
-
-        self.success = success
-        self.isRunning = false
-        self.hasRun = true
-
-        if not success then
-            self.errors = results
-        end
-
-        if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
-            reporter:testFinished(self, success, unpack(results))
-        end
-
-        if not success then
-            failedTestCount = failedTestCount + 1
-
-            if retrySettings and retrySettings.timesRemaining then
-                if retrySettings.timesRemaining > 0 then
-                    retrySettings.timesRemaining = retrySettings.timesRemaining - 1
-
-                    reporter:testRetrying(self, retrySettings.timesRemaining + 1)
-
-                    return self:run(reporter, runnerOptions)
-                end
-            end
-
-            if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
-                reporter:testFinished(self, success, unpack(results))
-
-                error("Bail after " ..
-                failedTestCount ..
-                " failed " .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
-            end
-        end
-    else
-        if #self.children > 0 then
-            self.isRunning = true
-
-            for _, child in ipairs(self.children) do
-                local childFailedCount = child:run(reporter, runnerOptions)
-
-                failedTestCount = failedTestCount + childFailedCount
-            end
-
-            self.isRunning = false
-            self.hasRun = true
-            self.success = failedTestCount == 0
-        end
-
-        reporter:testFinished(self, self.success)
-    end
-
-    return failedTestCount
+    return success, errorMessage
 end
 
 --- @class DescribeOrTestForRun : DescribeOrTest
@@ -371,6 +366,8 @@ extendMetaTableIndex(DESCRIBE_OR_TEST_FOR_RUN_META, DESCRIBE_OR_TEST_META)
 
 function DESCRIBE_OR_TEST_FOR_RUN_META:addChild(describeOrTest)
     self.children[#self.children + 1] = describeOrTest
+
+    describeOrTest.parent = self
 end
 
 --- Creates a copy of the describe or test for running. Returns the estimated amount of tests to skip.
@@ -395,9 +392,26 @@ local function makeDescribeOrTestForRun(describeOrTest, runnerOptions)
     describeOrTestForRun.isTest = describeOrTest.isTest
     describeOrTestForRun.isDescribe = describeOrTest.isDescribe
 
+    describeOrTestForRun.registered = describeOrTest
+
+    testFunctionLookupByRegistered[describeOrTest].testCopy = describeOrTestForRun
+
+    -- Where context is stored, for things like storing expected assertions
+    describeOrTestForRun.context = {
+        retrySettings = describeOrTest.retrySettings and tablesLib.copy(describeOrTest.retrySettings),
+        beforeAll = describeOrTest.beforeAll,
+        beforeEach = describeOrTest.beforeEach,
+        afterAll = describeOrTest.afterAll,
+        afterEach = describeOrTest.afterEach,
+    }
+
+    describeOrTestForRun.traverseTestContexts = function(callback)
+        return contextLib.traverseTestContexts(describeOrTestForRun, callback)
+    end
+
     if runnerOptions.testPathIgnorePatterns then
         for _, pattern in ipairs(runnerOptions.testPathIgnorePatterns) do
-            local plain = not pattern:find("^/.*/$")    -- Only enable pattern matching if the pattern doesn't start and end with a slash
+            local plain = not pattern:find("^/.*/$")          -- Only enable pattern matching if the pattern doesn't start and end with a slash
             pattern = plain and pattern or pattern:sub(2, -2) -- Remove the slashes if pattern matching is enabled
 
             if describeOrTestForRun.filePath:find(pattern, nil, plain) then
@@ -433,11 +447,20 @@ local FILE_FOR_RUN = {
 
 FILE_FOR_RUN.__index = FILE_FOR_RUN
 
---- Recursively copies a Describe or Test to be run, returning the root describe, a table with all describes grouped by file path, and the number of skipped tests.
+--- Recursively copies a Describe or Test to be run, returning the root describe, a table with all describes grouped by file path,
+--- and the number of skipped tests.
+--- TODO: This function is a bit of a mess and could be cleaned up. I don't like the way it's handling the file paths.
+--- TODO: I later added the bit to cache test file paths and line numbers, and I don't think the original describesByFilePath
+--- TODO: table is that useful anymore.
 --- @param describeOrTest DescribeOrTest
 --- @param runnerOptions RunnerOptions
 --- @return DescribeOrTestForRun, table, number
 local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
+    assert(
+        not describeOrTest.registered,
+        "Cannot copy a describe or test is already a copy of a registered test or describe"
+    )
+
     local describeOrTestForRun, skippedTestCount = makeDescribeOrTestForRun(describeOrTest, runnerOptions)
     local describesByFilePath = {}
 
@@ -450,6 +473,9 @@ local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
                 break
             end
         end
+
+        assert(child.registered, "Provided child is not a copy, but a registered describe or test")
+        testFunctionLookupByRegistered[child.registered].testCopy = child
 
         describesByFilePath[fileIndex] = describesByFilePath[fileIndex] or setmetatable({
             filePath = child.filePath,
@@ -468,17 +494,15 @@ local function copyDescribeOrTestForRun(describeOrTest, runnerOptions)
         table.insert(describesByFilePath[fileIndex].describesOrTests, child)
     end
 
-    if describeOrTest.isDescribe then
+    if describeOrTest.children then
         for _, child in pairs(describeOrTest.children) do
-            local child, childDescribesByFilePath, childSkippedCount = copyDescribeOrTestForRun(child, runnerOptions)
+            local childCopy, childDescribesByFilePath, childSkippedCount = copyDescribeOrTestForRun(child, runnerOptions)
 
-            describeOrTestForRun:addChild(child)
+            describeOrTestForRun:addChild(childCopy)
 
             skippedTestCount = skippedTestCount + childSkippedCount
         end
-    end
 
-    if describeOrTestForRun.children then
         for _, child in pairs(describeOrTestForRun.children) do
             insertChildWithFile(child)
         end
@@ -491,12 +515,24 @@ end
 --- Must be called once befrore all others with a Describe to set as root.
 --- @param describeOrTest DescribeOrTest
 local function registerDescribeOrTest(describeOrTest)
-    local filePath, lineNumber = getTestFilePath(describeOrTest)
+    local filePath, startLineNumber, endLineNumber = getTestFilePath(describeOrTest)
 
     describeOrTest.filePath = filePath
-    describeOrTest.lineNumber = lineNumber
+    describeOrTest.startLineNumber = startLineNumber
+    describeOrTest.endLineNumber = endLineNumber
+
+    -- Build the lookup for easily finding tests and describes by file, which
+    -- is used to find test contexts by file path and line number
+    testFunctionLookup[filePath] = testFunctionLookup[filePath] or {}
+    local lookupIndex = #testFunctionLookup[filePath] + 1
+    testFunctionLookup[filePath][lookupIndex] = {
+        testCopy = nil,
+        registered = describeOrTest,
+    }
+    testFunctionLookupByRegistered[describeOrTest] = testFunctionLookup[filePath][lookupIndex]
 
     if not currentParent then
+        assert(describeOrTest.name == "root", "Root describe not set. Use `jestronaut.describe('root', function() end)` to set the root describe.")
         currentParent = describeOrTest
     else
         currentParent:addChild(describeOrTest)
@@ -516,12 +552,42 @@ local function registerDescribeOrTest(describeOrTest)
     return describeOrTest
 end
 
+local function incrementAssertionCount()
+    local relevantDescribeOrTest = getFromCallerFunction()
+
+    if not relevantDescribeOrTest then
+        error("Cannot increase the assertion count outside of a test or describe block", 2)
+    end
+
+    relevantDescribeOrTest.assertionCount = relevantDescribeOrTest.assertionCount + 1
+end
+
+local function setExpectAssertion()
+    local relevantDescribeOrTest = getFromCallerFunction()
+
+    if not relevantDescribeOrTest then
+        error("Cannot set the expect assertion outside of a test or describe block", 2)
+    end
+
+    relevantDescribeOrTest.isExpectingAssertion = true
+end
+
+local function setExpectedAssertionCount(count)
+    local relevantDescribeOrTest = getFromCallerFunction()
+
+    if not relevantDescribeOrTest then
+        error("Cannot set the expected assertion count outside of a test or describe block", 2)
+    end
+
+    relevantDescribeOrTest.expectedAssertionCount = count
+end
+
 --- Registers the tests
 --- @param testRegistrar function
 local function registerTests(testRegistrar)
     if not rootFilePaths then
         error(
-        "No root directory paths have been set. Configure options.roots using jestronaut:config(options) before registering tests.")
+            "No root directory paths have been set. Configure options.roots using jestronaut:config(options) before registering tests.")
     end
 
     testRegistrar()
@@ -530,33 +596,55 @@ end
 --- Runs all registered tests.
 --- @param runnerOptions RunnerOptions
 local function runTests(runnerOptions)
-    -- Pass modified require's on through
-    local reporter = callRespectingRequireOverride(function()
-        return runnerOptions.reporter or (require "jestronaut/reporter".newDefaultReporter())
+    assert(currentParent,
+        'Root describe not set. Use `jestronaut.describe("root", function() end)` to set the root describe.')
+
+    local runner = runnerLib.newTestRunner(runnerOptions)
+
+    runner:setPreTestCallback(function(test)
+        beforeDescribeOrTest(test)
     end)
 
-    reporter.isVerbose = runnerOptions.verbose
-
-    -- currentParent is the root describe at this point
-    local testSetRoot, describesByFilePath, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
-
-    reporter:startTestSet(testSetRoot, describesByFilePath)
-
-    local startTime = os.clock()
-    local success, errOrFailedTestCount = pcall(testSetRoot.run, testSetRoot, reporter, runnerOptions)
-    local endTime = os.clock()
-
-    if not success then
-        if not errOrFailedTestCount:find("(.*): Bail after") then
-            -- TODO: Use xpcall as to not lose the stack trace
-            error(errOrFailedTestCount)
+    runner:setModifyTestResultCallback(function(test, success, errorMessage)
+        if (test.expectedAssertionCount ~= nil and test.expectedAssertionCount ~= test.assertionCount) then
+            success = false
+            errorMessage = "Expected " ..
+            test.expectedAssertionCount .. " assertions, but " .. test.assertionCount .. " were run"
         end
 
-        reporter:printBailed(testSetRoot, errOrFailedTestCount)
-        return
+        if (test.isExpectingAssertion and test.assertionCount == 0) then
+            success = false
+            errorMessage = "Expected at least one assertion to be run, but none were run"
+        end
+
+        return test:flipIfFailExpected(success, errorMessage)
+    end)
+
+    runner:setPostTestCallback(function(test, success)
+        afterDescribeOrTest(test, success)
+    end)
+
+    local testSetRootCopy, describesByFilePath, skippedTestCount = copyDescribeOrTestForRun(currentParent, runnerOptions)
+
+    local function queueTestIfTest(describeOrTestCopy)
+        runner:queueTest(describeOrTestCopy)
+
+        if describeOrTestCopy.children then
+            for _, childCopy in ipairs(describeOrTestCopy.children) do
+                queueTestIfTest(childCopy)
+            end
+        end
     end
 
-    reporter:printEnd(testSetRoot, errOrFailedTestCount, skippedTestCount, endTime - startTime)
+    -- Find all nested describes and tests and add them to the runner queue
+    for _, describeOrTestCopy in ipairs(testSetRootCopy.children) do
+        queueTestIfTest(describeOrTestCopy)
+    end
+
+    runner:start(testSetRootCopy, describesByFilePath, skippedTestCount)
+    runnerOptions.eventLoopTicker(function()
+        return runner:tick()
+    end)
 end
 
 return {
@@ -565,18 +653,15 @@ return {
 
     resetEnvironment = resetEnvironment,
 
-    getCurrentDescribeOrTest = getCurrentDescribeOrTest,
     getDescribeOrTestForRun = copyDescribeOrTestForRun,
-
     registerDescribeOrTest = registerDescribeOrTest,
+
     setRoots = setRoots,
     registerTests = registerTests,
     runTests = runTests,
 
     incrementAssertionCount = incrementAssertionCount,
-    getAssertionCount = getAssertionCount,
     setExpectAssertion = setExpectAssertion,
-    getExpectedAssertionCount = getExpectedAssertionCount,
     setExpectedAssertionCount = setExpectedAssertionCount,
 
     retryTimes = retryTimes,

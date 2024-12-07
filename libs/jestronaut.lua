@@ -18,8 +18,8 @@ local JESTRONAUT = {
 function JESTRONAUT:configure(runnerOptions)
     environmentLib.resetEnvironment()
 
-    -- Setup the root describe
-    describeLib.describe("root", function() end)
+    -- Setup the root describe where every other describe and test will be nested under
+    describeLib.describeTransparent("root", function() end)
 
     runnerOptions = optionsLib.merge(runnerOptions)
 
@@ -54,18 +54,13 @@ function JESTRONAUT:registerTests(testRegistrar)
 end
 
 --- Runs the tests.
---- @param onFinishedCallback? fun()
 --- @return Jestronaut
-function JESTRONAUT:runTests(onFinishedCallback)
+function JESTRONAUT:runTests()
     if not self.runnerOptions then
         error("No options found. You must setup jestronaut (with jestronaut:configure(options)) before running tests.")
     end
 
     environmentLib.runTests(self.runnerOptions)
-
-    if onFinishedCallback then
-        onFinishedCallback()
-    end
 
     return self
 end
