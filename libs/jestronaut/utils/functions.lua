@@ -15,21 +15,6 @@ local function makeFunctionShim(fn, callback)
     end
 end
 
---- Captures the vararg results of a (x)pcall function call into a table.
---- @param success boolean
---- @vararg any
---- @return boolean, table
-local function captureSafeCallInTable(success, ...)
-    local output = {}
-
-    for key, value in ipairs({ ... }) do
-        output[key] = value
-    end
-
-    return success, output
-end
-
 return {
     makeFunctionShim = makeFunctionShim,
-    captureSafeCallInTable = captureSafeCallInTable,
 }

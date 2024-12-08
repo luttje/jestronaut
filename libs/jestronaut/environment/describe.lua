@@ -1,13 +1,12 @@
-local DESCRIBE_OR_TEST_META = require "jestronaut/environment/state".DESCRIBE_OR_TEST_META
-local registerDescribeOrTest = require "jestronaut/environment/state".registerDescribeOrTest
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
+local stateLib = require "jestronaut/environment/state"
 
 --- @class Describe
 local DESCRIBE_META = {
     isDescribe = true,
 }
 
-extendMetaTableIndex(DESCRIBE_META, DESCRIBE_OR_TEST_META)
+extendMetaTableIndex(DESCRIBE_META, stateLib.DESCRIBE_OR_TEST_META)
 
 --- Creates a new describe.
 --- @param name string
@@ -34,7 +33,7 @@ local function _internalDescribe(name, fn, options)
 
     setmetatable(describe, DESCRIBE_META)
 
-    registerDescribeOrTest(describe)
+    stateLib.registerDescribeOrTest(describe)
 
     return describe
 end
@@ -73,6 +72,19 @@ local function describeSkip(self, name, fn)
     return _describe
 end
 
+--- Creates a new describe that is transparent, meaning the user will
+--- not see it, but it is used for internal purposes like marking root.
+--- @param name string
+--- @param fn function
+--- @param arguments? table
+--- @return Describe
+local function describeTransparent(name, fn, arguments)
+    arguments = arguments or {}
+    arguments.isTransparent = true
+
+    return _internalDescribe(name, fn, arguments)
+end
+
 return {
     describe = describe,
 
@@ -81,4 +93,6 @@ return {
 
     describeSkip = describeSkip,
     xdescribe = describeSkip,
+
+    describeTransparent = describeTransparent,
 }
