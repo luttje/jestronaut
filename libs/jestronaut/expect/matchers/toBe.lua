@@ -17,6 +17,11 @@
 local function toBe(expect, expected)
     local actual = expect.actual
 
+    -- Special case: both actual and expected are nil
+    if actual == nil and expected == nil then
+        return true
+    end
+
     if not expect:checkEquals(actual, expected) then
         error("Expected " .. tostring(actual) .. (expect.inverse and " not " or "") .. " to be " .. tostring(expected))
     end
