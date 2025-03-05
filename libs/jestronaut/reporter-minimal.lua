@@ -1,6 +1,7 @@
-local split = require "jestronaut/utils/strings".split
 local styledText = require "jestronaut/utils/styledtexts"
 local originalPrint = print
+
+local STYLING_DISABLED = true
 
 --- @class Reporter
 local REPORTER = {
@@ -8,6 +9,7 @@ local REPORTER = {
 
     width = 75,
 }
+
 REPORTER.__index = REPORTER
 
 --- Gets the indentations.
@@ -15,6 +17,19 @@ REPORTER.__index = REPORTER
 --- @return string
 local function getIndentations(describeOrTest)
     return string.rep("  ", describeOrTest.indentationLevel)
+end
+
+--- Ensures the text is always the given amount of characters long.
+--- Truncates the text if it's too long, or pads it with spaces if it's too short.
+--- @param text string
+--- @param length number
+--- @return string
+local function ensureLength(text, length)
+    if text:len() > length then
+        return text:sub(1, length)
+    end
+
+    return text .. (" "):rep(length - text:len())
 end
 
 --- @param filePath string
@@ -27,7 +42,7 @@ function REPORTER:getFileByPath(filePath)
 end
 
 local function drawDescribeOrTest(describeOrTest)
-    local summary = styledText.new()
+    local summary = styledText.new(nil, STYLING_DISABLED)
 
     summary:plain(getIndentations(describeOrTest))
 
@@ -45,13 +60,31 @@ local function drawDescribeOrTest(describeOrTest)
 
     summary:plain(" " .. describeOrTest.name .. "\n")
 
-    if (describeOrTest.hasRun and not describeOrTest.success) then
-        summary:plain(describeOrTest.errorMessage .. "\n\n")
-    end
-
     if (describeOrTest.isRunning and describeOrTest.children) then
         for _, describeOrTest in ipairs(describeOrTest.children) do
-            summary:plain(drawDescribeOrTest(describeOrTest))
+            if describeOrTest.isDescribe then
+                summary:plain(drawDescribeOrTest(describeOrTest))
+            else
+                summary:plain(getIndentations(describeOrTest))
+
+                if describeOrTest.hasRun then
+                    if describeOrTest.success then
+                        summary:colored("✓", styledText.foregroundColors.green)
+                    else
+                        summary:colored("✗", styledText.foregroundColors.red)
+                    end
+                elseif describeOrTest.toSkip then
+                    summary:colored("⚠", styledText.foregroundColors.blue)
+                else
+                    summary:colored("o", styledText.foregroundColors.yellow)
+                end
+
+                summary:plain(" " .. describeOrTest.name .. "\n")
+
+                if (describeOrTest.hasRun and not describeOrTest.success) then
+                    summary:plain(describeOrTest.errorMessage .. "\n\n")
+                end
+            end
         end
     elseif (describeOrTest.hasRun and not describeOrTest.success) then
         summary:plain(describeOrTest.errorMessage .. "\n\n")
@@ -60,127 +93,39 @@ local function drawDescribeOrTest(describeOrTest)
     return tostring(summary)
 end
 
---- Gets the summary text and the amount of lines it takes up.
---- @param header styledText
---- @param describesByFilePath table
---- @param verbose boolean
---- @return string, number
-local function getSummary(header, describesByFilePath, verbose)
-    local summary = styledText.new(header)
-
-    verbose = verbose == nil and false or verbose
-
-    for _, file in ipairs(describesByFilePath) do
-        local filePathForShowing = " " .. file.filePath .. "\n"
-        local describesOrTests = file.describesOrTests
-
-        if file.hasRun then
-            if file.success then
-                summary:colored(" PASS ", styledText.foregroundColors.black, styledText.backgroundColors.green)
-            else
-                summary:colored(" FAIL ", styledText.foregroundColors.black, styledText.backgroundColors.red)
-            end
-
-            summary:plain(filePathForShowing)
-
-            if not file.success then
-                for _, describeOrTest in ipairs(describesOrTests) do
-                    if not describeOrTest.success then
-                        summary:plain(drawDescribeOrTest(describeOrTest))
-                    end
-                end
-            end
-        elseif file.skippedCount == #describesOrTests then
-            summary:colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.blue)
-            summary:plain(filePathForShowing)
-        else
-            summary:colored(" RUNS ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
-            summary:plain(filePathForShowing)
-
-            if verbose and file.isRunning then
-                for _, describeOrTest in ipairs(describesOrTests) do
-                    summary:plain(drawDescribeOrTest(describeOrTest))
-                end
-            end
-        end
-    end
-
-    return tostring(summary), summary:getLineCount()
-end
-
---- Redraws the summary lines, clearing the previous ones.
---- @param verbose boolean
-function REPORTER:redrawSummary(verbose)
-    local summary, lineCount = getSummary(self.summaryHeader, self.describesByFilePath, verbose)
-    local summaryText = tostring(summary)
-
-    if self.lastPrintEraseCount then
-        -- Remove all the previous lines and print the new summary.
-        local clearLines = styledText.new()
-            :erase(styledText.eraseCodes.eraseCursorToEndOfLine)
-            :cursor(styledText.cursorCodes.moveUpLines, 1)
-            :rep(self.lastPrintEraseCount + 2) -- The two is to add two newlines caused by the two prints below
-
-        originalPrint(clearLines)        -- 1
-    end
-    self.lastPrintEraseCount = lineCount
-
-    originalPrint(summaryText) -- 2
-end
-
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
 function REPORTER:onTestStarting(describeOrTest)
-    -- Override print so there's no interference with the test output.
-    print = function() end -- TODO: Store the print and output it at the end of the test.
-
     local file = self:getFileByPath(describeOrTest.filePath)
 
     if file then
         file.isRunning = true
     end
 
-    describeOrTest.isRunning = true
+    local summary = styledText.new(nil, STYLING_DISABLED)
+        :plain(drawDescribeOrTest(describeOrTest))
 
-    self:redrawSummary(self.isVerbose)
+    originalPrint(ensureLength("STARTED:", 10) .. tostring(summary))
 end
 
 --- Prints the result of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param success boolean
 function REPORTER:onTestFinished(describeOrTest, success)
-    print = originalPrint
-
     local file = self:getFileByPath(describeOrTest.filePath)
 
     if file then
-        -- Commented, since this wont work for async tests. We need
-        -- to keep track if all describes in a file have run instead
-        -- if not self.lastFile then
-        --     self.lastFile = file
-        -- elseif self.lastFile ~= file then
-        --     self.lastFile.isRunning = false
-        --     self.lastFile.hasRun = true
-        --     self.lastFile.success = true -- TODO: Check if all tests passed.
+        if not self.lastFile then
+            self.lastFile = file
+        elseif self.lastFile ~= file then
+            self.lastFile.isRunning = false
+            self.lastFile.hasRun = true
+            self.lastFile.success = true -- TODO: Check if all tests passed.
 
-        --     self.lastFile = file
-        -- end
-        local allDescribesInFileHaveRun = true
-
-        for _, describe in ipairs(file.describesOrTests) do
-            if not describe.hasRun then
-                allDescribesInFileHaveRun = false
-                break
-            end
+            self.lastFile = file
         end
 
-        if allDescribesInFileHaveRun then
-            file.isRunning = false
-            file.hasRun = true
-            file.success = true
-        else
-            file.isRunning = true
-        end
+        file.isRunning = true
 
         if not success then
             file.hasRun = true
@@ -188,11 +133,10 @@ function REPORTER:onTestFinished(describeOrTest, success)
         end
     end
 
-    describeOrTest.success = success
-    describeOrTest.hasRun = true
-    describeOrTest.isRunning = false
+    local summary = styledText.new(nil, STYLING_DISABLED)
+        :plain(drawDescribeOrTest(describeOrTest))
 
-    self:redrawSummary(self.isVerbose)
+    originalPrint(ensureLength("FINISHED:", 10) .. tostring(summary))
 end
 
 --- Prints the skip message of the test.
@@ -204,16 +148,20 @@ function REPORTER:onTestSkipped(describeOrTest)
         file.skippedCount = file.skippedCount + 1
     end
 
-    self:redrawSummary(self.isVerbose)
+    local summary = styledText.new(nil, STYLING_DISABLED)
+        :plain(drawDescribeOrTest(describeOrTest))
 
-    return
+    originalPrint(ensureLength("SKIPPED:", 10) .. tostring(summary))
 end
 
 --- Prints the retry message of the test.
 --- @param describeOrTest DescribeOrTest
 --- @param retryCount number
 function REPORTER:onTestRetrying(describeOrTest, retryCount)
-    self:redrawSummary(self.isVerbose)
+    local summary = styledText.new(nil, STYLING_DISABLED)
+        :plain(drawDescribeOrTest(describeOrTest))
+
+    originalPrint(ensureLength("RETRYING:", 10) .. tostring(summary))
 end
 
 --- Prints text centered, using the reporter width.
@@ -235,7 +183,7 @@ function REPORTER:printHorizontalLine(char)
 end
 
 --- Creates some space by printing a new line.
---- @param count number
+--- @param count? number
 function REPORTER:printNewline(count)
     count = count or 1
 
@@ -251,7 +199,7 @@ end
 function REPORTER:onStartTestSet(rootDescribe, describesByFilePath, skippedTestCount)
     local totalTestCount = rootDescribe.childTestCount + rootDescribe.grandChildrenTestCount + skippedTestCount
 
-    self.summaryHeader = styledText.new()
+    self.summaryHeader = styledText.new(nil, STYLING_DISABLED)
         :plain("🚀 Starting ")
         :colored(tostring(totalTestCount), styledText.foregroundColors.yellow)
         :plain(" tests at ")
@@ -259,7 +207,8 @@ function REPORTER:onStartTestSet(rootDescribe, describesByFilePath, skippedTestC
         :plain("...\n\n")
 
     self.describesByFilePath = describesByFilePath
-    self:redrawSummary()
+
+    originalPrint(tostring(self.summaryHeader))
 end
 
 --- Prints the success message of the test.
@@ -273,15 +222,12 @@ function REPORTER:onEndTestSet(processedTests, passedTestCount, failedTestCount,
     local notRunCount = failedTestCount + skippedTestCount
     local relativeSuccess = 1 - (notRunCount / totalTestCount)
 
-    -- Commented, since this wont work for async tests. We need
-    -- to keep track if all describes in a file have run instead
-    -- if self.lastFile then
-    --     self.lastFile.isRunning = false
-    --     self.lastFile.hasRun = true
-    --     self.lastFile.success = true -- TODO: Check if all tests passed?
-    -- end
+    if self.lastFile then
+        self.lastFile.isRunning = false
+        self.lastFile.hasRun = true
+        self.lastFile.success = true -- TODO: Check if all tests passed?
+    end
 
-    self:redrawSummary()
     self:printNewline()
 
     if (relativeSuccess == 1) then
@@ -289,7 +235,7 @@ function REPORTER:onEndTestSet(processedTests, passedTestCount, failedTestCount,
         self:printNewline()
     end
 
-    local testResults = styledText.new()
+    local testResults = styledText.new(nil, STYLING_DISABLED)
         :colored("Tests:       ", styledText.foregroundColors.white)
 
     if failedTestCount > 0 then
@@ -311,11 +257,14 @@ function REPORTER:onEndTestSet(processedTests, passedTestCount, failedTestCount,
     originalPrint(testResults)
 
     originalPrint(
-        styledText.new()
+        styledText.new(nil, STYLING_DISABLED)
         :plain("Time:        " .. testDuration .. "s")
     )
+
+    self:printNewline()
+
     originalPrint(
-        styledText.new()
+        styledText.new(nil, STYLING_DISABLED)
         :styled("Ran all test suites.", styledText.styles.dim)
     )
 
@@ -339,7 +288,7 @@ function REPORTER:onEndTestSet(processedTests, passedTestCount, failedTestCount,
     if #todos > 0 then
         for _, describeOrTest in ipairs(todos) do
             originalPrint(
-                styledText.new()
+                styledText.new(nil, STYLING_DISABLED)
                 :newline()
                 :colored(" TODO ", styledText.foregroundColors.black, styledText.backgroundColors.yellow)
                 :plain(" " .. describeOrTest.name)
@@ -379,14 +328,14 @@ function REPORTER:printProgress(relativeSuccess)
     self:printHorizontalLine()
 end
 
---- Creates a new default reporter.
+--- Creates a new minimal reporter.
 --- @return Reporter
-local function newDefaultReporter()
+local function newMinimalReporter()
     local reporter = setmetatable({}, REPORTER)
 
     return reporter
 end
 
 return {
-    newDefaultReporter = newDefaultReporter,
+    newMinimalReporter = newMinimalReporter,
 }
