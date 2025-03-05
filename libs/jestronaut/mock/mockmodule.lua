@@ -20,7 +20,7 @@ local function setupModuleMocking()
     --- Search for modules in the test mocking environment.
     --- @param moduleName string
     --- @return any
-    table.insert(package.loaders, function(moduleName)
+    table.insert(package.loaders or package.searchers, function(moduleName)
         if mockedModules[moduleName] ~= nil then
             return mockedModules[moduleName]
         end

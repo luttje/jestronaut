@@ -10,3 +10,5 @@ lua_modules
 /gmod-addon/lua/tests
 /gmod-addon/lua/jestronaut/
 /gmod-addon/lua/jestronaut.lua
+
+/gmod-addon/**/sound.cache
