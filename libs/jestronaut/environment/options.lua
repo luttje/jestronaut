@@ -2,7 +2,9 @@ local copy = require "jestronaut/utils/tables".copy
 
 --- @class RunnerOptions
 local RUNNER_DEFAULT_OPTIONS = {
+    --- @type number
     bail = 1,
+
     -- cache = true,
     -- changedFilesWithAncestor = true,
     -- changedSince = true,
@@ -58,8 +60,10 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- testLocationInResults = true,
     -- testMatch = "",
     -- testNamePattern = "",
+
     --- @type string[]
     testPathIgnorePatterns = nil,
+
     -- testPathPattern = "",
     -- testRunner = "",
     -- testSequencer = "",
@@ -72,6 +76,31 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- watchAll = true,
     -- watchman = true,
     -- workerThreads = true,
+
+    --- The default event ticker simply loops at a rate of 10 times per second.
+    --- Depending on your environment you may want to override this.
+    ---
+    --- For example in Garry's Mod you could use the following:
+    --- eventLoopTicker = function(ticker)
+    ---     hook.Add("Think", "AsyncTestRunner", function()
+    ---         if ticker() == false then
+    ---            hook.Remove("Think", "AsyncTestRunner")
+    ---         end
+    ---     end)
+    --- end
+    ---
+    --- @param ticker fun(): boolean
+    --- @type fun(ticker: EventLoopTicker)
+    eventLoopTicker = function(ticker)
+        while ticker() do
+            -- Prevent tight loop
+            os.execute("sleep 0.1")
+
+            if (JESTRONAUT_TIMER_LIBRARY) then
+                JESTRONAUT_TIMER_LIBRARY.update()
+            end
+        end
+    end
 }
 
 --- @param options RunnerOptions

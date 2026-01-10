@@ -1,8 +1,9 @@
 local require = require
 
---- Ensures that any overridden require functions are respected when calling the given callback.
---- This is done by localizing the require (see above) and then making that available
---- globally for the duration of the callback.
+--- Ensures that any overridden require functions (at library load) are respected when
+--- calling the given callback later (during testing). This is done by localizing the
+--- require (see above) and then making that available globally for the duration of the
+--- callback.
 --- This is useful for requires that happen after the initial require override period.
 --- @param callback fun(...: any): any
 --- @vararg any

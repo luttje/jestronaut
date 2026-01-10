@@ -10,17 +10,27 @@ local function toHaveBeenNthCalledWith(expect, nthCall, ...)
     if not expect:checkEquals(true, actual:wasNthCalledWith(nthCall, ...)) then
         local args = wrapAndTagVarargsOrReturn(...)
 
-        if tableLib.count(args) == 0 then
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called with no arguments (on call " ..
-            nthCall .. ") but it was called with " .. tableLib.implode({ actual:getCallArgs() }, ", "))
+        if (not actual:wasCalled()) then
+            error("Expected " .. tostring(actual) .. " to have been called but it was never called")
+        elseif (type(args) == "table") then
+            if tableLib.count(args) == 0 then
+                error(
+                    "Expected " .. tostring(actual)
+                    .. " to have been called with no arguments but it was called with "
+                    .. tableLib.implode({ actual:getCallArgs() }, ", ")
+                )
+            else
+                error(
+                    "Expected " .. tostring(actual) .. " to have been called with "
+                    .. tableImplode(args, ", ") .. " but it was called with "
+                    .. tableLib.implode({ actual:getCallArgs() }, ", ")
+                )
+            end
         else
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called with " ..
-            tableLib.implode(args, ", ") ..
-            " (on call " .. nthCall .. ") but it was called with " .. tableLib.implode({ actual:getCallArgs() }, ", "))
+            error(
+                "Expected " .. tostring(actual) .. " to have been called with " .. tostring(args)
+                .. " but it was called with " .. tableLib.implode(actual:getCallArgs(), ", ")
+            )
         end
     end
 
