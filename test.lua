@@ -15,10 +15,6 @@ jestronaut
         "/tests/generated/ExpectAPI/toBeCloseTo.lua$/", -- This test fails because of floating point errors (the example in Jest docs is meant to fail)
         "/tests/generated/GlobalAPI/test.lua$/",      -- This test returns a promise, which Jestronaut doesn't support
 
-        -- Fake timer functions not supported yet:
-        "tests/generated/JestObjectAPI/jest/useFakeTimers.lua",
-        "tests/generated/JestObjectAPI/jest/useRealTimers.lua",
-
         "tests/generated/JestObjectAPI/jest/retryTimes.lua", -- These tests are intended to fail
 
         "tests/generated/MockFunctionAPI/mockFn/mockName.lua", -- The docs have mockFn commented, causing this test to fail.

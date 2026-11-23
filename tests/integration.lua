@@ -439,6 +439,21 @@ do
     end
 end
 
+-- Fake timers
+do
+    local realTime = os.time
+    run("faketimers-leak", {})
+
+    check("fake timers are removed after the last test of the file that installed them", os.time == realTime, true)
+
+    jestronaut
+        :configure({ roots = { "./tests/fixtures/" }, reporter = newRecordingReporter(), exitOnFailure = false })
+        :registerTests({ "./tests/fixtures/faketimers-leak.lua", "./tests/fixtures/faketimers-after.lua" })
+        :runTests()
+
+    check("fake timers installed in one test file don't affect the next", FAKE_TIMERS_LEAKED, false)
+end
+
 -- Counts (issue #10)
 do
     local expectedCounts = { totalCount = 8, passedCount = 4, failedCount = 1, skippedCount = 2, todoCount = 1 }

@@ -3,6 +3,7 @@ local unpack = table.unpack or unpack
 local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
 local asyncLib = require "jestronaut/environment/async"
+local fakeTimersLib = require "jestronaut/faketimers"
 local stringsLib = require "jestronaut/utils/strings"
 local formatLib = require "jestronaut/utils/format"
 
@@ -514,12 +515,17 @@ local function waitUntil(isDone, timeout, description)
 
     local eventLoop = activeRunnerOptions and activeRunnerOptions.eventLoop
 
+    -- Fake timers with advanceTimers set can run the timers a test waits for
+    if type(eventLoop) ~= "table" or not (eventLoop.tick or eventLoop.external) then
+        eventLoop = fakeTimersLib.getEventLoop()
+    end
+
     if type(eventLoop) ~= "table" or not (eventLoop.tick or eventLoop.external) then
         return false, description .. " didn't call done before returning, and no event loop is configured to wait " ..
             "for it. Set the eventLoop option to let Jestronaut wait."
     end
 
-    local now = eventLoop.now or os.clock
+    local now = eventLoop.now or fakeTimersLib.realOsClock
     local deadline = now() + timeout / 1000
 
     while not isDone() do
@@ -785,6 +791,10 @@ function DESCRIBE_OR_TEST_META:runTest(reporter, runnerOptions)
     setPrintCapture(false)
     activePrintCapture = nil
 
+    if self.isLastTestOfFile then
+        fakeTimersLib.uninstall()
+    end
+
     self.output = output
     self.success = success
     self.isRunning = false
@@ -821,10 +831,10 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
     end
 
     if (runnerOptions.slowDown) then -- For debugging terminal output
-        local endTime = os.clock() + runnerOptions.slowDown * 0.001
+        local endTime = fakeTimersLib.realOsClock() + runnerOptions.slowDown * 0.001
 
         -- Start a loop to freeze for the specified amount of milliseconds
-        while os.clock() < endTime do end
+        while fakeTimersLib.realOsClock() < endTime do end
     end
 
     reporter:testStarting(self)
@@ -1058,6 +1068,12 @@ local function planHooks(testSetRoot, tests)
         if not test.toSkip then
             table.insert(runnableTests, test)
         end
+    end
+
+    for i, test in ipairs(runnableTests) do
+        local nextTest = runnableTests[i + 1]
+
+        test.isLastTestOfFile = not nextTest or nextTest.filePath ~= test.filePath
     end
 
     -- Visit describes outer to inner, so hooks of outer describes end up first
@@ -1333,7 +1349,7 @@ local function runTests(runnerOptions, onFinished)
     activeRunnerOptions = runnerOptions
 
     local eventLoop = type(runnerOptions.eventLoop) == "table" and runnerOptions.eventLoop or {}
-    local now = eventLoop.now or os.clock
+    local now = eventLoop.now or fakeTimersLib.realOsClock
     local startTime = now()
 
     -- The run happens in a coroutine, so it can yield while waiting for the host (see the eventLoop option). Errors
@@ -1348,6 +1364,7 @@ local function runTests(runnerOptions, onFinished)
         activeRun = nil
         activeRunnerOptions = nil
         currentDescribeOrTest = nil
+        fakeTimersLib.uninstall()
 
         local counts = countTests(tests)
         local bailed = false

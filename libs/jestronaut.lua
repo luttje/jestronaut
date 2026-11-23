@@ -5,6 +5,7 @@ local coverageLib = require "jestronaut/coverage"
 local asyncLib = require "jestronaut/environment/async"
 local testLib = require "jestronaut/environment/test"
 local discoveryLib = require "jestronaut/discovery"
+local fakeTimersLib = require "jestronaut/faketimers"
 local expectLib = require "jestronaut/expect"
 local mockLib = require "jestronaut/mock"
 local setupModuleMocking = mockLib.setupModuleMocking
@@ -142,6 +143,82 @@ end
 --- @param timeout number
 function JESTRONAUT:setTimeout(timeout)
     environmentLib.setTimeout(timeout)
+end
+
+--- Replaces os.time, os.clock and os.date with a fake clock, and adds setTimeout, setInterval, clearTimeout and
+--- clearInterval globals that schedule timers on it. The timers only run when you advance the fake time with
+--- advanceTimersByTime, runAllTimers and the like. Fake timers are removed again by useRealTimers, and after the last
+--- test of the test file that installed them.
+---
+--- Options:
+--- - doNotFake: names of functions to keep real, e.g. { "os.clock" }.
+--- - now: the fake system time to start at, in milliseconds. Defaults to the real time.
+--- - advanceTimers: when true, tests that wait for done move the fake time to their timers, without an event loop.
+--- @param config? { doNotFake?: string[], now?: number, advanceTimers?: boolean }
+--- @return Jestronaut
+function JESTRONAUT:useFakeTimers(config)
+    fakeTimersLib.install(config)
+
+    return self
+end
+
+--- Puts back the real os.time, os.clock and os.date, and removes the timer globals of useFakeTimers.
+--- @return Jestronaut
+function JESTRONAUT:useRealTimers()
+    fakeTimersLib.uninstall()
+
+    return self
+end
+
+--- Moves the fake time forward, running the timers that are due in that time, in order.
+--- @param milliseconds number
+function JESTRONAUT:advanceTimersByTime(milliseconds)
+    fakeTimersLib.advanceTimersByTime(milliseconds)
+end
+
+--- Moves the fake time to the next timer and runs the timers due then, `steps` times (default 1).
+--- @param steps? number
+function JESTRONAUT:advanceTimersToNextTimer(steps)
+    fakeTimersLib.advanceTimersToNextTimer(steps)
+end
+
+--- Runs all timers, including the ones they schedule, until none are left.
+function JESTRONAUT:runAllTimers()
+    fakeTimersLib.runAllTimers()
+end
+
+--- Runs the timers that are pending now, but not the ones they schedule.
+function JESTRONAUT:runOnlyPendingTimers()
+    fakeTimersLib.runOnlyPendingTimers()
+end
+
+--- Removes all pending fake timers.
+function JESTRONAUT:clearAllTimers()
+    fakeTimersLib.clearAllTimers()
+end
+
+--- Gets the number of pending fake timers.
+--- @return number
+function JESTRONAUT:getTimerCount()
+    return fakeTimersLib.getTimerCount()
+end
+
+--- Gets the fake system time, in milliseconds.
+--- @return number
+function JESTRONAUT:now()
+    return fakeTimersLib.now()
+end
+
+--- Sets the fake system time used by os.time and os.date, in milliseconds. Timers are not affected.
+--- @param milliseconds number
+function JESTRONAUT:setSystemTime(milliseconds)
+    fakeTimersLib.setSystemTime(milliseconds)
+end
+
+--- Gets the real system time in milliseconds, also while fake timers are used.
+--- @return number
+function JESTRONAUT:getRealSystemTime()
+    return fakeTimersLib.getRealSystemTime()
 end
 
 function JESTRONAUT:getGlobals()
