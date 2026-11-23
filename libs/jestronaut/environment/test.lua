@@ -77,38 +77,44 @@ local function testSkip(self, name, fn, timeout)
     return _test
 end
 
---- Creates a new test that will run concurrently.
---- @param self Test
---- @param name string
---- @param fn function
---- @param timeout number
---- @return Test
---- @private
-local function testConcurrent(self, name, fn, timeout)
-    --- @Not yet implemented
-    return {}
+--- Gets the name, function and timeout of a test.concurrent call, which can be made as `test.concurrent(name, fn)`
+--- or `test:concurrent(name, fn)`.
+--- @return string, function, number?
+local function getConcurrentArguments(...)
+    if type((...)) == "table" then
+        return select(2, ...)
+    end
+
+    return ...
 end
 
---- Creates a new test that will run concurrently and is the only one that will run.
---- @param self Test
---- @param name string
---- @param fn function
---- @param timeout number
+--- Creates a test like test.concurrent does in Jest. Tests run one after another in Jestronaut, so concurrent tests
+--- run like other tests.
 --- @return Test
---- @private
-local function testConcurrentOnly(self, name, fn, timeout)
-    --- @Not yet implemented
+local function testConcurrent(...)
+    local name, fn, timeout = getConcurrentArguments(...)
+
+    return _internalTest(name, fn, timeout)
 end
 
---- Creates a new test that will run concurrently and will be skipped.
---- @param self Test
---- @param name string
---- @param fn function
---- @param timeout number
+--- Creates a test like test.concurrent.only does in Jest. It runs like test.only.
 --- @return Test
---- @private
-local function testConcurrentSkip(self, name, fn, timeout)
-    --- @Not yet implemented
+local function testConcurrentOnly(...)
+    local name, fn, timeout = getConcurrentArguments(...)
+
+    return _internalTest(name, fn, timeout, {
+        isOnlyToRun = true,
+    })
+end
+
+--- Creates a test like test.concurrent.skip does in Jest. It is skipped like test.skip.
+--- @return Test
+local function testConcurrentSkip(...)
+    local name, fn, timeout = getConcurrentArguments(...)
+
+    return _internalTest(name, fn, timeout, {
+        toSkip = true,
+    })
 end
 
 --- Creates a new test that will fail.

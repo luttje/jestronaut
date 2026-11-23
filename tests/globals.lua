@@ -20,4 +20,12 @@ describe('its', function()
     end)
 
     it:todo('this test is still to be written')
+
+    it.concurrent('runs concurrent tests', function()
+        expect('it.concurrent'):toBe('it.concurrent')
+    end)
+
+    it:concurrent('runs concurrent tests called with a colon', function()
+        expect('it:concurrent'):toBe('it:concurrent')
+    end)
 end)
