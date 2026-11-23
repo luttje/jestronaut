@@ -23,6 +23,7 @@ jestronaut
 
         "tests/generated/MockFunctionAPI/mockFn/mockName.lua", -- The docs have mockFn commented, causing this test to fail.
         "tests/generated/ExpectAPI/expect/addEqualityTesters.lua", -- The docs example compares the amount to other.unit, so the volumes are never equal
+        "tests/generated/GlobalAPI/test/todo.lua", -- The generator wraps the docs snippet in a test, nesting test.todo inside a running test
         "tests/generated/GlobalAPI/test/failing.lua",        -- This test succeeds, but it's supposed to fail
         "tests/generated/GlobalAPI/test/failing/each.lua",   -- This test succeeds, but it's supposed to fail
       },

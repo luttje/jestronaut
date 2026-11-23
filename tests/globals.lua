@@ -21,17 +21,3 @@ describe('its', function()
 
     it:todo('this test is still to be written')
 end)
-
-describe('only tests can fail', function()
-    it.failing:skip('skips failing test', function()
-        expect('it')['NOTVALIDMODIFIER']:toBeDefined()
-    end)
-
-    it.failing:only('fails on incorrect modifier only to run', function()
-        expect('it')['NOTVALIDMODIFIER']:toBeDefined()
-    end)
-
-    it('not run', function()
-        error('Should not be run!')
-    end)
-end)

@@ -23,10 +23,19 @@ local function newRecordingReporter()
         end
     end
 
-    function reporter:testSkipped(describeOrTest)
-        if describeOrTest.isTest then
-            table.insert(recorded.skipped, describeOrTest.name)
+    -- Record which tests will be skipped from the planned tree, since skipped describes are reported as a whole
+    function reporter:startTestSet(rootDescribe)
+        local function collect(describeOrTest)
+            if describeOrTest.isTest and describeOrTest.toSkip then
+                table.insert(recorded.skipped, describeOrTest.name)
+            end
+
+            for _, child in ipairs(describeOrTest.children or {}) do
+                collect(child)
+            end
         end
+
+        collect(rootDescribe)
     end
 
     return reporter
@@ -67,6 +76,17 @@ local function check(description, actual, expected)
     if actual ~= expected then
         table.insert(failures,
             description .. "\n    expected: " .. tostring(expected) .. "\n    actual:   " .. tostring(actual))
+    end
+end
+
+--- Like check, but compares lists in order.
+local function checkSequence(description, actual, expected)
+    actual = table.concat(actual or {}, "\n      ")
+    expected = table.concat(expected, "\n      ")
+
+    if actual ~= expected then
+        table.insert(failures,
+            description .. "\n    expected:\n      " .. expected .. "\n    actual:\n      " .. actual)
     end
 end
 
@@ -124,6 +144,75 @@ do
     _, recorded = run("names", { testNamePattern = "inner", testPathIgnorePatterns = { "/does-not-exist/" } })
     check("testNamePattern also works together with testPathIgnorePatterns", recorded.passed,
         { "first inner test", "second inner test" })
+end
+
+-- Hook order and scoping
+do
+    run("hooks", {})
+    checkSequence("hooks run once per scope, in the same order as Jest", HOOK_LOG, {
+        "file beforeAll",
+        "file beforeEach", "top", "file afterEach",
+        "outer beforeAll",
+        "file beforeEach", "outer beforeEach 1", "outer beforeEach 2", "outer test", "outer afterEach",
+        "file afterEach",
+        "inner beforeAll",
+        "file beforeEach", "outer beforeEach 1", "outer beforeEach 2", "inner beforeEach", "inner test",
+        "inner afterEach", "outer afterEach", "file afterEach",
+        "inner afterAll", "outer afterAll", "file afterAll",
+    })
+
+    run("wrapper", {})
+    checkSequence("file level hooks only apply to tests in their own file, even when wrapped in a describe",
+        WRAPPER_LOG, {
+            "wrapper beforeEach", "wrapper test",
+            "wrapper beforeEach", "wrapped file beforeEach", "wrapped test",
+            "wrapper beforeEach", "wrapped file beforeEach", "deeply wrapped test",
+        })
+end
+
+-- Failing hooks
+do
+    local results, recorded = run("hook-errors", {})
+    check("a failing beforeAll fails all tests in its scope, a failing beforeEach or afterEach fails its test",
+        recorded.failed, {
+            "first test in failing beforeAll", "second test in failing beforeAll",
+            "test with failing beforeEach", "test with failing afterEach",
+        })
+    check("tests without failing hooks still pass", recorded.passed, { "test without failing hooks" })
+    check("results count tests failed by hooks", results.failedCount, 4)
+    checkSequence("tests don't run when their beforeAll or beforeEach failed, afterEach still runs after beforeEach",
+        HOOK_ERRORS_LOG, { "afterEach after failing beforeEach" })
+end
+
+-- Retries
+do
+    local _, recorded = run("retries", {})
+    check("each test gets its own retries", recorded.passed, { "passes on the third attempt", "passes on the second attempt" })
+    check("tests that keep failing fail after their retries", recorded.failed, { "always fails", "fails without retrying" })
+    check("a test is attempted once plus the number of retries", RETRY_ATTEMPTS.always, 3)
+    check("retryTimes in a describe overrides retryTimes for the file", RETRY_ATTEMPTS.noRetry, 1)
+end
+
+-- only
+do
+    local _, recorded = run("only", {})
+    check("only runs the tests marked only (or in a describe marked only) in that file", recorded.passed,
+        { "fails on incorrect modifier only to run", "runs because its describe is marked only" })
+    check("only skips the other tests in that file", recorded.skipped,
+        { "top-level test without only", "skips failing test", "not run" })
+end
+
+-- Counts (issue #10)
+do
+    local expectedCounts = { totalCount = 8, passedCount = 4, failedCount = 1, skippedCount = 2, todoCount = 1 }
+
+    for _, fixture in ipairs({ "counts", "counts-wrapped" }) do
+        local results = run(fixture, {})
+
+        for key, expected in pairs(expectedCounts) do
+            check(fixture .. ": results." .. key .. " counts tests at any depth", results[key], expected)
+        end
+    end
 end
 
 if #failures > 0 then

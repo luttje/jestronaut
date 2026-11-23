@@ -71,8 +71,8 @@ describe('readme examples', function()
         ranBefore = ranBefore + 1
     end)
 
-    it('should run beforeAll for each "it" this checks how many (so far)', function()
-        expect(ranBefore):toEqual(5)
+    it('runs beforeAll once, before the first test in its scope', function()
+        expect(ranBefore):toEqual(1)
     end)
 
     it('can spy on a property setter', function()
