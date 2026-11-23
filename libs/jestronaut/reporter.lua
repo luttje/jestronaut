@@ -66,12 +66,12 @@ local function drawDescribeOrTest(describeOrTest)
 
                 summary:plain(" " .. describeOrTest.name .. "\n")
 
-                if (describeOrTest.hasRun and not describeOrTest.success) then
+                if (describeOrTest.hasRun and not describeOrTest.success and describeOrTest.errors) then
                     summary:plain(table.concat(describeOrTest.errors) .. "\n\n")
                 end
             end
         end
-    elseif (describeOrTest.hasRun and not describeOrTest.success) then
+    elseif (describeOrTest.hasRun and not describeOrTest.success and describeOrTest.errors) then
         summary:plain(table.concat(describeOrTest.errors) .. "\n\n")
     end
 
@@ -178,7 +178,7 @@ function REPORTER:testFinished(describeOrTest, success, ...)
         elseif self.lastFile ~= file then
             self.lastFile.isRunning = false
             self.lastFile.hasRun = true
-            self.lastFile.success = true -- TODO: Check if all tests passed.
+            self.lastFile.success = not self.lastFile.hasFailure
 
             self.lastFile = file
         end
@@ -188,6 +188,7 @@ function REPORTER:testFinished(describeOrTest, success, ...)
         if not success then
             file.hasRun = true
             file.success = false
+            file.hasFailure = true
         end
     end
 
@@ -273,7 +274,7 @@ function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, dura
     if self.lastFile then
         self.lastFile.isRunning = false
         self.lastFile.hasRun = true
-        self.lastFile.success = true -- TODO: Check if all tests passed?
+        self.lastFile.success = not self.lastFile.hasFailure
     end
 
     self:redrawSummary()

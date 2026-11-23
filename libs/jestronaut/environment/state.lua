@@ -296,6 +296,11 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
         beforeDescribeOrTest(self)
 
         local success, results = functionLib.captureSafeCallInTable(xpcall(self.fn, function(err)
+            -- debug.traceback returns non-string errors (e.g. error({ code = 1 })) untouched, which reporters can't print
+            if type(err) ~= "string" then
+                err = "(error object is a " .. type(err) .. " value: " .. tostring(err) .. ")"
+            end
+
             return debug.traceback(err, 2)
         end))
 
