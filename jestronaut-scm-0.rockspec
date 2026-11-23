@@ -10,13 +10,16 @@ description = {
    license = "MIT"
 }
 dependencies = {
-   "lua >= 5.1"
+   "lua >= 5.1",
+   "luafilesystem >= 1.6"
 }
 build = {
    type = "builtin",
    modules = {
       ["jestronaut"] = "libs/jestronaut.lua",
+      ["jestronaut/cli"] = "libs/jestronaut/cli.lua",
       ["jestronaut/coverage"] = "libs/jestronaut/coverage.lua",
+      ["jestronaut/discovery"] = "libs/jestronaut/discovery.lua",
       ["jestronaut/each"] = "libs/jestronaut/each.lua",
       ["jestronaut/environment"] = "libs/jestronaut/environment.lua",
       ["jestronaut/expect"] = "libs/jestronaut/expect.lua",
@@ -86,5 +89,10 @@ build = {
       ["jestronaut/utils/strings"] = "libs/jestronaut/utils/strings.lua",
       ["jestronaut/utils/styledtexts"] = "libs/jestronaut/utils/styledtexts.lua",
       ["jestronaut/utils/tables"] = "libs/jestronaut/utils/tables.lua",
+   },
+   install = {
+      bin = {
+         jestronaut = "bin/jestronaut"
+      }
    }
 }

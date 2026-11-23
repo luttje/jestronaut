@@ -1,6 +1,7 @@
 local DESCRIBE_OR_TEST_META = require "jestronaut/environment/state".DESCRIBE_OR_TEST_META
 local registerDescribeOrTest = require "jestronaut/environment/state".registerDescribeOrTest
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
+local stringsLib = require "jestronaut/utils/strings"
 
 --- @class Test
 local TEST_META = {
@@ -189,8 +190,36 @@ local function testTodo(self, name, fn)
     return test
 end
 
+--- Loads a test file, registering its tests. When the file fails to load, a failing test is registered for it
+--- instead, so the other test files still run.
+--- @param path string
+local function loadTestFile(path)
+    local chunk, err = loadfile(path)
+    local success = false
+
+    if chunk then
+        success, err = xpcall(chunk, debug.traceback)
+    end
+
+    if success then
+        return
+    end
+
+    local failedTest = setmetatable({
+        name = "Test suite failed to run",
+        filePath = stringsLib.normalizePath(path),
+        lineNumber = 0,
+        fn = function()
+            error(tostring(err), 0)
+        end,
+    }, TEST_META)
+
+    registerDescribeOrTest(failedTest)
+end
+
 return {
     test = test,
+    loadTestFile = loadTestFile,
 
     testOnly = testOnly,
     ftest = testOnly,

@@ -3,6 +3,8 @@ local describeLib = require "jestronaut/environment/describe"
 local environmentLib = require "jestronaut/environment"
 local coverageLib = require "jestronaut/coverage"
 local asyncLib = require "jestronaut/environment/async"
+local testLib = require "jestronaut/environment/test"
+local discoveryLib = require "jestronaut/discovery"
 local expectLib = require "jestronaut/expect"
 local mockLib = require "jestronaut/mock"
 local setupModuleMocking = mockLib.setupModuleMocking
@@ -11,6 +13,7 @@ setupModuleMocking()
 
 --- @class Jestronaut
 local JESTRONAUT = {
+    version = "0.6-1",
     runnerOptions = {},
 }
 
@@ -40,8 +43,13 @@ function JESTRONAUT:configure(runnerOptions)
     return self
 end
 
---- Registers the tests. This is done by calling the given function.
---- @param testRegistrar function
+--- Registers the tests, by one of:
+--- - calling the given function, which loads the test files (e.g. by requiring them);
+--- - loading the given list of test files;
+--- - finding the test files in the roots, when nothing is given (see the testMatch option). This requires
+---   LuaFileSystem.
+--- Test files that fail to load are reported as failing tests.
+--- @param testRegistrar? function|string[]
 --- @return Jestronaut
 function JESTRONAUT:registerTests(testRegistrar)
     if not self.runnerOptions then
@@ -49,7 +57,28 @@ function JESTRONAUT:registerTests(testRegistrar)
         "No options found. You must setup jestronaut (with jestronaut:configure(options)) before registering tests.")
     end
 
-    environmentLib.registerTests(testRegistrar)
+    if type(testRegistrar) == "function" then
+        environmentLib.registerTests(testRegistrar)
+
+        return self
+    end
+
+    local testFiles = testRegistrar
+
+    if testFiles == nil then
+        testFiles = discoveryLib.findTestFiles(self.runnerOptions)
+    elseif type(testFiles) == "string" then
+        testFiles = { testFiles }
+    elseif type(testFiles) ~= "table" then
+        error("registerTests expects a function that loads the tests, a list of test files, or nothing to find the " ..
+            "test files in the roots. Got " .. type(testFiles), 2)
+    end
+
+    environmentLib.registerTests(function()
+        for _, path in ipairs(testFiles) do
+            testLib.loadTestFile(path)
+        end
+    end)
 
     return self
 end

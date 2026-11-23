@@ -8,6 +8,7 @@ on:
       - 'tests/**'
       - 'test.lua'
       - 'main.lua'
+      - 'bin/**'
       - '.github/workflows/tests.yml'
   pull_request:
     branches:
@@ -17,6 +18,7 @@ on:
       - 'tests/**'
       - 'test.lua'
       - 'main.lua'
+      - 'bin/**'
       - '.github/workflows/tests.yml'
 jobs:
   # Runs the test suite with each supported Lua interpreter directly.
@@ -34,6 +36,9 @@ jobs:
         uses: leafo/gh-actions-lua@v10
         with:
           luaVersion: ${{ matrix.luaVersion }}
+      - uses: leafo/gh-actions-luarocks@v4
+      - name: Install LuaFileSystem, used to find test files
+        run: luarocks install luafilesystem
       # LuaJIT is installed as `luajit` rather than `lua`
       - name: Select the Lua interpreter
         run: echo "LUA=$(command -v lua || command -v luajit)" >> "$GITHUB_ENV"
@@ -45,6 +50,14 @@ jobs:
         run: |
           if $LUA tests/fixtures/failing-run.lua > /dev/null; then
             echo "Expected tests/fixtures/failing-run.lua to exit with a non-zero status code"
+            exit 1
+          fi
+      - name: Verify the jestronaut command finds and runs test files
+        run: |
+          $LUA -e 'package.path = "./libs/?.lua;" .. package.path' bin/jestronaut tests/fixtures/discovery
+
+          if $LUA -e 'package.path = "./libs/?.lua;" .. package.path' bin/jestronaut tests/fixtures/discovery-broken > /dev/null; then
+            echo "Expected the jestronaut command to exit with a non-zero status code for a failing test"
             exit 1
           fi
 

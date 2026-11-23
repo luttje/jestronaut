@@ -10,11 +10,17 @@ description = {
    license = "MIT"
 }
 dependencies = {
-   "lua >= 5.1"
+   "lua >= 5.1",
+   "luafilesystem >= 1.6"
 }
 build = {
    type = "builtin",
    modules = {
       {{ MODULES }}
+   },
+   install = {
+      bin = {
+         jestronaut = "bin/jestronaut"
+      }
    }
 }

@@ -1,0 +1,2 @@
+#!/usr/bin/env lua
+os.exit(require "jestronaut/cli".run(arg))

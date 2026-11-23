@@ -46,7 +46,21 @@ end
 --- @param path string
 --- @return string
 local function normalizePath(path)
-    local normalizedPath = path:gsub('\\', '/'):gsub('/+', '/'):gsub('/$', '')
+    local normalizedPath = path:gsub('\\', '/'):gsub('/+', '/')
+
+    -- The current directory, or the root of a file system
+    if normalizedPath == '' or normalizedPath == '.' or normalizedPath == './' then
+        return './'
+    elseif normalizedPath == '/' or normalizedPath:match('^%a:/?$') then
+        return (normalizedPath:gsub('^(%a:)$', '%1/'))
+    end
+
+    normalizedPath = normalizedPath:gsub('/$', '')
+
+    -- Absolute paths, like /home/user or C:/Users, stay absolute
+    if normalizedPath:sub(1, 1) == '/' or normalizedPath:match('^%a:/') then
+        return normalizedPath
+    end
 
     if normalizedPath:sub(1, 2) ~= './' then
         normalizedPath = './' .. normalizedPath

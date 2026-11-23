@@ -370,6 +370,68 @@ do
     check("output printed by the host while a test waits is printed normally", hostOutput[1], "from the host")
 end
 
+-- Command line arguments
+do
+    local cli = require "jestronaut/cli"
+    local options, paths = cli.parseArguments({
+        "--bail", "--no-colors", "--roots=./a", "--roots=./b", "--testTimeout=100", "--testNamePattern=x", "tests/",
+    })
+
+    check("--option without a value is true", options.bail, true)
+    check("--no-option is false", options.colors, false)
+    check("repeated list options are collected", options.roots, { "./a", "./b" })
+    check("number options are numbers", options.testTimeout, 100)
+    check("--option=value is the value", options.testNamePattern, "x")
+    check("arguments that aren't options are paths", paths, { "tests/" })
+end
+
+-- Finding test files and running them from the command line
+do
+    local hasFileSystem = pcall(require, "lfs") or pcall(require, "luv")
+
+    if not hasFileSystem then
+        print("Skipping the checks for finding test files, because LuaFileSystem isn't installed.")
+    else
+        local cli = require "jestronaut/cli"
+
+        local function runCli(args)
+            local reporter = newRecordingReporter()
+            local exitCode = cli.run(args, { reporter = reporter })
+
+            return exitCode, reporter.recorded
+        end
+
+        local exitCode, recorded = runCli({ "--roots=./tests/fixtures/discovery" })
+        check("test files are found by name, skipping other files, hidden directories and lua_modules",
+            recorded.passed, { "math adds", "strings concatenate", "deep test" })
+        check("the exit code is 0 when all tests pass", exitCode, 0)
+
+        _, recorded = runCli({ "./tests/fixtures/discovery/math_test.lua" })
+        check("test files given as paths run on their own", recorded.passed, { "math adds" })
+
+        _, recorded = runCli({ "./tests/fixtures/discovery/nested" })
+        check("directories given as paths are searched for test files", recorded.passed, { "deep test" })
+
+        _, recorded = runCli({ "--roots=./tests/fixtures/discovery", "nested" })
+        check("other paths only run test files whose path contains them", recorded.passed, { "deep test" })
+
+        _, recorded = runCli({ "--roots=./tests/fixtures/discovery", "--testMatch=helper.lua" })
+        check("testMatch changes which files are test files", recorded.passed, { "helper test" })
+
+        exitCode, recorded = runCli({ "--roots=./tests/fixtures/discovery-broken" })
+        check("test files that fail to load are reported as a failing test", recorded.failed,
+            { "Test suite failed to run" })
+        check("other test files still run when one fails to load", recorded.passed, { "works" })
+        check("the exit code is 1 when a test fails", exitCode, 1)
+
+        exitCode = runCli({ "--roots=./tests/fixtures/discovery-empty" })
+        check("finding no tests fails", exitCode, 1)
+
+        exitCode = runCli({ "--roots=./tests/fixtures/discovery-empty", "--passWithNoTests" })
+        check("finding no tests passes with passWithNoTests", exitCode, 0)
+    end
+end
+
 -- Counts (issue #10)
 do
     local expectedCounts = { totalCount = 8, passedCount = 4, failedCount = 1, skippedCount = 2, todoCount = 1 }

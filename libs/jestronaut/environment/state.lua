@@ -65,10 +65,59 @@ local function setRoots(roots)
     rootFilePaths = roots
 end
 
---- Gets the file path and line number of the test by checking the stack trace until it reaches beyond the root of this package.
+--- Path parts that only occur in paths of Jestronaut's own files, however its modules were loaded. Garry's Mod for
+--- example loads them with include, so they don't appear in package.loaded.
+local LIBRARY_PATH_PARTS = {
+    "/jestronaut.lua",
+    "/jestronaut/environment/", "/jestronaut/expect/", "/jestronaut/mock/", "/jestronaut/utils/",
+    "/jestronaut/cli.lua", "/jestronaut/coverage.lua", "/jestronaut/discovery.lua", "/jestronaut/each.lua",
+    "/jestronaut/environment.lua", "/jestronaut/expect.lua", "/jestronaut/faketimers.lua", "/jestronaut/mock.lua",
+    "/jestronaut/plainreporter.lua", "/jestronaut/reporter.lua",
+}
+
+--- Gets the path parts that identify Jestronaut's own files: those of LIBRARY_PATH_PARTS, and the path endings of
+--- all loaded Jestronaut modules, like "/jestronaut/utils/functions.lua".
+--- @return string[]
+local function getLibraryPathSuffixes()
+    local suffixes = {}
+
+    for _, part in ipairs(LIBRARY_PATH_PARTS) do
+        table.insert(suffixes, part)
+    end
+
+    for moduleName in pairs(package.loaded) do
+        if type(moduleName) == "string" and (moduleName == "jestronaut" or moduleName:sub(1, 11) == "jestronaut/") then
+            table.insert(suffixes, "/" .. moduleName .. ".lua")
+            table.insert(suffixes, "/" .. moduleName .. "/init.lua")
+        end
+    end
+
+    return suffixes
+end
+
+--- Checks whether a path (or a line of a stack traceback) points into Jestronaut's own files.
+--- @param path string
+--- @param libraryPathSuffixes? string[]
+--- @return boolean
+local function isLibraryPath(path, libraryPathSuffixes)
+    -- Start the path with a slash, so relative paths like "jestronaut/utils/functions.lua" match too
+    path = "/" .. path:gsub("\\", "/"):gsub("^%s+", "")
+
+    for _, suffix in ipairs(libraryPathSuffixes or getLibraryPathSuffixes()) do
+        if path:find(suffix, 1, true) then
+            return true
+        end
+    end
+
+    return false
+end
+
+--- Gets the file path and line number of the test: the first frame in the stack trace that is inside one of the roots,
+--- skipping Jestronaut's own files (which can be inside a root too, e.g. in a project's lua_modules).
 --- @return string, number
 local function getTestFilePath()
     local filePath, lineNumber
+    local libraryPathSuffixes = getLibraryPathSuffixes()
     local i = 1
 
     while true do
@@ -82,7 +131,9 @@ local function getTestFilePath()
 
         local path = stringsLib.normalizePath(info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source)
 
-        if rootFilePaths ~= nil then
+        if rootFilePaths ~= nil and isLibraryPath(path, libraryPathSuffixes) then
+            -- Jestronaut's own files are never test files
+        elseif rootFilePaths ~= nil then
             local found = false
 
             -- Check if the file path contains the root file path. If it does, then we've found the test
@@ -119,45 +170,7 @@ local function isLibraryFrame(line, libraryPathSuffixes)
         return true
     end
 
-    -- Start the path with a slash, so relative paths like "jestronaut/utils/functions.lua" match too
-    line = "/" .. line:gsub("\\", "/"):gsub("^%s+", "")
-
-    for _, suffix in ipairs(libraryPathSuffixes) do
-        if line:find(suffix, 1, true) then
-            return true
-        end
-    end
-
-    return false
-end
-
---- Path parts that only occur in frames inside Jestronaut, however its modules were loaded. Garry's Mod for example
---- loads them with include, so they don't appear in package.loaded.
-local LIBRARY_PATH_PARTS = {
-    "/jestronaut.lua:",
-    "/jestronaut/environment/", "/jestronaut/expect/", "/jestronaut/mock/", "/jestronaut/utils/",
-    "/jestronaut/coverage.lua:", "/jestronaut/each.lua:", "/jestronaut/environment.lua:", "/jestronaut/expect.lua:",
-    "/jestronaut/mock.lua:", "/jestronaut/plainreporter.lua:", "/jestronaut/reporter.lua:",
-}
-
---- Gets the path parts that identify frames inside Jestronaut: those of LIBRARY_PATH_PARTS, and the path endings of
---- all loaded Jestronaut modules, like "/jestronaut/utils/functions.lua:".
---- @return string[]
-local function getLibraryPathSuffixes()
-    local suffixes = {}
-
-    for _, part in ipairs(LIBRARY_PATH_PARTS) do
-        table.insert(suffixes, part)
-    end
-
-    for moduleName in pairs(package.loaded) do
-        if type(moduleName) == "string" and (moduleName == "jestronaut" or moduleName:sub(1, 11) == "jestronaut/") then
-            table.insert(suffixes, "/" .. moduleName .. ".lua:")
-            table.insert(suffixes, "/" .. moduleName .. "/init.lua:")
-        end
-    end
-
-    return suffixes
+    return isLibraryPath(line, libraryPathSuffixes)
 end
 
 --- Removes frames from the stack traceback that are inside Jestronaut, or that called the test (everything from the
@@ -1182,10 +1195,13 @@ local function registerDescribeOrTest(describeOrTest)
             .. "inside a describe block.", 4)
     end
 
-    local filePath, lineNumber = getTestFilePath()
+    -- Tests created by Jestronaut itself, like for test files that failed to load, already have a file path
+    if rawget(describeOrTest, "filePath") == nil then
+        local filePath, lineNumber = getTestFilePath()
 
-    describeOrTest.filePath = filePath
-    describeOrTest.lineNumber = lineNumber
+        describeOrTest.filePath = filePath
+        describeOrTest.lineNumber = lineNumber
+    end
 
     if not currentParent then
         currentParent = describeOrTest
@@ -1199,9 +1215,14 @@ local function registerDescribeOrTest(describeOrTest)
         local oldParent = currentParent
         currentParent = describeOrTest
 
-        describeOrTest.fn()
+        -- Restore the parent when the describe raises an error, so tests registered afterwards don't end up in it
+        local success, err = pcall(describeOrTest.fn)
 
         currentParent = oldParent
+
+        if not success then
+            error(err, 0)
+        end
     end
 
     return describeOrTest
@@ -1294,8 +1315,15 @@ local function runTests(runnerOptions, onFinished)
             reporter:printEnd(testSetRoot, counts.failed, counts.skipped, duration)
         end
 
+        -- Like Jest, finding no tests at all fails the run, since it usually means the tests weren't found
+        local noTestsFound = counts.total == 0 and not runnerOptions.passWithNoTests
+
+        if noTestsFound then
+            print("No tests found. Check the roots and testMatch options, or set passWithNoTests to pass without tests.")
+        end
+
         local results = {
-            success = counts.failed == 0 and not bailed,
+            success = counts.failed == 0 and not bailed and not noTestsFound,
             bailed = bailed,
             totalCount = counts.total,
             passedCount = counts.passed,
