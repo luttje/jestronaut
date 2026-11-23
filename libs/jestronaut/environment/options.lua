@@ -2,7 +2,9 @@ local copy = require "jestronaut/utils/tables".copy
 
 --- @class RunnerOptions
 local RUNNER_DEFAULT_OPTIONS = {
-    bail = 1,
+    --- Stop running tests after this many tests have failed. `0` or `false` runs all tests, `true` is the same as `1`.
+    --- @type number|boolean
+    bail = 0,
     -- cache = true,
     -- changedFilesWithAncestor = true,
     -- changedSince = true,
@@ -78,6 +80,26 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- workerThreads = true,
 }
 
+--- Turns the bail option into the number of failed tests after which to stop (0 means never stop).
+--- Accepts booleans and numeric strings (as passed on the command line).
+--- @param bail number|boolean|string|nil
+--- @return number
+local function normalizeBail(bail)
+    if bail == nil or bail == false then
+        return 0
+    elseif bail == true then
+        return 1
+    end
+
+    local count = tonumber(bail)
+
+    if count == nil or count < 0 then
+        error("Invalid bail option: " .. tostring(bail) .. ". Expected a non-negative number or a boolean.", 3)
+    end
+
+    return count
+end
+
 --- @param options RunnerOptions
 --- @return RunnerOptions
 local function merge(options)
@@ -86,6 +108,8 @@ local function merge(options)
     for key, value in pairs(options) do
         mergedOptions[key] = value
     end
+
+    mergedOptions.bail = normalizeBail(mergedOptions.bail)
 
     return mergedOptions
 end

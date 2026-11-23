@@ -26,6 +26,9 @@ local testLocalStates = {}
 --- @type DescribeOrTest?
 local currentParent = nil
 
+--- Number of tests that failed so far during the current run, used to decide when to bail.
+local totalFailedTestCount = 0
+
 local function getCurrentDescribeOrTest()
     return currentDescribeOrTest
 end
@@ -323,13 +326,14 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
             self.errors = results
         end
 
+        local isReported = false
+
         if (success or (not retrySettings or retrySettings.options.logErrorsBeforeRetry)) then
             reporter:testFinished(self, success, unpack(results))
+            isReported = true
         end
 
         if not success then
-            failedTestCount = failedTestCount + 1
-
             if retrySettings and retrySettings.timesRemaining then
                 if retrySettings.timesRemaining > 0 then
                     retrySettings.timesRemaining = retrySettings.timesRemaining - 1
@@ -340,12 +344,17 @@ function DESCRIBE_OR_TEST_META:run(reporter, runnerOptions)
                 end
             end
 
-            if runnerOptions.bail ~= nil and failedTestCount >= runnerOptions.bail then
-                reporter:testFinished(self, success, unpack(results))
+            failedTestCount = failedTestCount + 1
+            totalFailedTestCount = totalFailedTestCount + 1
+
+            if runnerOptions.bail > 0 and totalFailedTestCount >= runnerOptions.bail then
+                if not isReported then
+                    reporter:testFinished(self, success, unpack(results))
+                end
 
                 error("Bail after " ..
-                failedTestCount ..
-                " failed " .. (failedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
+                totalFailedTestCount ..
+                " failed " .. (totalFailedTestCount == 1 and "test" or "tests") .. " with error: \n" .. tostring(results[1]))
             end
         end
     else
@@ -557,6 +566,7 @@ local function runTests(runnerOptions)
 
     reporter:startTestSet(testSetRoot, describesByFilePath)
 
+    totalFailedTestCount = 0
     local startTime = os.clock()
     local success, errOrFailedTestCount = pcall(testSetRoot.run, testSetRoot, reporter, runnerOptions)
     local endTime = os.clock()
