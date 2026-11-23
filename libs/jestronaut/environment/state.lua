@@ -130,10 +130,12 @@ local function getTestFilePath()
             break
         end
 
-        local path = stringsLib.normalizePath(info.source:sub(1, 1) == "@" and info.source:sub(2) or info.source)
+        local isFile = info.source:sub(1, 1) == "@"
+        local path = stringsLib.normalizePath(isFile and info.source:sub(2) or info.source)
 
-        if rootFilePaths ~= nil and isLibraryPath(path, libraryPathSuffixes) then
-            -- Jestronaut's own files are never test files
+        if rootFilePaths ~= nil and (not isFile or isLibraryPath(path, libraryPathSuffixes)) then
+            -- Only files are test files, not C functions, tail calls ("=(tail call)" in Lua 5.1) or strings loaded
+            -- as code. Jestronaut's own files never are.
         elseif rootFilePaths ~= nil then
             local found = false
 

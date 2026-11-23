@@ -10,7 +10,7 @@ local failures = {}
 
 --- A reporter that prints nothing and records which tests passed, failed or were skipped.
 local function newRecordingReporter()
-    local recorded = { passed = {}, failed = {}, skipped = {}, errors = {}, output = {} }
+    local recorded = { passed = {}, failed = {}, skipped = {}, errors = {}, output = {}, filePaths = {} }
     local reporter = setmetatable({ recorded = recorded }, {
         __index = function()
             return function() end
@@ -26,6 +26,7 @@ local function newRecordingReporter()
             end
 
             recorded.output[describeOrTest.name] = describeOrTest.output
+            recorded.filePaths[describeOrTest.name] = describeOrTest.filePath
         end
     end
 
@@ -452,6 +453,21 @@ do
         :runTests()
 
     check("fake timers installed in one test file don't affect the next", FAKE_TIMERS_LEAKED, false)
+end
+
+-- Test file paths
+do
+    local reporter = newRecordingReporter()
+
+    jestronaut
+        :configure({ roots = { "./" }, reporter = reporter, exitOnFailure = false })
+        :registerTests({ "./tests/fixtures/names.lua" })
+        :runTests()
+
+    for name, filePath in pairs(reporter.recorded.filePaths) do
+        check(name .. ": tests in nested describes get the path of their file, also with ./ as root", filePath,
+            "./tests/fixtures/names.lua")
+    end
 end
 
 -- Counts (issue #10)
