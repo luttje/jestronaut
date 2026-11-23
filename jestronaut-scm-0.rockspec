@@ -95,5 +95,8 @@ build = {
       bin = {
          jestronaut = "bin/jestronaut"
       }
+   },
+   copy_directories = {
+      "types"
    }
 }
