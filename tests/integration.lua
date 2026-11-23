@@ -238,6 +238,138 @@ do
     check("print is restored after the run", print == printBefore, true)
 end
 
+--- Creates an event loop with timers and a fake clock that advances 10 ms on every tick, so waiting takes no real time.
+local function newFakeEventLoop()
+    local loop = { time = 0, timers = {} }
+
+    function loop.now()
+        return loop.time
+    end
+
+    function loop.setTimeout(milliseconds, callback)
+        table.insert(loop.timers, { at = loop.time + milliseconds / 1000, callback = callback })
+    end
+
+    function loop.tick()
+        loop.time = loop.time + 0.01
+
+        local due = {}
+
+        for i = #loop.timers, 1, -1 do
+            if loop.timers[i].at <= loop.time then
+                table.insert(due, 1, table.remove(loop.timers, i))
+            end
+        end
+
+        for _, timer in ipairs(due) do
+            timer.callback()
+        end
+    end
+
+    return loop
+end
+
+-- Asynchronous tests (issue #12)
+do
+    local canCountParameters = require "jestronaut/environment/async".CAN_COUNT_PARAMETERS
+
+    ASYNC_LOOP = newFakeEventLoop()
+    local results, recorded = run("async", { eventLoop = { tick = ASYNC_LOOP.tick, now = ASYNC_LOOP.now } })
+
+    local expectedPassed = {
+        "calls done right away", "calls done later", "counts assertions made in callbacks",
+        "can be expected to fail", "sees what an async beforeEach set up", "runs concurrent tests",
+    }
+    local expectedFailed = {
+        "passes an error to done", "never calls done", "fails an expect in a callback", "calls done more than once",
+    }
+
+    if canCountParameters then
+        table.insert(expectedPassed, "detects functions that take done")
+    else
+        table.insert(expectedFailed, "explains how to mark functions on Lua 5.1")
+    end
+
+    check("asynchronous tests pass once they call done", recorded.passed, expectedPassed)
+    check("asynchronous tests fail on errors, timeouts and failing expects in callbacks", recorded.failed,
+        expectedFailed)
+    check("results count asynchronous tests", results.failedCount, #expectedFailed)
+
+    local errors = recorded.errors
+
+    check("an error passed to done is the failure message",
+        (errors["passes an error to done"] or ""):find("something went wrong", 1, true) ~= nil, true)
+    check("a test that doesn't call done times out after its timeout",
+        (errors["never calls done"] or ""):find("Test timed out after 100 ms", 1, true) ~= nil, true)
+    check("a failing expect in a callback fails the test with its message",
+        (errors["fails an expect in a callback"] or ""):find("Expected: 2", 1, true) ~= nil, true)
+    check("calling done twice fails the test",
+        (errors["calls done more than once"] or ""):find("called done more than once", 1, true) ~= nil, true)
+
+    if not canCountParameters then
+        check("on Lua 5.1 calling done in an unmarked function explains jestronaut:async",
+            (errors["explains how to mark functions on Lua 5.1"] or ""):find("jestronaut:async", 1, true) ~= nil, true)
+    end
+
+    ASYNC_LOOP = newFakeEventLoop()
+    _, recorded = run("async", {})
+
+    check("without an event loop, tests that call done right away pass",
+        recorded.passed[1] == "calls done right away" or recorded.passed[2] == "calls done right away", true)
+    check("without an event loop, tests that wait for done fail and say why",
+        (recorded.errors["calls done later"] or ""):find("no event loop is configured", 1, true) ~= nil, true)
+end
+
+-- Asynchronous tests in an application that runs its own loop
+do
+    local hostOutput = {}
+    local printBefore = print
+
+    print = function(...)
+        table.insert(hostOutput, table.concat({ ... }, "\t"))
+    end
+
+    ASYNC_LOOP = newFakeEventLoop()
+
+    local reporter = newRecordingReporter()
+    local runResults
+    local tickCount = 0
+
+    jestronaut
+        :configure({
+            roots = { "./tests/fixtures/" },
+            reporter = reporter,
+            exitOnFailure = false,
+            eventLoop = { external = true, now = ASYNC_LOOP.now },
+        })
+        :registerTests(function()
+            dofile("./tests/fixtures/async-external.lua")
+        end)
+        :runTests(function(results)
+            runResults = results
+        end)
+
+    check("runTests returns before tests that wait for the host have finished", runResults, nil)
+
+    while not jestronaut:tick() and tickCount < 1000 do
+        print("from the host")
+        ASYNC_LOOP.tick()
+        tickCount = tickCount + 1
+    end
+
+    print = printBefore
+
+    local recorded = reporter.recorded
+
+    check("the run finishes once the host has called tick enough", runResults ~= nil, true)
+    check("tests continue when the host calls tick", recorded.passed,
+        { "waits for the host to call tick", "runs after the asynchronous tests" })
+    check("tests time out while the host calls tick", recorded.failed, { "times out while the host calls tick" })
+    checkSequence("output printed by the host while a test waits isn't captured for the test",
+        recorded.output["waits for the host to call tick"], { "from the test" })
+    check("output printed by the host while a test waits is printed normally", hostOutput[1], "from the host")
+end
+
 -- Counts (issue #10)
 do
     local expectedCounts = { totalCount = 8, passedCount = 4, failedCount = 1, skippedCount = 2, todoCount = 1 }

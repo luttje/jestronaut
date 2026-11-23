@@ -239,6 +239,70 @@ it:each({{1, 1, 2}, {1, 2, 3}, {2, 1, 3}})(
 
 Check out [the Jestronaut tests](https://github.com/luttje/jestronaut/tree/main/tests) for more examples.
 
+### Testing asynchronous code
+
+Like [in Jest](https://jestjs.io/docs/asynchronous#callbacks), a test (or hook) that takes a `done` parameter only finishes once it calls `done`. Pass an error to `done` to fail the test:
+
+```lua
+it("fetches the data", function(done)
+  fetchData(function(err, data)
+    if err then
+      done(err)
+      return
+    end
+
+    expect(data):toBe("peanut butter")
+    done()
+  end)
+end, 1000) -- Optional timeout in milliseconds, defaults to the testTimeout option (5000)
+```
+
+On Lua 5.1 Jestronaut can't see whether a function takes a parameter, so wrap asynchronous functions with `jestronaut:async`. This works on every Lua version:
+
+```lua
+it("fetches the data", jestronaut:async(function(done)
+  -- ...
+end))
+```
+
+To wait for `done`, Jestronaut needs to know how your code runs its callbacks. Set the `eventLoop` option to one of:
+
+* `tick`: a function Jestronaut calls repeatedly while it waits. Errors raised in it, like a failing `expect` in a callback, fail the test. For example with [luv](https://github.com/luvit/luv):
+
+    ```lua
+    local uv = require "luv"
+
+    jestronaut:configure({
+      roots = { "./tests/" },
+      eventLoop = {
+        tick = function() uv.run("once") end,
+        now = function() return uv.now() / 1000 end, -- Current time in seconds, used for timeouts
+      },
+    })
+    ```
+
+* `external = true`: for applications that run their own loop, like games. `runTests` returns right away and the tests continue each time you call `jestronaut:tick()`, which returns `true` once they are done. Errors raised in callbacks are handled by your application, so pass them to `done` yourself. For example in Garry's Mod:
+
+    ```lua
+    jestronaut
+      :configure({
+        roots = { "addons/my_addon/lua/tests/" },
+        eventLoop = { external = true, now = SysTime },
+      })
+      :registerTests(function() --[[ ... ]] end)
+      :runTests(function(results)
+        print("Tests finished, " .. results.failedCount .. " failed")
+      end)
+
+    hook.Add("Think", "RunJestronautTests", function()
+      if jestronaut:tick() then
+        hook.Remove("Think", "RunJestronautTests")
+      end
+    end)
+    ```
+
+Without an `eventLoop`, tests can still call `done` before they return. `test.concurrent` tests are supported, but run one after another.
+
 ## 🦾 Contributing
 
 Contributions are welcome! Check out [`CONTRIBUTING.md`](./CONTRIBUTING.md) for more information.

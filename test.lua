@@ -13,7 +13,7 @@ jestronaut
       -- Jestronaut will automatically ignore any files listed here. If the path starts and ends with / it will be treated as a Lua pattern.
       testPathIgnorePatterns = {
         "/tests/generated/ExpectAPI/toBeCloseTo.lua$/", -- This test fails because of floating point errors (the example in Jest docs is meant to fail)
-        "/tests/generated/GlobalAPI/test.lua$/",      -- This test fails because of async not being supported
+        "/tests/generated/GlobalAPI/test.lua$/",      -- This test returns a promise, which Jestronaut doesn't support
 
         -- Fake timer functions not supported yet:
         "tests/generated/JestObjectAPI/jest/useFakeTimers.lua",

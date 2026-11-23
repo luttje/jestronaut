@@ -27,6 +27,16 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- detectOpenHandles = true,
     -- env = "lua",
     -- errorOnDeprecated = true,
+    --- Lets tests and hooks that take a done callback wait for asynchronous work. Without it, they must call done
+    --- before returning. Set one of:
+    --- - `tick`: a function that Jestronaut calls repeatedly while waiting, e.g. to run one iteration of your event
+    ---   loop (`function() uv.run("once") end` with luv) or to update your timers.
+    --- - `external = true`: for applications that run their own loop, like games. Call `jestronaut:tick()` regularly
+    ---   (e.g. every frame) to continue the tests, and use the callback of `runTests` to get the results.
+    --- Optionally also set `now`, a function returning the current time in seconds, used for timeouts. Defaults to
+    --- os.clock, which measures CPU time.
+    --- @type { tick?: fun(), external?: boolean, now?: fun(): number }?
+    eventLoop = nil,
     --- Exit the process with status code 1 when any test fails, so CI can detect failures.
     --- Only has effect where `os.exit` is available. Set to false when embedding Jestronaut in a host application.
     --- @type boolean
@@ -80,7 +90,10 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- testPathPattern = "",
     -- testRunner = "",
     -- testSequencer = "",
-    -- testTimeout = 5000,
+    --- How long tests and hooks that take a done callback may take to call it, in milliseconds. A single test can set
+    --- its own timeout with the third argument of `it`/`test`, a hook with the second argument.
+    --- @type number
+    testTimeout = 5000,
     -- updateSnapshot = true,
     -- useStderr = true,
     -- verbose = true,

@@ -76,6 +76,7 @@ return {
     setRoots = stateLib.setRoots,
     registerTests = stateLib.registerTests,
     runTests = stateLib.runTests,
+    tick = stateLib.tick,
 
     setTimeout = setTimeout,
     exposeTo = exposeTo,

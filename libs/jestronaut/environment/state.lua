@@ -2,8 +2,9 @@ local unpack = table.unpack or unpack
 
 local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
-local functionLib = require "jestronaut/utils/functions"
+local asyncLib = require "jestronaut/environment/async"
 local stringsLib = require "jestronaut/utils/strings"
+local formatLib = require "jestronaut/utils/format"
 
 local rootFilePaths
 
@@ -20,6 +21,20 @@ local totalFailedTestCount = 0
 
 --- Errors of beforeAll hooks that failed during the current run, by hook entry.
 local failedBeforeAllHooks = {}
+
+--- The options of the current run.
+--- @type RunnerOptions?
+local activeRunnerOptions = nil
+
+--- The run that is waiting for the host to call tick, when the eventLoop option has `external` set.
+local activeRun = nil
+
+--- True while the runner's coroutine is yielded to wait for the host.
+local isWaitingForHost = false
+
+--- The print functions to switch between while a test runs: `capture` stores output for the test, `previous` is the
+--- print from before the test.
+local activePrintCapture = nil
 
 --- Thrown (and caught by runTests) to stop the run when the bail threshold is reached.
 local BAIL_SIGNAL_META = {
@@ -248,14 +263,16 @@ end
 
 --- Registers a hook in the current scope.
 --- @param kind string
---- @param fn function
-local function registerHook(kind, fn)
-    if type(fn) ~= "function" then
+--- @param fn function|table A function, or one wrapped with jestronaut:async.
+--- @param timeout? number How long to wait for done to be called, in milliseconds.
+local function registerHook(kind, fn, timeout)
+    if type(fn) ~= "function" and not asyncLib.isMarkedAsync(fn) then
         error(kind .. " expects a function, got " .. type(fn), 3)
     end
 
     local entry, scope = newScopedEntry(kind)
     entry.fn = fn
+    entry.timeout = timeout
 
     if not rawget(scope, "hooks") then
         scope.hooks = { beforeAll = {}, beforeEach = {}, afterAll = {}, afterEach = {} }
@@ -265,19 +282,19 @@ local function registerHook(kind, fn)
 end
 
 local function afterAll(fn, timeout)
-    registerHook("afterAll", fn)
+    registerHook("afterAll", fn, timeout)
 end
 
 local function afterEach(fn, timeout)
-    registerHook("afterEach", fn)
+    registerHook("afterEach", fn, timeout)
 end
 
 local function beforeAll(fn, timeout)
-    registerHook("beforeAll", fn)
+    registerHook("beforeAll", fn, timeout)
 end
 
 local function beforeEach(fn, timeout)
-    registerHook("beforeEach", fn)
+    registerHook("beforeEach", fn, timeout)
 end
 
 --- Sets how many times failing tests in the current scope (file or describe) are retried.
@@ -397,11 +414,133 @@ function DESCRIBE_OR_TEST_META:addChild(child)
     end
 end
 
+--- Sets print to the function that captures the output of the running test, or back to what it was.
+--- @param isCapturing boolean
+local function setPrintCapture(isCapturing)
+    if activePrintCapture then
+        print = isCapturing and activePrintCapture.capture or activePrintCapture.previous
+    end
+end
+
+--- Waits until `isDone` returns true, using the event loop from the runner options:
+--- - with `eventLoop.tick`, tick is called repeatedly. Errors raised by it (e.g. by a failing expect in a callback)
+---   end the wait with that error.
+--- - with `eventLoop.external`, the runner's coroutine yields until the host calls jestronaut:tick() again.
+--- Returns false and an error message when the timeout passes first, or when no event loop is configured.
+--- @param isDone fun(): boolean
+--- @param timeout number In milliseconds.
+--- @param description string What is being waited for, e.g. "Test", for error messages.
+--- @return boolean, string?
+local function waitUntil(isDone, timeout, description)
+    if isDone() then
+        return true
+    end
+
+    local eventLoop = activeRunnerOptions and activeRunnerOptions.eventLoop
+
+    if type(eventLoop) ~= "table" or not (eventLoop.tick or eventLoop.external) then
+        return false, description .. " didn't call done before returning, and no event loop is configured to wait " ..
+            "for it. Set the eventLoop option to let Jestronaut wait."
+    end
+
+    local now = eventLoop.now or os.clock
+    local deadline = now() + timeout / 1000
+
+    while not isDone() do
+        if now() >= deadline then
+            return false, description .. " timed out after " .. timeout .. " ms while waiting for done to be called"
+        end
+
+        if eventLoop.tick then
+            local success, err = xpcall(eventLoop.tick, traceErrorHandler)
+
+            if not success then
+                return false, err
+            end
+        else
+            setPrintCapture(false)
+            isWaitingForHost = true
+            coroutine.yield()
+            isWaitingForHost = false
+            setPrintCapture(true)
+        end
+    end
+
+    return true
+end
+
+--- Formats the value a test or hook passed to done.
+--- @param err any
+--- @return string
+local function formatDoneError(err)
+    if type(err) == "string" then
+        return err
+    elseif type(err) == "table" and err.message ~= nil then
+        return tostring(err.message)
+    end
+
+    return "done was called with " .. formatLib.format(err)
+end
+
+--- Calls a test or hook function. When it takes a done callback (see jestronaut/environment/async), waits for done
+--- to be called, failing when it isn't within the timeout or when it receives an error.
+--- @param fnOrAsync function|table
+--- @param timeout number In milliseconds.
+--- @param description string e.g. "Test" or "beforeEach hook", for error messages.
+--- @return boolean, string?
+local function callFunction(fnOrAsync, timeout, description)
+    local fn, isAsync = asyncLib.getFunction(fnOrAsync)
+
+    if not isAsync then
+        if asyncLib.CAN_COUNT_PARAMETERS then
+            return xpcall(fn, traceErrorHandler)
+        end
+
+        return xpcall(function()
+            fn(asyncLib.doneOnLua51)
+        end, traceErrorHandler)
+    end
+
+    local doneCallCount = 0
+    local doneError
+
+    local function done(err)
+        doneCallCount = doneCallCount + 1
+
+        if doneCallCount == 1 then
+            doneError = err
+        end
+    end
+
+    local success, err = xpcall(function()
+        fn(done)
+    end, traceErrorHandler)
+
+    if not success then
+        return false, err
+    end
+
+    local isFinished, waitError = waitUntil(function()
+        return doneCallCount > 0
+    end, timeout, description)
+
+    if not isFinished then
+        return false, waitError
+    elseif doneError ~= nil then
+        return false, formatDoneError(doneError)
+    elseif doneCallCount > 1 then
+        return false, description .. " called done more than once"
+    end
+
+    return true
+end
+
 --- Runs a single hook, returning false and an error message if it failed.
 --- @param entry table
 --- @return boolean, string?
 local function runHook(entry)
-    local success, err = xpcall(entry.fn, traceErrorHandler)
+    local timeout = entry.timeout or activeRunnerOptions.testTimeout
+    local success, err = callFunction(entry.fn, timeout, entry.kind .. " hook")
 
     if not success then
         return false, entry.kind .. " hook failed: " .. tostring(err)
@@ -453,11 +592,12 @@ function DESCRIBE_OR_TEST_META:runAttempt()
     end
 
     if success then
-        local testSuccess, results = functionLib.captureSafeCallInTable(xpcall(self.fn, traceErrorHandler))
+        local timeout = rawget(self, "timeout") or activeRunnerOptions.testTimeout
+        local testSuccess, err = callFunction(self.fn, timeout, "Test")
 
         if not testSuccess then
             success = false
-            errors = results
+            errors = { err }
         end
     end
 
@@ -506,17 +646,21 @@ function DESCRIBE_OR_TEST_META:runTest(reporter, runnerOptions)
 
     -- Capture what the test and its hooks print, so reporters can show it without it interfering with their output
     local output = {}
-    local previousPrint = print
 
-    print = function(...)
-        local parts = {}
+    activePrintCapture = {
+        previous = print,
+        capture = function(...)
+            local parts = {}
 
-        for i = 1, select("#", ...) do
-            parts[i] = tostring((select(i, ...)))
-        end
+            for i = 1, select("#", ...) do
+                parts[i] = tostring((select(i, ...)))
+            end
 
-        table.insert(output, table.concat(parts, "\t"))
-    end
+            table.insert(output, table.concat(parts, "\t"))
+        end,
+    }
+
+    setPrintCapture(true)
 
     for _, entry in ipairs(self.beforeAllHooksToRun) do
         local success, err = runHook(entry)
@@ -562,7 +706,8 @@ function DESCRIBE_OR_TEST_META:runTest(reporter, runnerOptions)
     end
 
     currentDescribeOrTest = nil
-    print = previousPrint
+    setPrintCapture(false)
+    activePrintCapture = nil
 
     self.output = output
     self.success = success
@@ -1068,10 +1213,12 @@ end
 --- @field todoCount number
 --- @field duration number # In seconds.
 
---- Runs all registered tests.
+--- Runs all registered tests and calls onFinished with the results. When the tests finish without waiting for the
+--- host, the results are also returned. Otherwise the run continues each time `tick` is called.
 --- @param runnerOptions RunnerOptions
---- @return TestRunResults
-local function runTests(runnerOptions)
+--- @param onFinished? fun(results: TestRunResults)
+--- @return TestRunResults?
+local function runTests(runnerOptions, onFinished)
     -- Pass modified require's on through
     local reporter = callRespectingRequireOverride(function()
         if runnerOptions.reporter then
@@ -1099,37 +1246,85 @@ local function runTests(runnerOptions)
 
     totalFailedTestCount = 0
     failedBeforeAllHooks = {}
+    activeRunnerOptions = runnerOptions
 
-    local startTime = os.clock()
-    local success, err = pcall(testSetRoot.run, testSetRoot, reporter, runnerOptions)
-    local endTime = os.clock()
+    local eventLoop = type(runnerOptions.eventLoop) == "table" and runnerOptions.eventLoop or {}
+    local now = eventLoop.now or os.clock
+    local startTime = now()
 
-    currentDescribeOrTest = nil
+    -- The run happens in a coroutine, so it can yield while waiting for the host (see the eventLoop option). Errors
+    -- end the coroutine, so they are caught without a pcall, which Lua 5.1 can't yield across.
+    local runCoroutine = coroutine.create(function()
+        return testSetRoot:run(reporter, runnerOptions)
+    end)
 
-    local counts = countTests(tests)
-    local bailed = false
+    local function finish(success, err)
+        local duration = now() - startTime
 
-    if not success then
-        if getmetatable(err) ~= BAIL_SIGNAL_META then
-            error(err, 0)
+        activeRun = nil
+        activeRunnerOptions = nil
+        currentDescribeOrTest = nil
+
+        local counts = countTests(tests)
+        local bailed = false
+
+        if not success then
+            if getmetatable(err) ~= BAIL_SIGNAL_META then
+                error(debug.traceback(runCoroutine, tostring(err)), 0)
+            end
+
+            bailed = true
+            reporter:printBailed(testSetRoot, tostring(err))
+        else
+            reporter:printEnd(testSetRoot, counts.failed, counts.skipped, duration)
         end
 
-        bailed = true
-        reporter:printBailed(testSetRoot, tostring(err))
-    else
-        reporter:printEnd(testSetRoot, counts.failed, counts.skipped, endTime - startTime)
+        local results = {
+            success = counts.failed == 0 and not bailed,
+            bailed = bailed,
+            totalCount = counts.total,
+            passedCount = counts.passed,
+            failedCount = counts.failed,
+            skippedCount = counts.skipped,
+            todoCount = counts.todo,
+            duration = duration,
+        }
+
+        if onFinished then
+            onFinished(results)
+        end
+
+        return results
     end
 
-    return {
-        success = counts.failed == 0 and not bailed,
-        bailed = bailed,
-        totalCount = counts.total,
-        passedCount = counts.passed,
-        failedCount = counts.failed,
-        skippedCount = counts.skipped,
-        todoCount = counts.todo,
-        duration = endTime - startTime,
-    }
+    local function step()
+        local success, err = coroutine.resume(runCoroutine)
+
+        if coroutine.status(runCoroutine) == "dead" then
+            return true, finish(success, err)
+        elseif not isWaitingForHost then
+            error("The test runner's coroutine was yielded by a test. Use your own coroutine to yield in tests.", 0)
+        end
+
+        return false
+    end
+
+    activeRun = { step = step }
+
+    local _, results = step()
+
+    return results
+end
+
+--- Continues the current run when it is waiting for the host (see the `external` field of the eventLoop option).
+--- Call this regularly, e.g. every frame, until it returns true.
+--- @return boolean # True when there is no run waiting anymore.
+local function tick()
+    if not activeRun then
+        return true
+    end
+
+    return (activeRun.step())
 end
 
 return {
@@ -1146,6 +1341,7 @@ return {
     setRoots = setRoots,
     registerTests = registerTests,
     runTests = runTests,
+    tick = tick,
 
     incrementAssertionCount = incrementAssertionCount,
     getAssertionCount = getAssertionCount,
