@@ -258,6 +258,50 @@ describe('matchers', function()
     end)
 end)
 
+describe('matcher lookup', function()
+    it('only finds matchers by their exact name', function()
+        expectFailure(function() expect(1):tobe(1) end, 'Unknown (asymmetric) matcher or modifier: tobe',
+            'Did you mean toBe?')
+        expectFailure(function() expect:varargsmatching(1) end, 'Did you mean varargsMatching?')
+    end)
+
+    it('knows every matcher module listed in the rockspec', function()
+        local expectLib = require 'jestronaut/expect'
+        local file = assert(io.open('jestronaut-scm-0.rockspec', 'r'))
+        local rockspec = file:read('*a')
+        file:close()
+
+        local function modulesIn(folder)
+            local names = {}
+
+            for name in rockspec:gmatch('%["jestronaut/expect/' .. folder .. '/([%w_]+)"%]') do
+                if name ~= 'asymmetricmatcher' then
+                    table.insert(names, name)
+                end
+            end
+
+            table.sort(names)
+
+            return names
+        end
+
+        local function sorted(list)
+            local copy = {}
+
+            for i, name in ipairs(list) do
+                copy[i] = name
+            end
+
+            table.sort(copy)
+
+            return copy
+        end
+
+        expect(sorted(expectLib.MATCHER_NAMES)):toEqual(modulesIn('matchers'))
+        expect(sorted(expectLib.ASYMMETRIC_MATCHER_NAMES)):toEqual(modulesIn('asymmetricmatchers'))
+    end)
+end)
+
 describe('expect.extend', function()
     expect:extend({
         toBeEven = function(received)

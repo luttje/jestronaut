@@ -17,43 +17,80 @@ local modifiers = {
     end,
 }
 
+--- The names of the modules in jestronaut/expect/matchers. Matchers are looked up in this list rather than by trying
+--- to require them, because require is case-insensitive on Windows: a misspelled `tobe` would work there, but not on
+--- other systems.
+local MATCHER_NAMES = {
+    "toBe", "toBeCloseTo", "toBeDefined", "toBeFalsy", "toBeGreaterThan", "toBeGreaterThanOrEqual",
+    "toBeInstanceOf", "toBeLessThan", "toBeLessThanOrEqual", "toBeNaN", "toBeNil", "toBeNull", "toBeTruthy",
+    "toBeType", "toBeUndefined", "toContain", "toContainEqual", "toEqual", "toHaveBeenCalled",
+    "toHaveBeenCalledTimes", "toHaveBeenCalledWith", "toHaveBeenLastCalledWith", "toHaveBeenNthCalledWith",
+    "toHaveLastReturnedWith", "toHaveLength", "toHaveNthReturnedWith", "toHaveProperty", "toHaveReturned",
+    "toHaveReturnedTimes", "toHaveReturnedWith", "toMatch", "toMatchObject", "toStrictEqual", "toThrow",
+    "toThrowError",
+}
+
+--- The names of the modules in jestronaut/expect/asymmetricmatchers, except the asymmetricmatcher base module.
+local ASYMMETRIC_MATCHER_NAMES = {
+    "any", "anything", "arrayContaining", "closeTo", "objectContaining", "stringContaining", "stringMatching",
+    "varargsMatching",
+}
+
+local function toSet(list)
+    local set = {}
+
+    for _, name in ipairs(list) do
+        set[name] = true
+    end
+
+    return set
+end
+
+local MATCHER_SET = toSet(MATCHER_NAMES)
+local ASYMMETRIC_MATCHER_SET = toSet(ASYMMETRIC_MATCHER_NAMES)
+
+local function requireRespectingOverride(modulePath)
+    return callRespectingRequireOverride(function()
+        return require(modulePath)
+    end)
+end
+
 local function getMatcher(key)
     if customMatchers[key] then
         return customMatchers[key]
+    elseif MATCHER_SET[key] then
+        return requireRespectingOverride('jestronaut/expect/matchers/' .. key)
     end
-
-    local modulePath = 'jestronaut/expect/matchers/' .. key
-    local success, matcherOrError = callRespectingRequireOverride(function()
-        return pcall(require, modulePath)
-    end)
-
-    if not success then
-        if not (matcherOrError:find("module '" .. modulePath .. "' not found")) then
-            error(matcherOrError)
-        end
-
-        return nil
-    end
-
-    return matcherOrError
 end
 
-
 local function getAsymmetricMatcher(key)
-    local modulePath = 'jestronaut/expect/asymmetricmatchers/' .. key
-    local success, matcherOrError = callRespectingRequireOverride(function()
-        return pcall(require, modulePath)
-    end)
+    if ASYMMETRIC_MATCHER_SET[key] then
+        return requireRespectingOverride('jestronaut/expect/asymmetricmatchers/' .. key)
+    end
+end
 
-    if not success then
-        if not (matcherOrError:find("module '" .. modulePath .. "' not found")) then
-            error(matcherOrError)
+--- Finds a matcher, asymmetric matcher or modifier whose name only differs in case from the given name.
+--- @param key string
+--- @return string?
+local function findNameWithOtherCase(key)
+    local lowerKey = tostring(key):lower()
+    local candidates = { "not" }
+
+    for _, list in ipairs({ MATCHER_NAMES, ASYMMETRIC_MATCHER_NAMES }) do
+        for _, name in ipairs(list) do
+            table.insert(candidates, name)
         end
-
-        return nil
     end
 
-    return matcherOrError
+    for name in pairs(customMatchers) do
+        table.insert(candidates, name)
+    end
+
+    for _, name in ipairs(candidates) do
+        if name:lower() == lowerKey then
+            return name
+        end
+    end
 end
 
 --- Builds the first line of a failure message, e.g. `expect(received)["not"]:toBe()`. Matchers can set
@@ -176,7 +213,10 @@ EXPECT_META.__index = function(self, key)
         return asymmetricMatcher.default
     end
 
-    error('Unknown (asymmetric) matcher or modifier: ' .. key)
+    local suggestion = findNameWithOtherCase(key)
+
+    error('Unknown (asymmetric) matcher or modifier: ' .. tostring(key) ..
+        (suggestion and (". Did you mean " .. suggestion .. "?") or ""), 2)
 end
 
 function expect(...)
@@ -231,6 +271,8 @@ end
 
 return {
     EXPECT_META = EXPECT_META,
+    MATCHER_NAMES = MATCHER_NAMES,
+    ASYMMETRIC_MATCHER_NAMES = ASYMMETRIC_MATCHER_NAMES,
     expect = expect,
     exposeTo = exposeTo,
 }
