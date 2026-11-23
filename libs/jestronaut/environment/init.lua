@@ -4,14 +4,6 @@ local stateLib = require "jestronaut/environment/state"
 local testLib = require "jestronaut/environment/test"
 local eachLib = require "jestronaut/each"
 
-local fileTestTimeouts = {}
-
--- Set the default timeout interval (in milliseconds) for all tests and before/after hooks in the test file. This only affects the test file from which this function is called. The default timeout interval is 5 seconds if this method is not called.
-local function setTimeout(timeout)
-    local file = debug.getinfo(2, "S").source:sub(2)
-    fileTestTimeouts[file] = timeout
-end
-
 --- Exposes the environment functions to the global environment.
 --- @param targetEnvironment table
 local function exposeTo(targetEnvironment)
@@ -78,7 +70,7 @@ return {
     runTests = stateLib.runTests,
     tick = stateLib.tick,
 
-    setTimeout = setTimeout,
+    setTimeout = stateLib.setTimeout,
     exposeTo = exposeTo,
 
     retryTimes = stateLib.retryTimes,

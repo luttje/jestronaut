@@ -77,3 +77,19 @@ else
 end
 
 it.concurrent("runs concurrent tests", function() end)
+
+describe("with a shorter default timeout", function()
+    jestronaut:setTimeout(50)
+
+    it("times out after the default timeout of its describe", async(function(done) end))
+
+    describe("a hook", function()
+        beforeEach(async(function(done) end))
+
+        it("fails because its beforeEach times out", function() end)
+    end)
+
+    it("can still set its own timeout", async(function(done)
+        setTimeout(80, done)
+    end), 200)
+end)

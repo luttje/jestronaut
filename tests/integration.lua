@@ -279,9 +279,11 @@ do
     local expectedPassed = {
         "calls done right away", "calls done later", "counts assertions made in callbacks",
         "can be expected to fail", "sees what an async beforeEach set up", "runs concurrent tests",
+        "can still set its own timeout",
     }
     local expectedFailed = {
         "passes an error to done", "never calls done", "fails an expect in a callback", "calls done more than once",
+        "times out after the default timeout of its describe", "fails because its beforeEach times out",
     }
 
     if canCountParameters then
@@ -303,6 +305,11 @@ do
         (errors["never calls done"] or ""):find("Test timed out after 100 ms", 1, true) ~= nil, true)
     check("a failing expect in a callback fails the test with its message",
         (errors["fails an expect in a callback"] or ""):find("Expected: 2", 1, true) ~= nil, true)
+    check("jestronaut:setTimeout sets the default timeout of tests in its describe",
+        (errors["times out after the default timeout of its describe"] or ""):find("timed out after 50 ms", 1, true) ~= nil, true)
+    check("jestronaut:setTimeout sets the default timeout of hooks in its describe",
+        (errors["fails because its beforeEach times out"] or ""):find("beforeEach hook timed out after 50 ms", 1, true) ~= nil,
+        true)
     check("calling done twice fails the test",
         (errors["calls done more than once"] or ""):find("called done more than once", 1, true) ~= nil, true)
 

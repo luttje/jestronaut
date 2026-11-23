@@ -233,11 +233,11 @@ end
 --- @return DescribeOrTest, string
 local function getRegistrationScope(kind)
     if currentDescribeOrTest then
-        error(kind .. " cannot be called inside a test. Call it at the top of a test file or inside a describe block.", 4)
+        error(kind .. " cannot be called inside a test. Call it at the top of a test file or inside a describe block.", 5)
     end
 
     if not currentParent then
-        error(kind .. " must be called while registering tests (in the function passed to jestronaut:registerTests).", 4)
+        error(kind .. " must be called while registering tests (in the function passed to jestronaut:registerTests).", 5)
     end
 
     local filePath = getTestFilePath()
@@ -345,18 +345,19 @@ local function retryTimes(numRetries, options)
     table.insert(scope.retrySettings, entry)
 end
 
---- Finds the retry settings of the nearest scope that applies to the given (registered) test.
---- @param test DescribeOrTest
+--- Finds the setting (like retrySettings) of the nearest scope, starting at the given describe and going outwards,
+--- that applies to a file. Within a scope, the last registered setting wins.
+--- @param describe DescribeOrTest?
+--- @param filePath string
+--- @param field string
 --- @return table?
-local function findRetrySettings(test)
-    local parent = test.parent
-
-    while parent do
+local function findScopedSetting(describe, filePath, field)
+    while describe do
         local found
 
-        for _, entry in ipairs(rawget(parent, "retrySettings") or {}) do
-            if appliesTo(entry, test) then
-                found = entry -- The last registered setting in a scope wins
+        for _, entry in ipairs(rawget(describe, field) or {}) do
+            if not entry.isFileScoped or entry.filePath == filePath then
+                found = entry
             end
         end
 
@@ -364,8 +365,55 @@ local function findRetrySettings(test)
             return found
         end
 
-        parent = parent.parent
+        describe = describe.parent
     end
+end
+
+--- Finds the retry settings of the nearest scope that applies to the given (registered) test.
+--- @param test DescribeOrTest
+--- @return table?
+local function findRetrySettings(test)
+    return findScopedSetting(test.parent, test.filePath, "retrySettings")
+end
+
+--- Sets the default timeout of tests and hooks that take a done callback, in the current scope (file or describe).
+--- Settings in a describe take precedence over those of surrounding describes and the file. A timeout passed to a
+--- test or hook itself takes precedence over all. Like in Jest, it can also be called in a test, to change the
+--- timeout of the tests in the same scope that run after it.
+--- @param timeout number In milliseconds.
+local function setTimeout(timeout)
+    if type(timeout) ~= "number" or timeout < 0 then
+        error("setTimeout expects a non-negative number of milliseconds, got " .. tostring(timeout), 3)
+    end
+
+    local entry, scope
+
+    if currentDescribeOrTest then
+        local test = currentDescribeOrTest.registered or currentDescribeOrTest
+
+        scope = test.parent
+        entry = { kind = "setTimeout", scope = scope, filePath = test.filePath, isFileScoped = true }
+    else
+        entry, scope = newScopedEntry("setTimeout")
+    end
+
+    entry.timeout = timeout
+
+    if not rawget(scope, "timeoutSettings") then
+        scope.timeoutSettings = {}
+    end
+
+    table.insert(scope.timeoutSettings, entry)
+end
+
+--- Gets the timeout from the nearest setTimeout call that applies, or the testTimeout option.
+--- @param describe DescribeOrTest? The describe to start looking in.
+--- @param filePath string
+--- @return number
+local function getDefaultTimeout(describe, filePath)
+    local setting = findScopedSetting(describe, filePath, "timeoutSettings")
+
+    return setting and setting.timeout or activeRunnerOptions.testTimeout
 end
 
 local function incrementAssertionCount()
@@ -567,7 +615,7 @@ end
 --- @param entry table
 --- @return boolean, string?
 local function runHook(entry)
-    local timeout = entry.timeout or activeRunnerOptions.testTimeout
+    local timeout = entry.timeout or getDefaultTimeout(entry.scope, entry.filePath)
     local success, err = callFunction(entry.fn, timeout, entry.kind .. " hook")
 
     if not success then
@@ -620,7 +668,7 @@ function DESCRIBE_OR_TEST_META:runAttempt()
     end
 
     if success then
-        local timeout = rawget(self, "timeout") or activeRunnerOptions.testTimeout
+        local timeout = rawget(self, "timeout") or getDefaultTimeout(self.registered.parent, self.filePath)
         local testSuccess, err = callFunction(self.fn, timeout, "Test")
 
         if not testSuccess then
@@ -1192,7 +1240,7 @@ end
 local function registerDescribeOrTest(describeOrTest)
     if currentDescribeOrTest then
         error("Cannot register a describe or test while a test is running. Register it at the top of a test file or "
-            .. "inside a describe block.", 4)
+            .. "inside a describe block.", 5)
     end
 
     -- Tests created by Jestronaut itself, like for test files that failed to load, already have a file path
@@ -1393,6 +1441,7 @@ return {
     setExpectedAssertionCount = setExpectedAssertionCount,
 
     retryTimes = retryTimes,
+    setTimeout = setTimeout,
 
     afterAll = afterAll,
     afterEach = afterEach,

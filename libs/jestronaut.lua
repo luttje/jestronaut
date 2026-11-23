@@ -129,10 +129,17 @@ function JESTRONAUT:async(fn)
     return asyncLib.markAsync(fn)
 end
 
+--- Retries failing tests in the current test file or describe the given number of times. Must be called while
+--- registering tests, at the top of a test file or in a describe.
+--- @param numRetries number
+--- @param options? { logErrorsBeforeRetry?: boolean }
 function JESTRONAUT:retryTimes(numRetries, options)
     environmentLib.retryTimes(numRetries, options)
 end
 
+--- Sets the default timeout, in milliseconds, for tests and hooks that take a done callback in the current test file or
+--- describe. Must be called while registering tests, at the top of a test file or in a describe.
+--- @param timeout number
 function JESTRONAUT:setTimeout(timeout)
     environmentLib.setTimeout(timeout)
 end
