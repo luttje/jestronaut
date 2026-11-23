@@ -19,6 +19,10 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- detectOpenHandles = true,
     -- env = "lua",
     -- errorOnDeprecated = true,
+    --- Exit the process with status code 1 when any test fails, so CI can detect failures.
+    --- Only has effect where `os.exit` is available. Set to false when embedding Jestronaut in a host application.
+    --- @type boolean
+    exitOnFailure = true,
     -- expand = true,
     -- filter = "",
     -- findRelatedTests = "", --spaceSeparatedListOfSourceFiles

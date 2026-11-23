@@ -529,8 +529,16 @@ local function registerTests(testRegistrar)
     testRegistrar()
 end
 
+--- @class TestRunResults
+--- @field success boolean # True if no test failed and the run did not bail.
+--- @field bailed boolean # True if the run stopped early because of the `bail` option.
+--- @field failedCount number
+--- @field skippedCount number
+--- @field duration number # In seconds.
+
 --- Runs all registered tests.
 --- @param runnerOptions RunnerOptions
+--- @return TestRunResults
 local function runTests(runnerOptions)
     -- Pass modified require's on through
     local reporter = callRespectingRequireOverride(function()
@@ -555,10 +563,25 @@ local function runTests(runnerOptions)
         end
 
         reporter:printBailed(testSetRoot, errOrFailedTestCount)
-        return
+
+        return {
+            success = false,
+            bailed = true,
+            failedCount = tonumber(tostring(errOrFailedTestCount):match("Bail after (%d+) failed")) or 1,
+            skippedCount = skippedTestCount,
+            duration = endTime - startTime,
+        }
     end
 
     reporter:printEnd(testSetRoot, errOrFailedTestCount, skippedTestCount, endTime - startTime)
+
+    return {
+        success = errOrFailedTestCount == 0,
+        bailed = false,
+        failedCount = errOrFailedTestCount,
+        skippedCount = skippedTestCount,
+        duration = endTime - startTime,
+    }
 end
 
 return {

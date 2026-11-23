@@ -82,6 +82,17 @@ Then you can choose one of several ways to run the tests with Jestronaut:
     lua5.1.exe test.lua
     ```
 
+    When any test fails, Jestronaut exits with status code `1`, so CI pipelines fail as expected. If you embed Jestronaut in a host application that should keep running, set `exitOnFailure = false` and inspect the results passed to `runTests` instead:
+
+    ```lua
+    jestronaut
+      :configure({ roots = { "./tests/" }, exitOnFailure = false })
+      :registerTests(function() --[[ ... ]] end)
+      :runTests(function(results)
+        print(results.success, results.failedCount, results.skippedCount)
+      end)
+    ```
+
 ### Running tests with lit binary
 
 This binary is a standalone executable that can be used to run Jestronaut tests anywhere.

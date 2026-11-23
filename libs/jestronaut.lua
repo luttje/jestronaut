@@ -54,17 +54,25 @@ function JESTRONAUT:registerTests(testRegistrar)
 end
 
 --- Runs the tests.
---- @param onFinishedCallback? fun()
+---
+--- When a test fails and the `exitOnFailure` option is enabled (the default wherever `os.exit` exists), the
+--- process exits with status code 1 after `onFinishedCallback` has been called. This lets CI detect failures.
+--- @param onFinishedCallback? fun(results: TestRunResults)
 --- @return Jestronaut
 function JESTRONAUT:runTests(onFinishedCallback)
     if not self.runnerOptions then
         error("No options found. You must setup jestronaut (with jestronaut:configure(options)) before running tests.")
     end
 
-    environmentLib.runTests(self.runnerOptions)
+    local results = environmentLib.runTests(self.runnerOptions)
+    self.results = results
 
     if onFinishedCallback then
-        onFinishedCallback()
+        onFinishedCallback(results)
+    end
+
+    if not results.success and self.runnerOptions.exitOnFailure ~= false and type(os.exit) == "function" then
+        os.exit(1)
     end
 
     return self
