@@ -236,3 +236,59 @@ describe('mocks', function()
         end)
     end)
 end)
+
+describe('restoring mocks', function()
+    it('puts the original method back with mockRestore', function()
+        local original = function(value) return value * 2 end
+        local object = { double = original }
+        local spy = jestronaut:spyOn(object, 'double')
+
+        expect(object.double(2)):toBe(4)
+        expect(spy):toHaveBeenCalledWith(2)
+
+        spy:mockRestore()
+        expect(object.double):toBe(original)
+    end)
+
+    it('puts all spied methods back with restoreAllMocks', function()
+        local original = function() end
+        local object = { a = original, b = original }
+        jestronaut:spyOn(object, 'a')
+        jestronaut:spyOn(object, 'b')
+
+        jestronaut:restoreAllMocks()
+        expect(object.a):toBe(original)
+        expect(object.b):toBe(original)
+    end)
+
+    it('puts a spied property back with mockRestore, keeping its value', function()
+        local metatable = {}
+        local object = setmetatable({ volume = 1 }, metatable)
+        local spy = jestronaut:spyOn(object, 'volume', 'set')
+
+        object.volume = 5
+        spy:mockRestore()
+
+        expect(getmetatable(object)):toBe(metatable)
+        expect(rawget(object, 'volume')):toBe(5)
+    end)
+
+    it('leaves other properties alone while spying on one', function()
+        local object = setmetatable({ volume = 1 }, { __index = { inherited = 'x' } })
+        jestronaut:spyOn(object, 'volume', 'get')
+
+        expect(object.missing):toBeNil()
+        expect(object.inherited):toBe('x')
+
+        object.added = 2
+        expect(rawget(object, 'added')):toBe(2)
+    end)
+
+    it('returns nothing after mockReset instead of failing', function()
+        local mockFn = jestronaut:fn(function() return 1 end)
+        mockFn:mockReset()
+
+        expect(mockFn()):toBeNil()
+        expect(mockFn):toHaveBeenCalledTimes(1)
+    end)
+end)

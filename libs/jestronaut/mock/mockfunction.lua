@@ -65,6 +65,12 @@ local MOCK_FUNCTION_META = {
             return varargsMatchingLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
         end
 
+        -- After mockReset there is no implementation, so the mock returns nothing
+        if self._mockImplementation == nil then
+            storeReturn()
+            return
+        end
+
         local results = storeReturn(self._mockImplementation(...))
         return varargsMatchingLib.unwrapVarargsOrReturn(forcedReturn ~= nil and forcedReturn or results)
     end,
@@ -114,6 +120,14 @@ end
 --- @return MockFunction
 function MOCK_FUNCTION_META:mockRestore()
     self:mockReset()
+
+    -- Spies put the original method or property back
+    local restore = rawget(self, "_restore")
+
+    if restore then
+        self._restore = nil
+        restore()
+    end
 
     return self
 end
@@ -382,9 +396,14 @@ end
 
 local function makeMethodSpy(object, propertyName)
     local originalProperty = object[propertyName]
+    local hadOwnProperty = rawget(object, propertyName) ~= nil
     local mockFn = fn(originalProperty)
 
     object[propertyName] = mockFn
+
+    mockFn._restore = function()
+        rawset(object, propertyName, hadOwnProperty and originalProperty or nil)
+    end
 
     return mockFn
 end
@@ -405,33 +424,48 @@ local function makePropertySpy(object, propertyName, accessType)
 
     setmetatable(object, newMetaTable)
 
-    newMetaTable.__index = function(_, key)
-        if accessType == nil or accessType == "get" then
-            if key == propertyName then
-                mockFn()
-                return propertyValue
-            end
-        end
+    -- Other keys behave as they did before, through the original metatable if there was one
+    local originalIndex = originalMetatable and originalMetatable.__index
+    local originalNewIndex = originalMetatable and originalMetatable.__newindex
 
-        if propertyValue ~= nil then
+    newMetaTable.__index = function(self, key)
+        if key == propertyName then
+            if accessType == nil or accessType == "get" then
+                mockFn()
+            end
+
             return propertyValue
         end
 
-        if originalMetatable ~= nil then
-            return rawget(originalMetatable, key)
+        if type(originalIndex) == "function" then
+            return originalIndex(self, key)
+        elseif type(originalIndex) == "table" then
+            return originalIndex[key]
         end
     end
 
-    newMetaTable.__newindex = function(_, key, value)
-        if accessType == nil or accessType == "set" then
-            if key == propertyName then
+    newMetaTable.__newindex = function(self, key, value)
+        if key == propertyName then
+            if accessType == nil or accessType == "set" then
                 mockFn(value)
-                propertyValue = value
-                return
             end
 
-            rawset(object, key, value)
+            propertyValue = value
+            return
         end
+
+        if type(originalNewIndex) == "function" then
+            originalNewIndex(self, key, value)
+        elseif type(originalNewIndex) == "table" then
+            originalNewIndex[key] = value
+        else
+            rawset(self, key, value)
+        end
+    end
+
+    mockFn._restore = function()
+        setmetatable(object, originalMetatable)
+        rawset(object, propertyName, propertyValue)
     end
 
     return mockFn
@@ -472,9 +506,13 @@ local function restoreAllMocks()
         mockFn:mockRestore()
     end
 
+    allMocks = {}
+
     for _, replacement in ipairs(allPropertyReplacements) do
         replacement.object[replacement.propertyKey] = replacement.originalValue
     end
+
+    allPropertyReplacements = {}
 end
 
 return {
