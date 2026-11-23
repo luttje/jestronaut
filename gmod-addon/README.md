@@ -66,17 +66,20 @@ This addon provides a way to run [Jestronaut](https://github.com/luttje/jestrona
       :runTests()
     ```
 
+    Garry's Mod has no LuaFileSystem, so Jestronaut can't find test files itself: load them with `include` in the
+    function passed to `registerTests`.
+
 3. Run the runner script in Garry's Mod:
 
     ```bash
-    lua_openscript run-all-tests.lua
+    lua_openscript run_all_tests.lua
     ```
 
     *The output should look like this:*
 
     ```
-    Running script run-all-tests.lua...
-    🚀 Starting 2 tests at 17:26:02...
+    Running script run_all_tests.lua...
+    🚀 Starting 1 tests at 17:26:02...
 
     STARTED:    o root
 
@@ -93,13 +96,45 @@ This addon provides a way to run [Jestronaut](https://github.com/luttje/jestrona
 
                         🎉 All tests passed. Great job!                     
 
-    Tests:       2 passed, 2 total
+    Tests:       1 passed, 1 total
     Time:        0.0019999999999527s
 
     Ran all test suites.
     ```
 
     *Note that the emoji icons are displayed as `□□` in the Garry's Mod console due to insufficient Unicode support.*
+
+## Asynchronous tests
+
+Tests that take a `done` callback can wait for timers, network requests and the like. Garry's Mod runs its own loop,
+so let Jestronaut continue the tests from a `Think` hook, and use `SysTime` as the clock for timeouts:
+
+```lua
+jestronaut
+  :configure({
+    roots = { "lua/tests/" },
+    reporter = GmodReporter,
+    eventLoop = { external = true, now = SysTime },
+  })
+  :registerTests(function()
+    include("tests/print_test.lua")
+  end)
+  :runTests(function(results)
+    print("Tests finished, " .. results.failedCount .. " failed")
+  end)
+
+hook.Add("Think", "RunJestronautTests", function()
+  if jestronaut:tick() then
+    hook.Remove("Think", "RunJestronautTests")
+  end
+end)
+```
+
+Errors raised in timer or hook callbacks are handled by Garry's Mod, so catch them and pass them to `done` to fail the
+test with them. See [Testing asynchronous code](../README.md#testing-asynchronous-code) for more.
+
+Fake timers (`jestronaut:useFakeTimers()`) replace `os.time`, `os.clock` and `os.date`, but not Garry's Mod's own
+`CurTime`, `SysTime` or `timer` library.
 
 ## Testing if Jestronaut is working
 

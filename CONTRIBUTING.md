@@ -13,69 +13,64 @@ To build Jestronaut, run the following command:
 npm run build
 ```
 
-This builds the [LuaRocks](https://luarocks.org/) module and [lit](https://luvit.io/) binary.
+This builds the [LuaRocks](https://luarocks.org/) module and [lit](https://luvit.io/) binary. The binary is written to `dist/jestronaut` and works like the `jestronaut` command of the LuaRocks module.
 
-*This will generate a `jestronaut` binary in the `dist` directory of this project. It expects to be added to path and will currently only run tests if you execute jestronaut in the root of your project*
+`npm run build:gmod` builds the Garry's Mod addon into `dist/gmod-addon.zip`.
 
 ## Jestronaut's own Tests
 
-Most of Jestronaut's own tests are generated from the Jest documentation automatically. 
+Run Jestronaut's tests with any Lua interpreter (5.1 through 5.4 and LuaJIT are supported) from the root of this repository:
 
-You can run the test generation script with `npm run generate-tests`. All tests in `tests/generated` will be overwritten.
+```bash
+lua test.lua
+```
 
-Use `luarocks test` in the root of this repo to execute the Jestronaut tests. You can also run them directly with any Lua interpreter (5.1 through 5.4 and LuaJIT are supported): `lua test.lua`.
+Behaviour of the test runner itself (run results, `bail`, hooks, asynchronous tests, finding test files, ...) can't be checked from inside a single test run. Those checks live in `tests/integration.lua`, which does complete runs over the fixture files in `tests/fixtures/`:
 
-Behaviour of the test runner itself (run results, `bail`, `testNamePattern`, ...) can't be checked from inside a single test run. Those checks live in `tests/integration.lua`, which does complete runs over the fixture files in `tests/fixtures/`. Run them with `lua tests/integration.lua`.
+```bash
+lua tests/integration.lua
+```
+
+The checks for finding test files need [LuaFileSystem](https://lunarmodules.github.io/luafilesystem/) (`luarocks install luafilesystem`), and are skipped without it.
+
+Some fixtures are separate runs that CI checks the exit code of: `tests/fixtures/failing-run.lua` must exit with status code 1, `tests/fixtures/no-globals-run.lua` with 0.
+
+Most tests in `tests/generated` are generated from the Jest documentation. Run `npm run generate-tests` to generate them again, which overwrites everything in `tests/generated`. Examples from the documentation that don't apply to Lua are listed in `testPathIgnorePatterns` in `test.lua` and in the `test` script in `package.json`, with the reason.
 
 For coverage install the following LuaRocks modules:
 * `luarocks install luacov`
 * `luarocks install luacov-reporter-lcov`
 
+## Type definitions
+
+When changing the API, update `types/jestronaut.lua`. Check it with [Lua Language Server](https://luals.github.io/), for example by running `lua-language-server --check=<folder>` on a folder with a test file and a `.luarc.json` that adds `types` to `workspace.library`.
+
 ## Publishing
 
-To publish Jestronaut to LuaRocks:
+To publish a new version, for example `0.6-1`:
 
-1. Build Jestronaut
+1. Set the version in `libs/jestronaut.lua` (`0.6-1`) and `package.lua` (`0.6.1`), and move the changes in `CHANGELOG.md` under the new version.
 
-    ```bash
-    npm run build
-    ```
-
-    This will generate a `jestronaut-scm-0.rockspec` file in the root of this project.
-    
-2. Copy `jestronaut-scm-0.rockspec` to `rockspecs/jestronaut-<version>.rockspec` and update the version number to the new version:
-
-    *For example for version `v0.5-2`*
+2. Generate the rockspec for the version:
 
     ```bash
-    cp jestronaut-scm-0.rockspec rockspecs/jestronaut-0.5-2.rockspec
+    npm run generate-rockspec -- 0.6-1
     ```
 
-3. Modify the contents of the `rockspecs/jestronaut-<version>.rockspec` file to match the new version:
+    This writes `rockspecs/jestronaut-0.6-1.rockspec`, which installs the code of the `v0.6-1` tag.
 
-    ```lua
-    package = "jestronaut"
-    version = "0.5-2"
-    -- the rest of the rockspec file remains unchanged
-    ```
-
-4. Commit theses changes to the repository:
+3. Commit the changes, and tag the commit with the version:
 
     ```bash
     git add .
-    git commit -m "Update rockspec for version 0.5-2"
+    git commit -m "Release 0.6-1"
+    git tag v0.6-1
     ```
 
-5. Tag the commit with the new version:
-
-    ```bash
-    git tag v0.5-2
-    ```
-
-6. Push the commit and tag to GitHub:
+4. Push the commit and tag to GitHub:
 
     ```bash
     git push origin main --tags
     ```
 
-7. A GitHub Action will automatically build and publish the new version to LuaRocks.
+5. A GitHub Action uploads the new rockspec to LuaRocks, and creates a GitHub release with the lit binaries and the Garry's Mod addon.
