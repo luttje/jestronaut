@@ -130,8 +130,12 @@ local function getTestFilePath()
             break
         end
 
-        local isFile = info.source:sub(1, 1) == "@"
-        local path = stringsLib.normalizePath(isFile and info.source:sub(2) or info.source)
+        -- Files have a source starting with @. Also accept sources that look like the path of a Lua file, in case an
+        -- environment loads files without the @. Sources starting with = are C functions or tail calls.
+        local source = info.source
+        local isFile = source:sub(1, 1) == "@"
+            or (source:sub(1, 1) ~= "=" and not source:find("\n", 1, true) and source:find("%.lua$") ~= nil)
+        local path = stringsLib.normalizePath(source:sub(1, 1) == "@" and source:sub(2) or source)
 
         if rootFilePaths ~= nil and (not isFile or isLibraryPath(path, libraryPathSuffixes)) then
             -- Only files are test files, not C functions, tail calls ("=(tail call)" in Lua 5.1) or strings loaded
