@@ -22,6 +22,7 @@ jestronaut
         "tests/generated/JestObjectAPI/jest/retryTimes.lua", -- These tests are intended to fail
 
         "tests/generated/MockFunctionAPI/mockFn/mockName.lua", -- The docs have mockFn commented, causing this test to fail.
+        "tests/generated/ExpectAPI/expect/addEqualityTesters.lua", -- The docs example compares the amount to other.unit, so the volumes are never equal
         "tests/generated/GlobalAPI/test/failing.lua",        -- This test succeeds, but it's supposed to fail
         "tests/generated/GlobalAPI/test/failing/each.lua",   -- This test succeeds, but it's supposed to fail
       },
