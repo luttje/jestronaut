@@ -1,6 +1,6 @@
   return {
     name = "luttje/jestronaut",
-    version = "0.1.0",
+    version = "0.6.1",
     description = "Library for testing your Lua scripts.",
     tags = { "test", "jest", "automated" },
     license = "MIT",
