@@ -59,7 +59,9 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- shard = true,
     -- showConfig = true,
     -- showSeed = true,
-    -- silent = true,
+    --- Hide what tests print. Printed output is captured per test either way, see `test.output`.
+    --- @type boolean
+    silent = false,
     -- testEnvironmentOptions = "",
     -- testLocationInResults = true,
     -- testMatch = "",

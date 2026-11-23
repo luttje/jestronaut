@@ -10,7 +10,7 @@ local failures = {}
 
 --- A reporter that prints nothing and records which tests passed, failed or were skipped.
 local function newRecordingReporter()
-    local recorded = { passed = {}, failed = {}, skipped = {}, errors = {} }
+    local recorded = { passed = {}, failed = {}, skipped = {}, errors = {}, output = {} }
     local reporter = setmetatable({ recorded = recorded }, {
         __index = function()
             return function() end
@@ -24,6 +24,8 @@ local function newRecordingReporter()
             if not success then
                 recorded.errors[describeOrTest.name] = table.concat({ ... })
             end
+
+            recorded.output[describeOrTest.name] = describeOrTest.output
         end
     end
 
@@ -221,6 +223,19 @@ do
         check(name .. ": tracebacks leave out frames inside Jestronaut", err:find("jestronaut/", 1, true), nil)
         check(name .. ": tracebacks leave out the runner", err:find("xpcall", 1, true), nil)
     end
+end
+
+-- Printed output
+do
+    local printBefore = print
+    local _, recorded = run("output", {})
+
+    checkSequence("print output of a test and its hooks is captured", recorded.output["prints"],
+        { "from beforeEach", "hello\t42\tnil" })
+    checkSequence("print output is captured for failing tests too", recorded.output["prints and fails"],
+        { "from beforeEach", "before failing" })
+    checkSequence("tests that print nothing get empty output", recorded.output["prints nothing"], { "from beforeEach" })
+    check("print is restored after the run", print == printBefore, true)
 end
 
 -- Counts (issue #10)

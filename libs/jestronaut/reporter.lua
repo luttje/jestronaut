@@ -1,5 +1,6 @@
 local split = require "jestronaut/utils/strings".split
 local styledText = require "jestronaut/utils/styledtexts"
+local getFullName = require "jestronaut/environment/state".getFullName
 local originalPrint = print
 
 --- @class Reporter
@@ -149,9 +150,6 @@ end
 --- Prints the name of the test.
 --- @param describeOrTest DescribeOrTest
 function REPORTER:testStarting(describeOrTest)
-    -- Override print so there's no interference with the test output.
-    print = function() end -- TODO: Store the print and output it at the end of the test.
-
     local file = self:getFileByPath(describeOrTest.filePath)
 
     if file then
@@ -168,8 +166,6 @@ end
 --- @param ... any
 --- @return boolean
 function REPORTER:testFinished(describeOrTest, success, ...)
-    print = originalPrint
-
     local file = self:getFileByPath(describeOrTest.filePath)
 
     if file then
@@ -261,6 +257,51 @@ function REPORTER:startTestSet(rootDescribe, describesByFilePath)
     self:redrawSummary()
 end
 
+--- Prints what each test printed, labeled with the full name and file of the test.
+function REPORTER:printOutputs()
+    if self.isSilent then
+        return
+    end
+
+    local outputs = {}
+
+    local function collect(describeOrTest)
+        if describeOrTest.isTest and describeOrTest.output and #describeOrTest.output > 0 then
+            table.insert(outputs, describeOrTest)
+        end
+
+        for _, child in ipairs(describeOrTest.children or {}) do
+            collect(child)
+        end
+    end
+
+    for _, file in ipairs(self.describesByFilePath) do
+        for _, describeOrTest in ipairs(file.describesOrTests) do
+            collect(describeOrTest)
+        end
+    end
+
+    if #outputs == 0 then
+        return
+    end
+
+    originalPrint(styledText.new():styled("Console output:", styledText.styles.bold))
+
+    for _, test in ipairs(outputs) do
+        originalPrint(
+            styledText.new()
+            :plain("  ● " .. getFullName(test))
+            :styled(" (" .. test.filePath .. ")", styledText.styles.dim)
+        )
+
+        for _, line in ipairs(test.output) do
+            originalPrint("      " .. (line:gsub("\n", "\n      ")))
+        end
+    end
+
+    self:printNewline()
+end
+
 --- Prints the success message of the test.
 --- @param rootDescribe Describe
 --- @param failedTestCount number
@@ -279,6 +320,7 @@ function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, dura
 
     self:redrawSummary()
     self:printNewline()
+    self:printOutputs()
 
     if failedTestCount == 0 then
         self:printCentered("🎉 All tests passed. Great job!")
@@ -355,6 +397,8 @@ end
 --- @param rootDescribe Describe
 --- @param bailError string
 function REPORTER:printBailed(rootDescribe, bailError)
+    self:printNewline()
+    self:printOutputs()
     self:printNewline(2)
     self:printCentered("🚨 Bailed out of tests!")
     self:printNewline(2)

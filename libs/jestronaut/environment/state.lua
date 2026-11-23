@@ -504,6 +504,20 @@ end
 function DESCRIBE_OR_TEST_META:runTest(reporter, runnerOptions)
     currentDescribeOrTest = self
 
+    -- Capture what the test and its hooks print, so reporters can show it without it interfering with their output
+    local output = {}
+    local previousPrint = print
+
+    print = function(...)
+        local parts = {}
+
+        for i = 1, select("#", ...) do
+            parts[i] = tostring((select(i, ...)))
+        end
+
+        table.insert(output, table.concat(parts, "\t"))
+    end
+
     for _, entry in ipairs(self.beforeAllHooksToRun) do
         local success, err = runHook(entry)
 
@@ -548,7 +562,9 @@ function DESCRIBE_OR_TEST_META:runTest(reporter, runnerOptions)
     end
 
     currentDescribeOrTest = nil
+    print = previousPrint
 
+    self.output = output
     self.success = success
     self.isRunning = false
     self.hasRun = true
@@ -1062,6 +1078,7 @@ local function runTests(runnerOptions)
     end)
 
     reporter.isVerbose = runnerOptions.verbose
+    reporter.isSilent = runnerOptions.silent
 
     -- currentParent is the root describe at this point
     local testSetRoot, describesByFilePath, tests = prepareRun(currentParent, runnerOptions)
