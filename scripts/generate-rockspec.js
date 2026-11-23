@@ -50,3 +50,25 @@ const modules = walkBuildModules(srcDir).join('\n');
 const rockspec = rockspecTemplate.replace(modulePlaceholderRegex, `\n${modules}`);
 
 fs.writeFileSync('jestronaut-scm-0.rockspec', rockspec);
+
+// With a version (like 0.6-1), also write the rockspec for that release. It builds from the release's git tag
+// (like v0.6-1), so installing a version always installs the code of that release.
+const version = process.argv[3];
+
+if (version) {
+  if (!/^\d+\.\d+-\d+$/.test(version)) {
+    throw new Error(`Versions look like 0.6-1, got ${version}`);
+  }
+
+  const versionedRockspec = rockspec
+    .replace('version = "scm-0"', `version = "${version}"`)
+    .replace(/source = \{\n(\s*)url = "([^"]+)"\n\}/, `source = {\n$1url = "$2",\n$1tag = "v${version}"\n}`);
+
+  if (!versionedRockspec.includes(`tag = "v${version}"`)) {
+    throw new Error('Could not add the tag to the source of the rockspec');
+  }
+
+  const versionedPath = path.join('rockspecs', `jestronaut-${version}.rockspec`);
+  fs.writeFileSync(versionedPath, versionedRockspec);
+  console.log(`Wrote ${versionedPath}`);
+}
