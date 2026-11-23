@@ -128,7 +128,7 @@ function REPORTER:testFinished(describeOrTest, success, ...)
         elseif self.lastFile ~= file then
             self.lastFile.isRunning = false
             self.lastFile.hasRun = true
-            self.lastFile.success = true -- TODO: Check if all tests passed.
+            self.lastFile.success = not self.lastFile.hasFailure
 
             self.lastFile = file
         end
@@ -138,6 +138,7 @@ function REPORTER:testFinished(describeOrTest, success, ...)
         if not success then
             file.hasRun = true
             file.success = false
+            file.hasFailure = true
         end
     end
 
@@ -201,7 +202,7 @@ end
 --- @param rootDescribe Describe
 --- @param describesByFilePath table
 function REPORTER:startTestSet(rootDescribe, describesByFilePath)
-    local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
+    local totalTestCount = rootDescribe.totalTestCount
 
     self.summaryHeader = styledText.new(nil, STYLING_DISABLED)
         :plain("🚀 Starting ")
@@ -221,19 +222,19 @@ end
 --- @param skippedTestCount number
 --- @param duration number
 function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, duration)
-    local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
-    local notRunCount = failedTestCount + skippedTestCount
-    local relativeSuccess = 1 - (notRunCount / totalTestCount)
+    local totalTestCount = rootDescribe.totalTestCount
+    local todoCount = rootDescribe.todoCount or 0
+    local notRunCount = failedTestCount + skippedTestCount + todoCount
 
     if self.lastFile then
         self.lastFile.isRunning = false
         self.lastFile.hasRun = true
-        self.lastFile.success = true -- TODO: Check if all tests passed?
+        self.lastFile.success = not self.lastFile.hasFailure
     end
 
     self:printNewline()
 
-    if (relativeSuccess == 1) then
+    if failedTestCount == 0 then
         self:printCentered("🎉 All tests passed. Great job!")
         self:printNewline()
     end
@@ -250,6 +251,12 @@ function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, dura
     if skippedTestCount > 0 then
         testResults = testResults
             :colored(skippedTestCount .. " skipped", styledText.foregroundColors.blue)
+            :plain(", ")
+    end
+
+    if todoCount > 0 then
+        testResults = testResults
+            :colored(todoCount .. " todo", styledText.foregroundColors.magenta)
             :plain(", ")
     end
 

@@ -108,7 +108,7 @@ local function getSummary(header, describesByFilePath, verbose)
                     end
                 end
             end
-        elseif file.skippedCount == #describesOrTests then
+        elseif file.isSkipped then
             summary:colored(" SKIP ", styledText.foregroundColors.black, styledText.backgroundColors.blue)
             summary:plain(filePathForShowing)
         else
@@ -248,7 +248,7 @@ end
 --- @param rootDescribe Describe
 --- @param describesByFilePath table
 function REPORTER:startTestSet(rootDescribe, describesByFilePath)
-    local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
+    local totalTestCount = rootDescribe.totalTestCount
 
     self.summaryHeader = styledText.new()
         :plain("🚀 Starting ")
@@ -267,9 +267,9 @@ end
 --- @param skippedTestCount number
 --- @param duration number
 function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, duration)
-    local totalTestCount = rootDescribe.childCount + rootDescribe.grandChildrenCount
-    local notRunCount = failedTestCount + skippedTestCount
-    local relativeSuccess = 1 - (notRunCount / totalTestCount)
+    local totalTestCount = rootDescribe.totalTestCount
+    local todoCount = rootDescribe.todoCount or 0
+    local notRunCount = failedTestCount + skippedTestCount + todoCount
 
     if self.lastFile then
         self.lastFile.isRunning = false
@@ -280,7 +280,7 @@ function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, dura
     self:redrawSummary()
     self:printNewline()
 
-    if (relativeSuccess == 1) then
+    if failedTestCount == 0 then
         self:printCentered("🎉 All tests passed. Great job!")
         self:printNewline()
     end
@@ -297,6 +297,12 @@ function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, dura
     if skippedTestCount > 0 then
         testResults = testResults
             :colored(skippedTestCount .. " skipped", styledText.foregroundColors.blue)
+            :plain(", ")
+    end
+
+    if todoCount > 0 then
+        testResults = testResults
+            :colored(todoCount .. " todo", styledText.foregroundColors.magenta)
             :plain(", ")
     end
 
