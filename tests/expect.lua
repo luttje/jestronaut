@@ -259,14 +259,25 @@ describe('matchers', function()
 end)
 
 describe('matcher lookup', function()
+    -- Required while registering, since Garry's Mod only supports requiring Lua files then
+    local expectLib = require 'jestronaut/expect'
+
     it('only finds matchers by their exact name', function()
         expectFailure(function() expect(1):tobe(1) end, 'Unknown (asymmetric) matcher or modifier: tobe',
             'Did you mean toBe?')
         expectFailure(function() expect:varargsmatching(1) end, 'Did you mean varargsMatching?')
     end)
 
-    it('knows every matcher module listed in the rockspec', function()
-        local expectLib = require 'jestronaut/expect'
+    -- Garry's Mod has no io library to read the rockspec with
+    local function itWithFiles(name, fn)
+        if io and io.open then
+            it(name, fn)
+        else
+            it:skip(name, fn)
+        end
+    end
+
+    itWithFiles('knows every matcher module listed in the rockspec', function()
         local file = assert(io.open('jestronaut-scm-0.rockspec', 'r'))
         local rockspec = file:read('*a')
         file:close()

@@ -119,7 +119,8 @@ local function isLibraryFrame(line, libraryPathSuffixes)
         return true
     end
 
-    line = line:gsub("\\", "/")
+    -- Start the path with a slash, so relative paths like "jestronaut/utils/functions.lua" match too
+    line = "/" .. line:gsub("\\", "/"):gsub("^%s+", "")
 
     for _, suffix in ipairs(libraryPathSuffixes) do
         if line:find(suffix, 1, true) then
@@ -130,10 +131,24 @@ local function isLibraryFrame(line, libraryPathSuffixes)
     return false
 end
 
---- Gets the path endings of all loaded Jestronaut modules, like "/jestronaut/utils/functions.lua:".
+--- Path parts that only occur in frames inside Jestronaut, however its modules were loaded. Garry's Mod for example
+--- loads them with include, so they don't appear in package.loaded.
+local LIBRARY_PATH_PARTS = {
+    "/jestronaut.lua:",
+    "/jestronaut/environment/", "/jestronaut/expect/", "/jestronaut/mock/", "/jestronaut/utils/",
+    "/jestronaut/coverage.lua:", "/jestronaut/each.lua:", "/jestronaut/environment.lua:", "/jestronaut/expect.lua:",
+    "/jestronaut/mock.lua:", "/jestronaut/plainreporter.lua:", "/jestronaut/reporter.lua:",
+}
+
+--- Gets the path parts that identify frames inside Jestronaut: those of LIBRARY_PATH_PARTS, and the path endings of
+--- all loaded Jestronaut modules, like "/jestronaut/utils/functions.lua:".
 --- @return string[]
 local function getLibraryPathSuffixes()
     local suffixes = {}
+
+    for _, part in ipairs(LIBRARY_PATH_PARTS) do
+        table.insert(suffixes, part)
+    end
 
     for moduleName in pairs(package.loaded) do
         if type(moduleName) == "string" and (moduleName == "jestronaut" or moduleName:sub(1, 11) == "jestronaut/") then
