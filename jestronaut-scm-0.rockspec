@@ -21,6 +21,7 @@ build = {
       ["jestronaut/environment"] = "libs/jestronaut/environment.lua",
       ["jestronaut/expect"] = "libs/jestronaut/expect.lua",
       ["jestronaut/mock"] = "libs/jestronaut/mock.lua",
+      ["jestronaut/plainreporter"] = "libs/jestronaut/plainreporter.lua",
       ["jestronaut/reporter"] = "libs/jestronaut/reporter.lua",
       ["jestronaut/environment/describe"] = "libs/jestronaut/environment/describe.lua",
       ["jestronaut/environment/init"] = "libs/jestronaut/environment/init.lua",

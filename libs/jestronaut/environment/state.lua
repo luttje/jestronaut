@@ -1074,10 +1074,17 @@ end
 local function runTests(runnerOptions)
     -- Pass modified require's on through
     local reporter = callRespectingRequireOverride(function()
-        return runnerOptions.reporter or (require "jestronaut/reporter".newDefaultReporter())
+        if runnerOptions.reporter then
+            return runnerOptions.reporter
+        elseif runnerOptions.ci or not runnerOptions.colors then
+            return require "jestronaut/plainreporter".newPlainReporter()
+        end
+
+        return require "jestronaut/reporter".newDefaultReporter()
     end)
 
     reporter.isVerbose = runnerOptions.verbose
+    reporter.isColorDisabled = not runnerOptions.colors
     reporter.isSilent = runnerOptions.silent
 
     -- currentParent is the root describe at this point

@@ -8,11 +8,17 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- cache = true,
     -- changedFilesWithAncestor = true,
     -- changedSince = true,
-    -- ci = false,
+    --- Use the plain reporter, which prints each test file once instead of redrawing the output. Defaults to true
+    --- when the CI environment variable is set.
+    --- @type boolean?
+    ci = nil,
     -- clearCache = true,
     -- clearMocks = true,
     -- collectCoverageFrom = ".",
-    -- colors = true,
+    --- Use colors in the output. Defaults to false when the NO_COLOR environment variable is set or TERM is "dumb".
+    --- Without colors the plain reporter is used, since the default reporter needs ANSI codes to redraw its output.
+    --- @type boolean?
+    colors = nil,
     -- config = ".",
     -- coverage = true,
     -- coverageDirectory = ".",
@@ -105,6 +111,28 @@ local function normalizeBail(bail)
     return count
 end
 
+--- @param name string
+--- @return string?
+local function getEnvironmentVariable(name)
+    return os.getenv and os.getenv(name) or nil
+end
+
+--- Checks the CI environment variable, which most CI services (like GitHub Actions) set.
+--- @return boolean
+local function isRunningInCI()
+    local ci = getEnvironmentVariable("CI")
+
+    return ci ~= nil and ci ~= "" and ci ~= "false" and ci ~= "0"
+end
+
+--- Checks NO_COLOR (https://no-color.org) and TERM=dumb.
+--- @return boolean
+local function supportsColors()
+    local noColor = getEnvironmentVariable("NO_COLOR")
+
+    return (noColor == nil or noColor == "") and getEnvironmentVariable("TERM") ~= "dumb"
+end
+
 --- @param options RunnerOptions
 --- @return RunnerOptions
 local function merge(options)
@@ -115,6 +143,14 @@ local function merge(options)
     end
 
     mergedOptions.bail = normalizeBail(mergedOptions.bail)
+
+    if mergedOptions.ci == nil then
+        mergedOptions.ci = isRunningInCI()
+    end
+
+    if mergedOptions.colors == nil then
+        mergedOptions.colors = supportsColors()
+    end
 
     return mergedOptions
 end

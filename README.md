@@ -82,7 +82,7 @@ Then you can choose one of several ways to run the tests with Jestronaut:
     lua5.1.exe test.lua
     ```
 
-    When any test fails, Jestronaut exits with status code `1`, so CI pipelines fail as expected. If you embed Jestronaut in a host application that should keep running, set `exitOnFailure = false` and inspect the results passed to `runTests` instead:
+    When any test fails, Jestronaut exits with status code `1`, so CI pipelines fail as expected. When the `CI` environment variable is set (as most CI services do), or colors are turned off with `NO_COLOR`, Jestronaut prints a plain log instead of redrawing its output. Set the `ci` and `colors` options to choose yourself. If you embed Jestronaut in a host application that should keep running, set `exitOnFailure = false` and inspect the results passed to `runTests` instead:
 
     ```lua
     jestronaut
