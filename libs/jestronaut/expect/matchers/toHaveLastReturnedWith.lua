@@ -13,7 +13,7 @@ local function toHaveLastReturnedWith(expect, ...)
 
     return expect:check(#results > 0 and mock:hasLastReturnedWith(...), function(isNot)
         return "Expected: " .. (isNot and "not " or "") .. messagesLib.formatWrappedValues(expectedValues, "nil") ..
-            "\nReceived: " .. (#results > 0 and messagesLib.formatWrappedValues(results[#results], "nil") or "(no returns)") ..
+            "\nReceived: " .. (#results > 0 and messagesLib.formatWrappedValues(results[#results].value, "nil") or "(no returns)") ..
             "\n\nNumber of returns: " .. #results
     end)
 end

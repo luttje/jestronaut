@@ -165,6 +165,25 @@ describe('mocks', function()
             expect(allReturnValues[1]):toEqual(4, 5, 9)
         end)
 
+        it('records returns of functions that return nothing', function()
+            local mockFn = jestronaut:fn()
+            mockFn()
+            mockFn()
+
+            expect(mockFn):toHaveReturned()
+            expect(mockFn):toHaveReturnedTimes(2)
+            expect(mockFn.mock.results[1]):toEqual({ type = 'return' })
+        end)
+
+        it('records returned values in mock.results', function()
+            local mockFn = jestronaut:fn(function(a) return a * 2 end)
+            mockFn(2)
+
+            expect(mockFn.mock.results[1]):toEqual({ type = 'return', value = 4 })
+            expect(mockFn):toHaveLastReturnedWith(4)
+            expect(mockFn):toHaveNthReturnedWith(1, 4)
+        end)
+
         it('can spy on a property getter', function()
             local obj = { foo = 1 }
             local spy = jestronaut:spyOn(obj, 'foo', 'get')

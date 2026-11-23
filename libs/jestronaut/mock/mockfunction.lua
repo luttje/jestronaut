@@ -40,7 +40,8 @@ local MOCK_FUNCTION_META = {
 
         local storeReturn = function(...)
             local returns = varargsMatchingLib.wrapAndTagVarargsOrReturn(...)
-            table.insert(self.mock.results, returns)
+            -- Like Jest, each result is a table, so returning nothing is recorded too
+            table.insert(self.mock.results, { type = "return", value = returns })
             return returns
         end
 
@@ -274,7 +275,7 @@ function MOCK_FUNCTION_META:hasReturnedWith(...)
     local results = self.mock.results
 
     for _, result in ipairs(results) do
-        if varargsMatchingLib.isWrappedVarargsEqual(result, args) then
+        if varargsMatchingLib.isWrappedVarargsEqual(result.value, args) then
             return true
         end
     end
@@ -286,14 +287,22 @@ function MOCK_FUNCTION_META:hasLastReturnedWith(...)
     local args = varargsMatchingLib.wrapAndTagVarargsOrReturn(...)
     local lastResult = self.mock.results[#self.mock.results]
 
-    return varargsMatchingLib.isWrappedVarargsEqual(lastResult, args)
+    if lastResult == nil then
+        return false
+    end
+
+    return varargsMatchingLib.isWrappedVarargsEqual(lastResult.value, args)
 end
 
 function MOCK_FUNCTION_META:hasNthReturnedWith(n, ...)
     local args = varargsMatchingLib.wrapAndTagVarargsOrReturn(...)
     local nthResult = self.mock.results[n]
 
-    return varargsMatchingLib.isWrappedVarargsEqual(nthResult, args)
+    if nthResult == nil then
+        return false
+    end
+
+    return varargsMatchingLib.isWrappedVarargsEqual(nthResult.value, args)
 end
 
 function MOCK_FUNCTION_META:getCallArgs(n)
@@ -326,8 +335,8 @@ end
 function MOCK_FUNCTION_META:getAllReturnValues()
     local returnValues = {}
 
-    for _, result in ipairs(self.mock.results) do
-        table.insert(returnValues, result)
+    for i, result in ipairs(self.mock.results) do
+        returnValues[i] = result.value
     end
 
     return returnValues
@@ -344,11 +353,17 @@ function MOCK_FUNCTION_META:getReturnedValue(n)
         return nil
     end
 
-    return results[n]
+    return results[n].value
 end
 
 function MOCK_FUNCTION_META:getLastReturn()
-    return varargsMatchingLib.unwrapVarargsOrReturn(self.mock.results[#self.mock.results])
+    local lastResult = self.mock.results[#self.mock.results]
+
+    if lastResult == nil then
+        return nil
+    end
+
+    return varargsMatchingLib.unwrapVarargsOrReturn(lastResult.value)
 end
 
 --- Returns a new, unused mock function. Optionally takes a mock implementation.

@@ -72,8 +72,13 @@ end
 --- @return string
 local function formatReturns(mock)
     local results = mock.mock.results
+    local list = {}
 
-    return formatNumberedList(results, #results, "(no returns)", "nil")
+    for i, result in ipairs(results) do
+        list[i] = result.value
+    end
+
+    return formatNumberedList(list, #results, "(no returns)", "nil")
 end
 
 return {

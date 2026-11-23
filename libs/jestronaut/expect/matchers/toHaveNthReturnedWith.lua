@@ -15,7 +15,7 @@ local function toHaveNthReturnedWith(expect, nthCall, ...)
     return expect:check(nthCall <= #results and mock:hasNthReturnedWith(nthCall, ...), function(isNot)
         return "Call: " .. tostring(nthCall) ..
             "\nExpected: " .. (isNot and "not " or "") .. messagesLib.formatWrappedValues(expectedValues, "nil") ..
-            "\nReceived: " .. (nthCall <= #results and messagesLib.formatWrappedValues(results[nthCall], "nil") or "(no such return)") ..
+            "\nReceived: " .. (nthCall <= #results and messagesLib.formatWrappedValues(results[nthCall].value, "nil") or "(no such return)") ..
             "\n\nNumber of returns: " .. #results
     end)
 end
