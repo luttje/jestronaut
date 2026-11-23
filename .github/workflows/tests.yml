@@ -6,30 +6,56 @@ on:
     paths:
       - 'libs/**'
       - 'tests/**'
+      - 'test.lua'
+      - 'main.lua'
+      - '.github/workflows/tests.yml'
   pull_request:
     branches:
       - '**'
     paths:
       - 'libs/**'
       - 'tests/**'
+      - 'test.lua'
+      - 'main.lua'
+      - '.github/workflows/tests.yml'
 jobs:
+  # Runs the test suite with each supported Lua interpreter directly.
   test:
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        luaVersion: ["5.1.5", "5.2.4", "5.3.5", "luajit-openresty", "5.1", "5.4"]
+        luaVersion: ["5.1", "5.2", "5.3", "5.4", "luajit-openresty"]
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: ${{ matrix.luaVersion }}
+      - name: Run the test suite
+        run: lua test.lua
+      - name: Verify a failing test run exits with a non-zero status code
+        run: |
+          if lua tests/fixtures/failing-run.lua > /dev/null; then
+            echo "Expected tests/fixtures/failing-run.lua to exit with a non-zero status code"
+            exit 1
+          fi
+
+  # Builds the LuaRocks module and lit binary, runs the suite through luvi and reports coverage.
+  build-and-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
       - name: Install Lua
         uses: leafo/gh-actions-lua@v10
         with:
-          luaVersion: ${{ matrix.luaVersion }}
+          luaVersion: "5.1"
       - uses: leafo/gh-actions-luarocks@v4
       - name: Install Luvit
         run: curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
