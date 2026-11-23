@@ -95,6 +95,75 @@ local function getTestFilePath()
     return filePath, lineNumber
 end
 
+--- Checks whether a line of a stack traceback is a frame inside Jestronaut itself or a C function.
+--- @param line string
+--- @param libraryPathSuffixes string[]
+--- @return boolean
+local function isLibraryFrame(line, libraryPathSuffixes)
+    if line:find("^%s*%[C%]") or line:find("tail call", 1, true) then
+        return true
+    end
+
+    line = line:gsub("\\", "/")
+
+    for _, suffix in ipairs(libraryPathSuffixes) do
+        if line:find(suffix, 1, true) then
+            return true
+        end
+    end
+
+    return false
+end
+
+--- Gets the path endings of all loaded Jestronaut modules, like "/jestronaut/utils/functions.lua:".
+--- @return string[]
+local function getLibraryPathSuffixes()
+    local suffixes = {}
+
+    for moduleName in pairs(package.loaded) do
+        if type(moduleName) == "string" and (moduleName == "jestronaut" or moduleName:sub(1, 11) == "jestronaut/") then
+            table.insert(suffixes, "/" .. moduleName .. ".lua:")
+            table.insert(suffixes, "/" .. moduleName .. "/init.lua:")
+        end
+    end
+
+    return suffixes
+end
+
+--- Removes frames from the stack traceback that are inside Jestronaut, or that called the test (everything from the
+--- runner's xpcall onwards). The traceback is left out completely when it would only repeat the location that
+--- already starts the error message.
+--- @param traceback string
+--- @return string
+local function trimTraceback(traceback)
+    local message, frames = traceback:match("^(.-)\nstack traceback:\n(.*)$")
+
+    if not message then
+        return traceback
+    end
+
+    local libraryPathSuffixes = getLibraryPathSuffixes()
+    local kept = {}
+
+    for line in (frames .. "\n"):gmatch("(.-)\n") do
+        if line:find("in function 'xpcall'", 1, true) then
+            break
+        end
+
+        if not isLibraryFrame(line, libraryPathSuffixes) then
+            table.insert(kept, line)
+        end
+    end
+
+    local hasLocation = message:find("^[^\n]-:%d+:") ~= nil
+
+    if #kept == 0 or (#kept == 1 and hasLocation) then
+        return message
+    end
+
+    return message .. "\nstack traceback:\n" .. table.concat(kept, "\n")
+end
+
 --- Error handler for xpcall that adds a stack trace to the error.
 --- @param err any
 --- @return string
@@ -104,7 +173,7 @@ local function traceErrorHandler(err)
         err = "(error object is a " .. type(err) .. " value: " .. tostring(err) .. ")"
     end
 
-    return debug.traceback(err, 2)
+    return trimTraceback(debug.traceback(err, 2))
 end
 
 --[[

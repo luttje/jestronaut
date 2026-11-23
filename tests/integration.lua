@@ -10,16 +10,20 @@ local failures = {}
 
 --- A reporter that prints nothing and records which tests passed, failed or were skipped.
 local function newRecordingReporter()
-    local recorded = { passed = {}, failed = {}, skipped = {} }
+    local recorded = { passed = {}, failed = {}, skipped = {}, errors = {} }
     local reporter = setmetatable({ recorded = recorded }, {
         __index = function()
             return function() end
         end,
     })
 
-    function reporter:testFinished(describeOrTest, success)
+    function reporter:testFinished(describeOrTest, success, ...)
         if describeOrTest.isTest then
             table.insert(success and recorded.passed or recorded.failed, describeOrTest.name)
+
+            if not success then
+                recorded.errors[describeOrTest.name] = table.concat({ ... })
+            end
         end
     end
 
@@ -200,6 +204,23 @@ do
         { "fails on incorrect modifier only to run", "runs because its describe is marked only" })
     check("only skips the other tests in that file", recorded.skipped,
         { "top-level test without only", "skips failing test", "not run" })
+end
+
+-- Stack tracebacks
+do
+    local _, recorded = run("traces", {})
+    local direct = recorded.errors["fails directly"] or ""
+    local helper = recorded.errors["fails in a helper"] or ""
+
+    check("failures start with the location of the failing expect",
+        direct:gsub("\\", "/"):match("^[^\n]*"), "./tests/fixtures/traces.lua:7: expect(received):toBe()")
+    check("a traceback that only repeats the location is left out", direct:find("stack traceback", 1, true), nil)
+    check("tracebacks show frames outside Jestronaut", helper:find("'assertTwo'", 1, true) ~= nil, true)
+
+    for name, err in pairs(recorded.errors) do
+        check(name .. ": tracebacks leave out frames inside Jestronaut", err:find("jestronaut/", 1, true), nil)
+        check(name .. ": tracebacks leave out the runner", err:find("xpcall", 1, true), nil)
+    end
 end
 
 -- Counts (issue #10)
