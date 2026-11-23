@@ -1,32 +1,25 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching"
 .wrapAndTagVarargsOrReturn
-local tableLib = require "jestronaut/utils/tables"
+local messagesLib = require "jestronaut/expect/messages"
 
+--- Checks that the last call to the mock function had the given arguments.
 --- @param expect Expect
 --- @param ... any
+--- @return boolean
 local function toHaveBeenLastCalledWith(expect, ...)
-    local actual = expect.actual
+    local mock = messagesLib.getMock(expect)
+    local expectedArgs = wrapAndTagVarargsOrReturn(...)
 
-    if not expect:checkEquals(true, actual:wasLastCalledWith(...)) then
-        local args = wrapAndTagVarargsOrReturn(...)
+    return expect:check(mock:wasLastCalledWith(...), function(isNot)
+        local lastCall = mock.mock.lastCall
 
-        if tableLib.count(args) == 0 then
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called last with no arguments but it was called with " ..
-            tableLib.implode({ actual:getCallArgs() }, ", "))
-        else
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called last with " ..
-            tableImplode(args, ", ") .. " but it was called with " .. tableLib.implode({ actual:getCallArgs() }, ", "))
-        end
-    end
-
-    return true
+        return "Expected: " .. (isNot and "not " or "") .. messagesLib.formatWrappedValues(expectedArgs, "(no arguments)") ..
+            "\nReceived: " .. (lastCall and messagesLib.formatWrappedValues(lastCall.args, "(no arguments)") or "(no calls)") ..
+            "\n\nNumber of calls: " .. mock.callCount
+    end)
 end
 
 return {
-    toHaveBeenCalledWith = toHaveBeenLastCalledWith,
+    toHaveBeenLastCalledWith = toHaveBeenLastCalledWith,
     default = toHaveBeenLastCalledWith,
 }

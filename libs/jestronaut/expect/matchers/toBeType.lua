@@ -1,17 +1,19 @@
 local isMockFunction = require "jestronaut/mock/mockfunction".isMockFunction
+local formatLib = require "jestronaut/utils/format"
 
+--- Checks the type of the received value, as returned by `type`. Mock functions count as functions.
 --- @param expect Expect
---- @param expected any
+--- @param expected string
 --- @return boolean
 local function toBeType(expect, expected)
-    if not expect:checkEquals(true,
-            expected == "function" and isMockFunction(expect.actual) or type(expect.actual) == expected) then
-        error("Expected " ..
-        tostring(expect.actual) ..
-        " to be type " .. tostring(expected) .. " but it was type " .. tostring(type(expect.actual)))
-    end
+    local actual = expect.actual
+    local pass = type(actual) == expected or (expected == "function" and isMockFunction(actual))
 
-    return true
+    return expect:check(pass, function(isNot)
+        return "Expected type: " .. (isNot and "not " or "") .. formatLib.format(expected) ..
+            "\nReceived type: " .. formatLib.format(type(actual)) ..
+            "\nReceived value: " .. formatLib.format(actual)
+    end)
 end
 
 return {

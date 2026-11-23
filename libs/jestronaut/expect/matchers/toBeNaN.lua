@@ -1,16 +1,14 @@
----
+local formatLib = require "jestronaut/utils/format"
+
+--- Checks that the received value is NaN (not a number), the only value that isn't equal to itself.
 --- @param expect Expect
---- @param value any
 --- @return boolean
-local function toBeNaN(expect, value)
+local function toBeNaN(expect)
     local actual = expect.actual
 
-    if not expect:checkEquals(true, tostring(actual) == tostring((0 / 0))
-            or tostring(actual) == tostring(-(0 / 0))) then
-        error("Expected " .. tostring(actual) .. " to be NaN")
-    end
-
-    return true
+    return expect:check(type(actual) == "number" and actual ~= actual, function(isNot)
+        return "Expected: " .. (isNot and "not " or "") .. "NaN\nReceived: " .. formatLib.format(actual)
+    end)
 end
 
 return {

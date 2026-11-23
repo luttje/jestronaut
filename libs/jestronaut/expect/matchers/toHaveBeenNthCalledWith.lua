@@ -1,33 +1,27 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching"
 .wrapAndTagVarargsOrReturn
-local tableLib = require "jestronaut/utils/tables"
+local messagesLib = require "jestronaut/expect/messages"
 
+--- Checks that the nth call to the mock function had the given arguments.
 --- @param expect Expect
+--- @param nthCall number
 --- @param ... any
+--- @return boolean
 local function toHaveBeenNthCalledWith(expect, nthCall, ...)
-    local actual = expect.actual
+    local mock = messagesLib.getMock(expect)
+    local expectedArgs = wrapAndTagVarargsOrReturn(...)
 
-    if not expect:checkEquals(true, actual:wasNthCalledWith(nthCall, ...)) then
-        local args = wrapAndTagVarargsOrReturn(...)
+    return expect:check(mock:wasNthCalledWith(nthCall, ...), function(isNot)
+        local call = mock.mock.calls[nthCall]
 
-        if tableLib.count(args) == 0 then
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called with no arguments (on call " ..
-            nthCall .. ") but it was called with " .. tableLib.implode({ actual:getCallArgs() }, ", "))
-        else
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called with " ..
-            tableLib.implode(args, ", ") ..
-            " (on call " .. nthCall .. ") but it was called with " .. tableLib.implode({ actual:getCallArgs() }, ", "))
-        end
-    end
-
-    return true
+        return "Call: " .. tostring(nthCall) ..
+            "\nExpected: " .. (isNot and "not " or "") .. messagesLib.formatWrappedValues(expectedArgs, "(no arguments)") ..
+            "\nReceived: " .. (call and messagesLib.formatWrappedValues(call.args, "(no arguments)") or "(no such call)") ..
+            "\n\nNumber of calls: " .. mock.callCount
+    end)
 end
 
 return {
-    toHaveBeenCalledWith = toHaveBeenNthCalledWith,
+    toHaveBeenNthCalledWith = toHaveBeenNthCalledWith,
     default = toHaveBeenNthCalledWith,
 }

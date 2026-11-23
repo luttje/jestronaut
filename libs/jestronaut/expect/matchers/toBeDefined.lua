@@ -1,11 +1,12 @@
+local formatLib = require "jestronaut/utils/format"
+
+--- Checks that the received value is not nil.
 --- @param expect Expect
 --- @return boolean
 local function toBeDefined(expect)
-    if not expect:checkEquals(true, expect.actual ~= nil) then
-        error("Expected " .. tostring(expect.actual) .. " to be defined")
-    end
-
-    return true
+    return expect:check(expect.actual ~= nil, function()
+        return "Received: " .. formatLib.format(expect.actual)
+    end)
 end
 
 return {

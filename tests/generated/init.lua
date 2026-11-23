@@ -83,12 +83,10 @@ myBeverage = { delicious = true, sour = false }
 function myBeverages()
     return {
         {
-            name = "LaCroix",
             delicious = true,
             sour = false,
         },
         {
-            name = "Energizer",
             delicious = false,
             sour = true,
         },

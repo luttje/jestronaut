@@ -1,40 +1,19 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching"
 .wrapAndTagVarargsOrReturn
-local tableLib = require "jestronaut/utils/tables"
+local messagesLib = require "jestronaut/expect/messages"
 
+--- Checks that the mock function was called with the given arguments at least once.
 --- @param expect Expect
 --- @param ... any
+--- @return boolean
 local function toHaveBeenCalledWith(expect, ...)
-    local actual = expect.actual
+    local mock = messagesLib.getMock(expect)
+    local expectedArgs = wrapAndTagVarargsOrReturn(...)
 
-    if not expect:checkEquals(true, actual:wasCalledWith(...)) then
-        local args = wrapAndTagVarargsOrReturn(...)
-
-        if (not actual:wasCalled()) then
-            error("Expected " .. tostring(actual) .. " to have been called but it was never called")
-        elseif (type(args) == "table") then
-            if tableLib.count(args) == 0 then
-                error("Expected " ..
-                tostring(actual) ..
-                " to have been called with no arguments but it was called with " ..
-                tableLib.implode(actual:getAllCallArgs(), ", "))
-            else
-                error("Expected " ..
-                tostring(actual) ..
-                " to have been called with " ..
-                tableLib.implode(args, ", ") ..
-                " but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", "))
-            end
-        else
-            PrintTable(actual)
-            error("Expected " ..
-            tostring(actual) ..
-            " to have been called with " ..
-            tostring(args) .. " but it was called with " .. tableLib.implode(actual:getAllCallArgs(), ", "))
-        end
-    end
-
-    return true
+    return expect:check(mock:wasCalledWith(...), function(isNot)
+        return "Expected: " .. (isNot and "not " or "") .. messagesLib.formatWrappedValues(expectedArgs, "(no arguments)") ..
+            "\n\nReceived calls:\n" .. messagesLib.formatCalls(mock)
+    end)
 end
 
 return {

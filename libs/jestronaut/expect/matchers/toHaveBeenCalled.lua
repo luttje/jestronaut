@@ -1,12 +1,16 @@
+local messagesLib = require "jestronaut/expect/messages"
+
+--- Checks that the mock function was called at least once.
 --- @param expect Expect
+--- @return boolean
 local function toHaveBeenCalled(expect)
-    local actual = expect.actual
+    local mock = messagesLib.getMock(expect)
 
-    if not expect:checkEquals(true, actual:wasCalled()) then
-        error("Expected " .. tostring(actual) .. (expect.inverse and " not" or "") .. " to have been called")
-    end
-
-    return true
+    return expect:check(mock.callCount > 0, function(isNot)
+        return "Expected number of calls: " .. (isNot and "0" or ">= 1") ..
+            "\nReceived number of calls: " .. mock.callCount ..
+            "\n\nCalls:\n" .. messagesLib.formatCalls(mock)
+    end)
 end
 
 return {

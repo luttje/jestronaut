@@ -1,24 +1,23 @@
----
+local formatLib = require "jestronaut/utils/format"
+
+--- Checks the length of a table or string, as returned by the # operator.
 --- @param expect Expect
---- @param length any
+--- @param length number
 --- @return boolean
 local function toHaveLength(expect, length)
     local actual = expect.actual
 
-    if (type(length) ~= 'number') then
-        error("Expected " .. tostring(length) .. " to be a number")
+    if type(length) ~= "number" then
+        expect:usageError("expected length must be a number, got " .. formatLib.format(length))
+    elseif type(actual) ~= "table" and type(actual) ~= "string" then
+        expect:usageError("received value must be a table or string, got " .. formatLib.format(actual))
     end
 
-    if (type(actual) ~= 'table' and type(actual) ~= 'string') then
-        error("Expected " .. tostring(actual) .. " to be a table or string")
-    end
-
-    if not expect:checkEquals(true, #actual == length) then
-        error("Expected " ..
-        tostring(actual) .. " to have length " .. tostring(length) .. " but it has length " .. tostring(#actual))
-    end
-
-    return true
+    return expect:check(#actual == length, function(isNot)
+        return "Expected length: " .. (isNot and "not " or "") .. length ..
+            "\nReceived length: " .. #actual ..
+            "\nReceived value: " .. formatLib.format(actual)
+    end)
 end
 
 return {

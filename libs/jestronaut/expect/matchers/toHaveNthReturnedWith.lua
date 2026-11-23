@@ -1,32 +1,23 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching"
 .wrapAndTagVarargsOrReturn
-local tableLib = require "jestronaut/utils/tables"
+local messagesLib = require "jestronaut/expect/messages"
 
+--- Checks that the nth return of the mock function had the given values.
 --- @param expect Expect
 --- @param nthCall number
 --- @param ... any
+--- @return boolean
 local function toHaveNthReturnedWith(expect, nthCall, ...)
-    local actual = expect.actual
+    local mock = messagesLib.getMock(expect)
+    local expectedValues = wrapAndTagVarargsOrReturn(...)
+    local results = mock.mock.results
 
-    if not expect:checkEquals(true, actual:hasNthReturnedWith(nthCall, ...)) then
-        local args = wrapAndTagVarargsOrReturn(...)
-
-        if tableLib.count(args) == 0 then
-            error("Expected " ..
-            tostring(actual) ..
-            " to have returned with no arguments (on call " ..
-            nthCall .. ") but it returned with " .. tableLib.implode(actual:getReturnedValue(nthCall), ", "))
-        else
-            error("Expected " ..
-            tostring(actual) ..
-            " to have last returned with " ..
-            tableLib.implode(args, ", ") ..
-            " (on call " ..
-            nthCall .. ") but it returned with " .. tableLib.implode(actual:getReturnedValue(nthCall), ", "))
-        end
-    end
-
-    return true
+    return expect:check(nthCall <= #results and mock:hasNthReturnedWith(nthCall, ...), function(isNot)
+        return "Call: " .. tostring(nthCall) ..
+            "\nExpected: " .. (isNot and "not " or "") .. messagesLib.formatWrappedValues(expectedValues, "nil") ..
+            "\nReceived: " .. (nthCall <= #results and messagesLib.formatWrappedValues(results[nthCall], "nil") or "(no such return)") ..
+            "\n\nNumber of returns: " .. #results
+    end)
 end
 
 return {

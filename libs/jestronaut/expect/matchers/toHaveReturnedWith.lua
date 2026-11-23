@@ -1,30 +1,19 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching"
 .wrapAndTagVarargsOrReturn
-local tableLib = require "jestronaut/utils/tables"
+local messagesLib = require "jestronaut/expect/messages"
 
+--- Checks that the mock function returned the given values at least once.
 --- @param expect Expect
 --- @param ... any
+--- @return boolean
 local function toHaveReturnedWith(expect, ...)
-    local actual = expect.actual
+    local mock = messagesLib.getMock(expect)
+    local expectedValues = wrapAndTagVarargsOrReturn(...)
 
-    if not expect:checkEquals(true, actual:hasReturnedWith(...)) then
-        local args = wrapAndTagVarargsOrReturn(...)
-
-        if tableLib.count(args) == 0 then
-            error("Expected " ..
-            tostring(actual) ..
-            " to have returned with no arguments but it returned with " ..
-            tableLib.implode({ actual:getAllReturnValues() }, ", "))
-        else
-            error("Expected " ..
-            tostring(actual) ..
-            " to have returned with " ..
-            tableLib.implode(args, ", ") ..
-            " but it returned with " .. tableLib.implode({ actual:getAllReturnValues() }, ", "))
-        end
-    end
-
-    return true
+    return expect:check(mock:hasReturnedWith(...), function(isNot)
+        return "Expected: " .. (isNot and "not " or "") .. messagesLib.formatWrappedValues(expectedValues, "nil") ..
+            "\n\nReceived returns:\n" .. messagesLib.formatReturns(mock)
+    end)
 end
 
 return {

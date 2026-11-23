@@ -36,7 +36,7 @@ CLOSE_TO_MATCHING_META = {
         elseif actual == -math.huge and self.sample == -math.huge then
             result = true
         else
-            result = math.abs(self.sample - actual) < math.pow(10, -self.precision) / 2
+            result = math.abs(self.sample - actual) < 10 ^ -self.precision / 2
         end
 
         return self.inverse and not result or result

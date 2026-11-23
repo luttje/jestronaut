@@ -1,12 +1,12 @@
----
+local formatLib = require "jestronaut/utils/format"
+
+--- Checks that the received value is neither false nor nil.
 --- @param expect Expect
 --- @return boolean
 local function toBeTruthy(expect)
-    if not expect:checkEquals(false, not expect.actual) then
-        error("Expected " .. tostring(expect.actual) .. " to be truthy")
-    end
-
-    return true
+    return expect:check(expect.actual, function()
+        return "Received: " .. formatLib.format(expect.actual)
+    end)
 end
 
 return {

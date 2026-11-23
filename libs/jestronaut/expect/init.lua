@@ -8,6 +8,7 @@ local stateLib = require "jestronaut/environment/state"
 local customEqualityTesters = {}
 local customMatchers = {}
 local expect
+local runCustomMatcher
 
 local modifiers = {
     ["not"] = function(expect)
@@ -55,27 +56,70 @@ local function getAsymmetricMatcher(key)
     return matcherOrError
 end
 
+--- Builds the first line of a failure message, e.g. `expect(received)["not"]:toBe()`. Matchers can set
+--- `receivedName` on the expect to show something more specific than "received", like the name of a mock.
+--- @param expect Expect
+--- @return string
+local function getMatcherHint(expect)
+    return "expect(" .. (rawget(expect, "receivedName") or "received") .. ")" ..
+        (expect.inverse and '["not"]' or "") .. ":" .. tostring(expect.matcherName) .. "()"
+end
+
 --- @class Expect
 --- @field actual any
+--- @field inverse boolean True when the matcher was preceded by `["not"]`.
+--- @field matcherName string The name of the matcher being run.
 local EXPECT_META = {
     actual = nil,
 
-    checkEquals = function(self, expected, actual)
-        if (actual == nil) then
-            return self.inverse ~= false
+    --- Passes when `pass` is true, or when it is false and the matcher was preceded by `["not"]`. Otherwise fails the
+    --- assertion with a message made of the matcher hint and the details.
+    --- @param self Expect
+    --- @param pass any Whether the received value satisfies the matcher, ignoring `not`.
+    --- @param buildDetails? fun(isNot: boolean): string? Explains the failure, e.g. "Expected: 5\nReceived: 3".
+    --- @return boolean
+    check = function(self, pass, buildDetails)
+        if (not not pass) ~= self.inverse then
+            return true
         end
 
-        for _, tester in ipairs(customEqualityTesters) do
-            local result = tester(expected, actual)
+        local details = buildDetails and buildDetails(self.inverse)
 
-            if result ~= nil then
-                return self.inverse ~= result
-            end
-        end
+        error(getMatcherHint(self) .. (details and ("\n\n" .. details) or ""), 0)
+    end,
 
-        return self.inverse ~= (actual == expected)
+    --- Fails the assertion because the matcher was used incorrectly, e.g. with a value of the wrong type.
+    --- Fails regardless of `not`.
+    --- @param self Expect
+    --- @param details string
+    usageError = function(self, details)
+        error(getMatcherHint(self) .. "\n\nMatcher error: " .. details, 0)
     end,
 }
+
+--- Runs a matcher added with expect.extend. Like in Jest, it receives the received value followed by the arguments
+--- passed to the matcher, and returns a table with `pass` (boolean) and `message` (string, or a function that
+--- receives whether `not` was used and returns a string).
+--- @param matcher function
+--- @param expectInstance Expect
+--- @return boolean
+function runCustomMatcher(matcher, expectInstance, ...)
+    local result = matcher(expectInstance.actual, ...)
+
+    if type(result) ~= "table" or result.pass == nil then
+        expectInstance:usageError("custom matchers must return a table with a `pass` field, got " .. tostring(result))
+    end
+
+    return expectInstance:check(result.pass, function(isNot)
+        local message = result.message
+
+        if type(message) == "function" then
+            return message(isNot)
+        end
+
+        return message ~= nil and tostring(message) or nil
+    end)
+end
 
 EXPECT_META.__index = function(self, key)
     if EXPECT_META[key] ~= nil then
@@ -105,11 +149,18 @@ EXPECT_META.__index = function(self, key)
     local matcher = getMatcher(key)
     if matcher then
         local matcherFunc
-        if matcher.build ~= nil then
+
+        if type(matcher) == "function" then
+            matcherFunc = function(expectInstance, ...)
+                return runCustomMatcher(matcher, expectInstance, ...)
+            end
+        elseif matcher.build ~= nil then
             matcherFunc = matcher.build(self, customEqualityTesters)
         else
             matcherFunc = matcher.default
         end
+
+        rawset(self, "matcherName", key)
 
         return functionLib.makeFunctionShim(matcherFunc, function(success, ...)
             stateLib.incrementAssertionCount()

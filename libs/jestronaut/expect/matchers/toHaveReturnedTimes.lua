@@ -1,12 +1,17 @@
+local messagesLib = require "jestronaut/expect/messages"
+
+--- Checks that the mock function returned exactly the given number of times.
 --- @param expect Expect
+--- @param times number
+--- @return boolean
 local function toHaveReturnedTimes(expect, times)
-    local actual = expect.actual
+    local mock = messagesLib.getMock(expect)
+    local returnCount = #mock.mock.results
 
-    if not expect:checkEquals(true, actual:hasReturnedTimes(times)) then
-        error("Expected " .. tostring(actual) .. " to have returned " .. tostring(times) .. " times")
-    end
-
-    return true
+    return expect:check(returnCount == times, function(isNot)
+        return "Expected number of returns: " .. (isNot and "not " or "") .. tostring(times) ..
+            "\nReceived number of returns: " .. returnCount
+    end)
 end
 
 return {

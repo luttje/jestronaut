@@ -1,29 +1,21 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching"
 .wrapAndTagVarargsOrReturn
-local tableLib = require "jestronaut/utils/tables"
+local messagesLib = require "jestronaut/expect/messages"
 
+--- Checks that the last return of the mock function had the given values.
 --- @param expect Expect
 --- @param ... any
+--- @return boolean
 local function toHaveLastReturnedWith(expect, ...)
-    local actual = expect.actual
+    local mock = messagesLib.getMock(expect)
+    local expectedValues = wrapAndTagVarargsOrReturn(...)
+    local results = mock.mock.results
 
-    if not expect:checkEquals(true, actual:hasLastReturnedWith(...)) then
-        local args = wrapAndTagVarargsOrReturn(...)
-
-        if tableLib.count(args) == 0 then
-            error("Expected " ..
-            tostring(actual) ..
-            " to have last returned with no arguments but it returned with " ..
-            tableLib.implode({ actual:getLastReturn() }, ", "))
-        else
-            error("Expected " ..
-            tostring(actual) ..
-            " to have last returned with " ..
-            tableLib.implode(args, ", ") .. " but it returned with " .. tableLib.implode({ actual:getLastReturn() }, ", "))
-        end
-    end
-
-    return true
+    return expect:check(#results > 0 and mock:hasLastReturnedWith(...), function(isNot)
+        return "Expected: " .. (isNot and "not " or "") .. messagesLib.formatWrappedValues(expectedValues, "nil") ..
+            "\nReceived: " .. (#results > 0 and messagesLib.formatWrappedValues(results[#results], "nil") or "(no returns)") ..
+            "\n\nNumber of returns: " .. #results
+    end)
 end
 
 return {

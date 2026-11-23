@@ -1,32 +1,27 @@
---- Determines whether two values are the same value. Two values are the same if one of the following holds true:
---- both undefined
---- both null
---- both true or both false
---- both strings of the same length with the same characters in the same order
---- both the same object (meaning both values reference the same object in memory)
---- both BigInts with the same numeric value -- N/a
---- both symbols that reference the same symbol value -- N/a
---- both numbers and
----     both +0
----     both -0
----     both NaN
----     or both non-zero, not NaN, and have the same value
+local deepEquals = require "jestronaut/expect/matchers/toEqual".deepEquals
+local formatLib = require "jestronaut/utils/format"
+
+--- Checks that the received value is the expected value: the same table, function or userdata, or an equal string,
+--- number, boolean or nil. NaN is the same as NaN. Metatable __eq methods are not used, use toEqual for that.
 --- @param expect Expect
 --- @param expected any
 --- @return boolean
 local function toBe(expect, expected)
     local actual = expect.actual
+    local pass = rawequal(actual, expected)
+        or (type(actual) == "number" and type(expected) == "number" and actual ~= actual and expected ~= expected)
 
-    -- Special case: both actual and expected are nil
-    if actual == nil and expected == nil then
-        return true
-    end
+    return expect:check(pass, function(isNot)
+        local details = "Expected: " .. (isNot and "not " or "") .. formatLib.format(expected) ..
+            "\nReceived: " .. formatLib.format(actual)
 
-    if not expect:checkEquals(actual, expected) then
-        error("Expected " .. tostring(actual) .. (expect.inverse and " not " or "") .. " to be " .. tostring(expected))
-    end
+        if not isNot and type(actual) == "table" and type(expected) == "table" and deepEquals(actual, expected) then
+            details = details ..
+                "\n\nThe tables have the same contents, but are different tables. Use toEqual to compare contents."
+        end
 
-    return true
+        return details
+    end)
 end
 
 return {

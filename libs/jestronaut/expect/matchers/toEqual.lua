@@ -1,38 +1,11 @@
 local wrapAndTagVarargsOrReturn = require "jestronaut/expect/asymmetricmatchers/varargsMatching"
 .wrapAndTagVarargsOrReturn
 local asymmetricMatcherLib = require "jestronaut/expect/asymmetricmatchers/asymmetricmatcher"
-local tableLib = require "jestronaut/utils/tables"
-
---- Formats a table key as it would appear in a path, e.g. `.name`, `[1]` or `["some key"]`.
---- @param key any
---- @return string
-local function formatKey(key)
-    if type(key) == "string" then
-        if key:match("^[%a_][%w_]*$") then
-            return "." .. key
-        end
-
-        return "[" .. string.format("%q", key) .. "]"
-    end
-
-    return "[" .. tostring(key) .. "]"
-end
-
---- Formats a value for use in an error message. Strings are quoted so "1" and 1 can be told apart.
---- @param value any
---- @return string
-local function formatValue(value)
-    if type(value) == "string" then
-        return string.format("%q", value)
-    elseif type(value) == "table" and not asymmetricMatcherLib.isMatcher(value) then
-        return "table: '" .. tableLib.implode(value, ", ") .. "'"
-    end
-
-    return tostring(value)
-end
+local formatLib = require "jestronaut/utils/format"
 
 --- Recursively checks whether two values are equal, the way Jest's toEqual does:
---- - tables are equal when they have the same keys with (recursively) equal values, metatables are ignored;
+--- - tables are equal when they have the same keys with (recursively) equal values;
+--- - metatables are ignored, unless `options.strict` is set (as toStrictEqual does);
 --- - asymmetric matchers (like expect.anything()) on either side are used to match the other value;
 --- - NaN is equal to NaN;
 --- - custom equality testers are consulted first, at every level. They receive (actual, expected) and return
@@ -43,11 +16,13 @@ end
 --- @param actual any
 --- @param expected any
 --- @param customEqualityTesters? function[]
+--- @param options? { strict?: boolean }
 --- @param path? string
 --- @param seen? table
 --- @return boolean, string?, any, any
-local function deepEquals(actual, expected, customEqualityTesters, path, seen)
+local function deepEquals(actual, expected, customEqualityTesters, options, path, seen)
     path = path or ""
+    options = options or {}
 
     if customEqualityTesters then
         for _, tester in ipairs(customEqualityTesters) do
@@ -92,6 +67,10 @@ local function deepEquals(actual, expected, customEqualityTesters, path, seen)
         return false, path, actual, expected
     end
 
+    if options.strict and getmetatable(actual) ~= getmetatable(expected) then
+        return false, path, actual, expected
+    end
+
     -- Guard against infinite recursion on cyclic tables: a pair that is already being compared further up is
     -- assumed equal, any real difference will be found elsewhere.
     seen = seen or {}
@@ -105,7 +84,7 @@ local function deepEquals(actual, expected, customEqualityTesters, path, seen)
 
     for key, expectedValue in pairs(expected) do
         local isEqual, differencePath, actualAtPath, expectedAtPath = deepEquals(
-            actual[key], expectedValue, customEqualityTesters, path .. formatKey(key), seen
+            actual[key], expectedValue, customEqualityTesters, options, path .. formatLib.formatPathKey(key), seen
         )
 
         if not isEqual then
@@ -115,11 +94,31 @@ local function deepEquals(actual, expected, customEqualityTesters, path, seen)
 
     for key, actualValue in pairs(actual) do
         if expected[key] == nil then
-            return false, path .. formatKey(key), actualValue, nil
+            return false, path .. formatLib.formatPathKey(key), actualValue, nil
         end
     end
 
     return true
+end
+
+--- Builds the failure details for equality matchers.
+--- @param actual any
+--- @param expected any
+--- @param isNot boolean
+--- @param differencePath string?
+--- @param actualAtPath any
+--- @param expectedAtPath any
+--- @return string
+local function buildEqualityDetails(actual, expected, isNot, differencePath, actualAtPath, expectedAtPath)
+    local details = "Expected: " .. (isNot and "not " or "") .. formatLib.format(expected) ..
+        "\nReceived: " .. formatLib.format(actual)
+
+    if not isNot and differencePath and differencePath ~= "" then
+        details = details .. "\n\nDifference at " .. differencePath .. ": expected " .. formatLib.format(expectedAtPath) ..
+            ", received " .. formatLib.format(actualAtPath)
+    end
+
+    return details
 end
 
 --- Checks that the actual value recursively equals the expected value.
@@ -132,24 +131,15 @@ local function toEqual(expect, customEqualityTesters, ...)
     local expected = wrapAndTagVarargsOrReturn(...)
     local isEqual, differencePath, actualAtPath, expectedAtPath = deepEquals(actual, expected, customEqualityTesters)
 
-    if isEqual == expect.inverse then
-        local message = "Expected " .. formatValue(actual) .. (expect.inverse and " not" or "") ..
-            " to equal " .. formatValue(expected)
-
-        if not isEqual and differencePath ~= "" then
-            message = message .. "\n  Difference at " .. differencePath .. ": expected " .. formatValue(expectedAtPath) ..
-                ", received " .. formatValue(actualAtPath)
-        end
-
-        error(message)
-    end
-
-    return true
+    return expect:check(isEqual, function(isNot)
+        return buildEqualityDetails(actual, expected, isNot, differencePath, actualAtPath, expectedAtPath)
+    end)
 end
 
 return {
     toEqual = toEqual,
     deepEquals = deepEquals,
+    buildEqualityDetails = buildEqualityDetails,
 
     --- @param expect Expect
     build = function(expect, customEqualityTesters)
