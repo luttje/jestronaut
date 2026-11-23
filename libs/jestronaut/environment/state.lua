@@ -389,6 +389,22 @@ function DESCRIBE_OR_TEST_FOR_RUN_META:addChild(describeOrTest)
     self.children[#self.children + 1] = describeOrTest
 end
 
+--- Gets the name of a describe or test prefixed with the names of its parent describes, separated by spaces.
+--- The root describe (which has no parent) is left out.
+--- @param describeOrTest DescribeOrTest
+--- @return string
+local function getFullName(describeOrTest)
+    local names = { describeOrTest.name }
+    local parent = describeOrTest.parent
+
+    while parent and parent.parent do
+        table.insert(names, 1, parent.name)
+        parent = parent.parent
+    end
+
+    return table.concat(names, " ")
+end
+
 --- Creates a copy of the describe or test for running. Returns the estimated amount of tests to skip.
 --- @param describeOrTest DescribeOrTest
 --- @param runnerOptions RunnerOptions
@@ -420,8 +436,12 @@ local function makeDescribeOrTestForRun(describeOrTest, runnerOptions)
                 describeOrTestForRun.toSkip = true
             end
         end
-    elseif runnerOptions.testNamePattern then
-        if not describeOrTestForRun.name:find(runnerOptions.testNamePattern) then
+    end
+
+    -- Like Jest, only tests are filtered by name, matching against the full name (including the names of
+    -- surrounding describe blocks). Describes are never skipped by name, otherwise their tests couldn't be matched.
+    if runnerOptions.testNamePattern and describeOrTest.isTest then
+        if not getFullName(describeOrTest):find(runnerOptions.testNamePattern) then
             describeOrTestForRun.toSkip = true
         end
     end

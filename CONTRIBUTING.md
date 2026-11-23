@@ -23,7 +23,9 @@ Most of Jestronaut's own tests are generated from the Jest documentation automat
 
 You can run the test generation script with `npm run generate-tests`. All tests in `tests/generated` will be overwritten.
 
-Use `luarocks test` in the root of this repo to execute the Jestronaut tests.
+Use `luarocks test` in the root of this repo to execute the Jestronaut tests. You can also run them directly with any Lua interpreter (5.1 through 5.4 and LuaJIT are supported): `lua test.lua`.
+
+Behaviour of the test runner itself (run results, `bail`, `testNamePattern`, ...) can't be checked from inside a single test run. Those checks live in `tests/integration.lua`, which does complete runs over the fixture files in `tests/fixtures/`. Run them with `lua tests/integration.lua`.
 
 For coverage install the following LuaRocks modules:
 * `luarocks install luacov`

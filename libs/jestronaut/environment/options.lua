@@ -63,7 +63,10 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- testEnvironmentOptions = "",
     -- testLocationInResults = true,
     -- testMatch = "",
-    -- testNamePattern = "",
+    --- Only run tests whose full name (surrounding describe names and the test name, joined by spaces) matches
+    --- this Lua pattern. Other tests are reported as skipped.
+    --- @type string?
+    testNamePattern = nil,
     --- @type string[]
     testPathIgnorePatterns = nil,
     -- testPathPattern = "",

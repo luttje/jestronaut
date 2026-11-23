@@ -36,6 +36,8 @@ jobs:
           luaVersion: ${{ matrix.luaVersion }}
       - name: Run the test suite
         run: lua test.lua
+      - name: Run the runner integration checks
+        run: lua tests/integration.lua
       - name: Verify a failing test run exits with a non-zero status code
         run: |
           if lua tests/fixtures/failing-run.lua > /dev/null; then
