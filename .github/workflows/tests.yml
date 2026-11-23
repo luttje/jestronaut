@@ -52,6 +52,8 @@ jobs:
             echo "Expected tests/fixtures/failing-run.lua to exit with a non-zero status code"
             exit 1
           fi
+      - name: Verify tests can be written without globals
+        run: $LUA tests/fixtures/no-globals-run.lua
       - name: Verify the jestronaut command finds and runs test files
         run: |
           $LUA -e 'package.path = "./libs/?.lua;" .. package.path' bin/jestronaut tests/fixtures/discovery

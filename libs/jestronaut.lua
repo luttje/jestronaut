@@ -167,4 +167,13 @@ end
 
 package.loaded['@jestronaut_globals'] = JESTRONAUT:getGlobals()
 
+-- describe, it, test, expect and the hooks are also available on the module, for tests that don't use globals:
+--   local jestronaut = require "jestronaut"
+--   local describe, it, expect = jestronaut.describe, jestronaut.it, jestronaut.expect
+for key, value in pairs(package.loaded['@jestronaut_globals']) do
+    if key ~= "jestronaut" then
+        JESTRONAUT[key] = value
+    end
+end
+
 return JESTRONAUT
