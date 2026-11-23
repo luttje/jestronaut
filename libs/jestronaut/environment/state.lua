@@ -1,3 +1,5 @@
+local unpack = table.unpack or unpack
+
 local callRespectingRequireOverride = require "jestronaut/utils/require".callRespectingRequireOverride
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
 local functionLib = require "jestronaut/utils/functions"

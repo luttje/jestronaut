@@ -1,3 +1,5 @@
+local unpack = table.unpack or unpack
+
 --- Normalizes an item so it becomes an array.
 --- @param item any
 --- @return ...

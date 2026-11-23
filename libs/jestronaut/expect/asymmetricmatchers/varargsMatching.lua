@@ -1,3 +1,5 @@
+local unpack = table.unpack or unpack
+
 local asymmetricMatcherLib = require "jestronaut/expect/asymmetricmatchers/asymmetricmatcher"
 local extendMetaTableIndex = require "jestronaut/utils/metatables".extendMetaTableIndex
 local tableLib = require "jestronaut/utils/tables"

@@ -1,3 +1,5 @@
+local unpack = table.unpack or unpack
+
 local require = require
 
 --- Ensures that any overridden require functions are respected when calling the given callback.

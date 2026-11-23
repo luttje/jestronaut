@@ -220,7 +220,7 @@ jestronaut:preloadRequireActual("../myModule", function(moduleName)
     }
 end)
 
-table.insert(package.loaders, function(moduleName)
+table.insert(package.loaders or package.searchers, function(moduleName)
     if moduleName == "SomeClass" then
         return function(moduleName)
             return require("SomeClass_js")
