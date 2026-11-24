@@ -60,8 +60,8 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- onlyChanged = true,
     -- openHandlesTimeout = 1000,
     -- outputFile = "",
-    --- Pass when no tests are found. Otherwise a run without tests fails, since that usually means the roots or
-    --- testMatch don't point at the tests.
+    --- Pass when there are no tests. Otherwise a run without tests fails, since that usually means the test files
+    --- weren't loaded.
     --- @type boolean
     passWithNoTests = false,
     -- projects = "", --path1 ... pathN
@@ -69,8 +69,7 @@ local RUNNER_DEFAULT_OPTIONS = {
     -- reporters = "",
     -- resetMocks = true,
     -- restoreMocks = true,
-    --- The directories that contain the tests. Tests are recognized by being in one of these, and test files are
-    --- found in them when registerTests is called without arguments.
+    --- The directories that contain the tests. Tests are recognized by being in a file in one of these.
     --- @type string[]
     roots = nil,
     -- runInBand = true,
@@ -86,21 +85,14 @@ local RUNNER_DEFAULT_OPTIONS = {
     silent = false,
     -- testEnvironmentOptions = "",
     -- testLocationInResults = true,
-    --- The file names of test files, used to find them in the roots when registerTests is called without arguments.
-    --- `*` matches any characters and `?` a single character. Patterns that start and end with a slash are Lua
-    --- patterns matched against the whole path. Defaults to *_spec.lua, *_test.lua, *.spec.lua and *.test.lua.
-    --- @type string[]?
-    testMatch = nil,
+    -- testMatch = "",
     --- Only run tests whose full name (surrounding describe names and the test name, joined by spaces) matches
     --- this Lua pattern. Other tests are reported as skipped.
     --- @type string?
     testNamePattern = nil,
     --- @type string[]
     testPathIgnorePatterns = nil,
-    --- Only find test files whose path contains one of these texts. Like testPathIgnorePatterns, texts that start and
-    --- end with a slash are Lua patterns.
-    --- @type string[]?
-    testPathPattern = nil,
+    -- testPathPattern = "",
     -- testRunner = "",
     -- testSequencer = "",
     --- How long tests and hooks that take a done callback may take to call it, in milliseconds. A single test can set

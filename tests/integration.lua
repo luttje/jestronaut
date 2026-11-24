@@ -393,51 +393,79 @@ do
     check("arguments that aren't options are paths", paths, { "tests/" })
 end
 
--- Finding test files and running them from the command line
+-- Running test files from the command line
 do
-    local hasFileSystem = pcall(require, "lfs") or pcall(require, "luv")
+    local cli = require "jestronaut/cli"
 
-    if not hasFileSystem then
-        print("Skipping the checks for finding test files, because LuaFileSystem isn't installed.")
-    else
-        local cli = require "jestronaut/cli"
+    --- Runs the command line, returning the exit code, what the reporter recorded, and what the command printed.
+    local function runCli(args)
+        local reporter = newRecordingReporter()
+        local printed = {}
+        local printBefore = print
 
-        local function runCli(args)
-            local reporter = newRecordingReporter()
-            local exitCode = cli.run(args, { reporter = reporter })
-
-            return exitCode, reporter.recorded
+        print = function(...)
+            table.insert(printed, table.concat({ ... }, "\t"))
         end
 
-        local exitCode, recorded = runCli({ "--roots=./tests/fixtures/discovery" })
-        check("test files are found by name, skipping other files, hidden directories and lua_modules",
-            recorded.passed, { "math adds", "strings concatenate", "deep test" })
-        check("the exit code is 0 when all tests pass", exitCode, 0)
+        local exitCode = cli.run(args, { reporter = reporter })
 
-        _, recorded = runCli({ "./tests/fixtures/discovery/math_test.lua" })
-        check("test files given as paths run on their own", recorded.passed, { "math adds" })
+        print = printBefore
 
-        _, recorded = runCli({ "./tests/fixtures/discovery/nested" })
-        check("directories given as paths are searched for test files", recorded.passed, { "deep test" })
-
-        _, recorded = runCli({ "--roots=./tests/fixtures/discovery", "nested" })
-        check("other paths only run test files whose path contains them", recorded.passed, { "deep test" })
-
-        _, recorded = runCli({ "--roots=./tests/fixtures/discovery", "--testMatch=helper.lua" })
-        check("testMatch changes which files are test files", recorded.passed, { "helper test" })
-
-        exitCode, recorded = runCli({ "--roots=./tests/fixtures/discovery-broken" })
-        check("test files that fail to load are reported as a failing test", recorded.failed,
-            { "Test suite failed to run" })
-        check("other test files still run when one fails to load", recorded.passed, { "works" })
-        check("the exit code is 1 when a test fails", exitCode, 1)
-
-        exitCode = runCli({ "--roots=./tests/fixtures/discovery-empty" })
-        check("finding no tests fails", exitCode, 1)
-
-        exitCode = runCli({ "--roots=./tests/fixtures/discovery-empty", "--passWithNoTests" })
-        check("finding no tests passes with passWithNoTests", exitCode, 0)
+        return exitCode, reporter.recorded, table.concat(printed, "\n")
     end
+
+    local exitCode, recorded = runCli({ "./tests/fixtures/cli/math_test.lua", "./tests/fixtures/cli/strings_test.lua" })
+    check("the command runs the tests in the given files", recorded.passed, { "math adds", "strings concatenate" })
+    check("the exit code is 0 when all tests pass", exitCode, 0)
+
+    _, recorded = runCli({ "./tests/fixtures/cli/math_test.lua", "--testNamePattern=nothing matches this" })
+    check("options are passed on", recorded.skipped, { "math adds" })
+
+    exitCode, recorded = runCli({ "./tests/fixtures/cli/broken_test.lua", "./tests/fixtures/cli/math_test.lua" })
+    check("test files that fail to load are reported as a failing test", recorded.failed,
+        { "Test suite failed to run" })
+    check("other test files still run when one fails to load", recorded.passed, { "math adds" })
+    check("the exit code is 1 when a test fails", exitCode, 1)
+
+    local printed
+    exitCode, _, printed = runCli({ "./tests/fixtures/cli/missing_test.lua" })
+    check("the exit code is 1 when a test file doesn't exist", exitCode, 1)
+    check("missing test files are named", printed:find("Test file not found: ./tests/fixtures/cli/missing_test.lua", 1,
+        true) ~= nil, true)
+
+    exitCode, _, printed = runCli({ "./tests/fixtures/cli" })
+    check("directories aren't test files", exitCode, 1)
+
+    exitCode, _, printed = runCli({ "--verbose" })
+    check("the exit code is 1 without test files", exitCode, 1)
+    check("the usage is shown without test files", printed:find("Usage: jestronaut", 1, true) ~= nil, true)
+end
+
+-- Runs without tests
+do
+    local results = run("names", { testNamePattern = "nothing matches this" })
+    check("a run with only skipped tests passes", results.success, true)
+
+    jestronaut
+        :configure({ roots = { "./tests/fixtures/" }, reporter = newRecordingReporter(), exitOnFailure = false })
+        :registerTests(function() end)
+
+    local printBefore = print
+    print = function() end
+    jestronaut:runTests()
+    print = printBefore
+
+    check("a run without any tests fails", jestronaut.results.success, false)
+
+    jestronaut
+        :configure({
+            roots = { "./tests/fixtures/" }, reporter = newRecordingReporter(), exitOnFailure = false,
+            passWithNoTests = true,
+        })
+        :registerTests(function() end)
+        :runTests()
+
+    check("a run without any tests passes with passWithNoTests", jestronaut.results.success, true)
 end
 
 -- Fake timers

@@ -24,16 +24,14 @@ tests that used to pass fail, see the breaking changes below.
 - Matchers added with `expect.extend` receive the received value and the matcher's arguments, and return
   `{ pass, message }`, like in Jest.
 - Matcher names are case-sensitive on every platform. On Windows `expect(x):tobe(y)` used to work.
-- A run that finds no tests fails, unless `passWithNoTests` is set.
+- A run without any tests fails, unless `passWithNoTests` is set.
 - Registering tests or hooks inside a running test raises an error.
 - The test counts only count tests, not describes.
-- LuaFileSystem is a new dependency.
 
 ### Added
 
-- A `jestronaut` command that finds test files (`*_test.lua`, `*_spec.lua`, `*.test.lua`, `*.spec.lua`) and runs
-  them, with the options as `--name=value` arguments. `registerTests()` without arguments finds test files too, and it
-  also accepts a list of test files.
+- A `jestronaut` command that runs the given test files, with the options as `--name=value` arguments.
+  `registerTests` also accepts a list of test files, and reports files that fail to load as a failing test.
 - Asynchronous tests and hooks with a `done` callback, `jestronaut:async` for Lua 5.1, the `testTimeout` option and
   the `eventLoop` option to wait with your own event loop or from an application's loop (`jestronaut:tick()`).
 - Fake timers: `jestronaut:useFakeTimers()`, `advanceTimersByTime`, `runAllTimers` and the other Jest timer functions.
@@ -44,7 +42,7 @@ tests that used to pass fail, see the breaking changes below.
 - What tests print is captured and shown after the run. The `silent` option hides it.
 - A plain reporter for CI and terminals without colors, used when `CI` or `NO_COLOR` is set (the `ci` and `colors`
   options).
-- `testMatch`, `testPathPattern` and `passWithNoTests` options.
+- The `passWithNoTests` option.
 - `jestronaut:setTimeout` sets the default timeout of tests and hooks.
 - Run results with counts are passed to the `runTests` callback.
 - Support for Lua 5.2, 5.3 and 5.4.

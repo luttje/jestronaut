@@ -71,7 +71,7 @@ end
 local LIBRARY_PATH_PARTS = {
     "/jestronaut.lua",
     "/jestronaut/environment/", "/jestronaut/expect/", "/jestronaut/mock/", "/jestronaut/utils/",
-    "/jestronaut/cli.lua", "/jestronaut/coverage.lua", "/jestronaut/discovery.lua", "/jestronaut/each.lua",
+    "/jestronaut/cli.lua", "/jestronaut/coverage.lua", "/jestronaut/each.lua",
     "/jestronaut/environment.lua", "/jestronaut/expect.lua", "/jestronaut/faketimers.lua", "/jestronaut/mock.lua",
     "/jestronaut/plainreporter.lua", "/jestronaut/reporter.lua",
 }
@@ -1390,7 +1390,7 @@ local function runTests(runnerOptions, onFinished)
         local noTestsFound = counts.total == 0 and not runnerOptions.passWithNoTests
 
         if noTestsFound then
-            print("No tests found. Check the roots and testMatch options, or set passWithNoTests to pass without tests.")
+            print("No tests found. Check that the test files are loaded, or set passWithNoTests to pass without tests.")
         end
 
         local results = {

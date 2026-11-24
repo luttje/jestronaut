@@ -25,13 +25,11 @@ Run Jestronaut's tests with any Lua interpreter (5.1 through 5.4 and LuaJIT are 
 lua test.lua
 ```
 
-Behaviour of the test runner itself (run results, `bail`, hooks, asynchronous tests, finding test files, ...) can't be checked from inside a single test run. Those checks live in `tests/integration.lua`, which does complete runs over the fixture files in `tests/fixtures/`:
+Behaviour of the test runner itself (run results, `bail`, hooks, asynchronous tests, the command line, ...) can't be checked from inside a single test run. Those checks live in `tests/integration.lua`, which does complete runs over the fixture files in `tests/fixtures/`:
 
 ```bash
 lua tests/integration.lua
 ```
-
-The checks for finding test files need [LuaFileSystem](https://lunarmodules.github.io/luafilesystem/) (`luarocks install luafilesystem`), and are skipped without it.
 
 Some fixtures are separate runs that CI checks the exit code of: `tests/fixtures/failing-run.lua` must exit with status code 1, `tests/fixtures/no-globals-run.lua` with 0.
 

@@ -25,15 +25,13 @@
 
 ---@class JestronautOptions
 ---@field roots string[] The directories that contain the tests.
----@field testMatch? string[] File names of test files to find in the roots (globs with `*` and `?`, or /Lua patterns/ matched against the path).
----@field testPathIgnorePatterns? string[] Skip test files whose path contains one of these (or matches it, when written as /pattern/).
----@field testPathPattern? string[] Only find test files whose path contains one of these (or matches it, when written as /pattern/).
+---@field testPathIgnorePatterns? string[] Skip tests in files whose path contains one of these (or matches it, when written as /pattern/).
 ---@field testNamePattern? string Only run tests whose full name matches this Lua pattern.
 ---@field bail? number|boolean Stop after this many failed tests. 0 or false runs all tests, true is the same as 1.
 ---@field testTimeout? number Timeout in milliseconds for tests and hooks that take a done callback (default 5000).
 ---@field eventLoop? JestronautEventLoop How to wait for tests and hooks that take a done callback.
 ---@field exitOnFailure? boolean Exit the process with status code 1 when a test fails (default true where os.exit exists).
----@field passWithNoTests? boolean Pass when no tests are found.
+---@field passWithNoTests? boolean Pass when there are no tests.
 ---@field verbose? boolean Show every test.
 ---@field silent? boolean Hide what tests print.
 ---@field ci? boolean Print a plain log instead of redrawing the output (default: true when the CI environment variable is set).
@@ -359,8 +357,8 @@ local Jestronaut = {}
 ---@return Jestronaut
 function Jestronaut:configure(options) end
 
----Registers the tests: by calling the function, by loading the test files, or by finding the test files in the roots.
----@param testsOrRegistrar? fun()|string[]
+---Registers the tests: by calling the function, which loads the test files, or by loading the given test files.
+---@param testsOrRegistrar fun()|string[]
 ---@return Jestronaut
 function Jestronaut:registerTests(testsOrRegistrar) end
 

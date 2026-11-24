@@ -36,9 +36,6 @@ jobs:
         uses: leafo/gh-actions-lua@v10
         with:
           luaVersion: ${{ matrix.luaVersion }}
-      - uses: leafo/gh-actions-luarocks@v4
-      - name: Install LuaFileSystem, used to find test files
-        run: luarocks install luafilesystem
       # LuaJIT is installed as `luajit` rather than `lua`
       - name: Select the Lua interpreter
         run: echo "LUA=$(command -v lua || command -v luajit)" >> "$GITHUB_ENV"
@@ -54,11 +51,11 @@ jobs:
           fi
       - name: Verify tests can be written without globals
         run: $LUA tests/fixtures/no-globals-run.lua
-      - name: Verify the jestronaut command finds and runs test files
+      - name: Verify the jestronaut command runs test files
         run: |
-          $LUA -e 'package.path = "./libs/?.lua;" .. package.path' bin/jestronaut tests/fixtures/discovery
+          $LUA -e 'package.path = "./libs/?.lua;" .. package.path' bin/jestronaut tests/fixtures/cli/math_test.lua tests/fixtures/cli/strings_test.lua
 
-          if $LUA -e 'package.path = "./libs/?.lua;" .. package.path' bin/jestronaut tests/fixtures/discovery-broken > /dev/null; then
+          if $LUA -e 'package.path = "./libs/?.lua;" .. package.path' bin/jestronaut tests/fixtures/cli/broken_test.lua > /dev/null; then
             echo "Expected the jestronaut command to exit with a non-zero status code for a failing test"
             exit 1
           fi

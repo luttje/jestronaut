@@ -66,8 +66,8 @@ This addon provides a way to run [Jestronaut](https://github.com/luttje/jestrona
       :runTests()
     ```
 
-    Garry's Mod has no LuaFileSystem, so Jestronaut can't find test files itself: load them with `include` in the
-    function passed to `registerTests`.
+    Load the test files with `include` in the function passed to `registerTests`, since Garry's Mod's `require`
+    only loads modules in `lua/includes/modules`.
 
 3. Run the runner script in Garry's Mod:
 

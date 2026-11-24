@@ -18,7 +18,7 @@ A Lua library for testing your code. It does for Lua what [Jest](https://jestjs.
 * Jest's matchers, with readable failure messages that show where values differ
 * Mock functions, spies and module mocking
 * Asynchronous tests with a `done` callback, and fake timers
-* A `jestronaut` command that finds and runs your test files, and exits with status code 1 when tests fail
+* A `jestronaut` command that runs your test files, and exits with status code 1 when tests fail
 * Lua 5.1 to 5.4, LuaJIT and [Garry's Mod](./gmod-addon/README.md)
 
 ![Jestronaut output showing green signals besides all tests in 4 files to indicate the tests inside passed](./docs/output.gif)
@@ -31,7 +31,7 @@ A Lua library for testing your code. It does for Lua what [Jest](https://jestjs.
     luarocks install jestronaut
     ```
 
-2. Create a test file. Files ending in `_test.lua`, `_spec.lua`, `.test.lua` or `.spec.lua` are test files:
+2. Create a test file:
 
     ```lua
     -- tests/math_test.lua
@@ -45,23 +45,23 @@ A Lua library for testing your code. It does for Lua what [Jest](https://jestjs.
 3. Run the tests from the root of your project:
 
     ```bash
-    jestronaut
+    jestronaut tests/math_test.lua
     ```
 
 ## ▶️ Running tests
 
 ### With the `jestronaut` command
 
-`jestronaut` finds the test files in the current directory (skipping hidden directories, `node_modules` and `lua_modules`) and runs them. Test files can `require` your project's modules relative to the current directory.
+`jestronaut` runs the tests in the test files you give it. Test files can `require` your project's modules relative to the current directory.
 
 ```bash
-jestronaut                              # Run all test files
-jestronaut tests/unit                   # Run the test files in a directory
-jestronaut tests/math_test.lua          # Run a single test file
-jestronaut math                         # Run the test files whose path contains "math"
-jestronaut --testNamePattern="adds"     # Run the tests whose full name matches a Lua pattern
-jestronaut --bail --verbose             # Stop at the first failure, and show every test
+jestronaut tests/math_test.lua tests/strings_test.lua   # Run the tests in these files
+jestronaut tests/*_test.lua                             # Let your shell list the files (bash, zsh)
+jestronaut tests/math_test.lua --testNamePattern="adds" # Only run tests whose full name matches a Lua pattern
+jestronaut tests/math_test.lua --bail --verbose         # Stop at the first failure, and show every test
 ```
+
+To run many test files, or to set Jestronaut up in your own way, use a [runner file](#from-lua) instead.
 
 Run `jestronaut --help` for all options. They are the same as the [configuration options](#%EF%B8%8F-configuration), written as `--name=value`, `--name` (true) or `--no-name` (false). Options that take a list, like `--roots`, can be repeated.
 
@@ -77,17 +77,8 @@ require "jestronaut":withGlobals()
 
 jestronaut
   :configure({
-    roots = { "./tests/" },
+    roots = { "./tests/" }, -- The directories that contain your test files
   })
-  :registerTests()
-  :runTests()
-```
-
-`registerTests` finds the test files in the roots when called without arguments, which requires [LuaFileSystem](https://lunarmodules.github.io/luafilesystem/) (installed together with Jestronaut by LuaRocks). You can also give it a list of test files, or a function that loads them:
-
-```lua
-jestronaut
-  :configure({ roots = { "./tests/" } })
   :registerTests(function()
     require "tests.math_test"
     require "tests.strings_test"
@@ -95,12 +86,14 @@ jestronaut
   :runTests()
 ```
 
+Then run it with `lua test.lua`. Instead of a function that loads the test files, `registerTests` also accepts a list of test files: `:registerTests({ "tests/math_test.lua", "tests/strings_test.lua" })`. Test files in the list that fail to load are reported as a failing test, and the other files still run.
+
 If the host application should keep running when tests fail, set `exitOnFailure = false` and use the results passed to `runTests`:
 
 ```lua
 jestronaut
   :configure({ roots = { "./tests/" }, exitOnFailure = false })
-  :registerTests()
+  :registerTests(function() --[[ ... ]] end)
   :runTests(function(results)
     print(results.success, results.failedCount, results.skippedCount)
   end)
@@ -111,7 +104,7 @@ jestronaut
 The [releases page](https://github.com/luttje/jestronaut/releases) has a standalone `jestronaut` binary (built with [lit](https://luvit.io/)) for Linux and Windows. It works like the `jestronaut` command, without needing Lua or LuaRocks:
 
 ```bash
-jestronaut tests/
+jestronaut tests/math_test.lua tests/strings_test.lua
 ```
 
 > [!NOTE]
@@ -435,16 +428,14 @@ Pass these options to `jestronaut:configure`, or to the `jestronaut` command as 
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `roots` | `{ "./" }` with the command | The directories that contain the tests. |
-| `testMatch` | `*_spec.lua`, `*_test.lua`, `*.spec.lua`, `*.test.lua` | File names of test files (`*` and `?` wildcards), or `/Lua patterns/` matched against the path. |
-| `testPathIgnorePatterns` | | Skip test files whose path contains one of these, or matches it when written as `/pattern/`. |
-| `testPathPattern` | | Only run test files whose path contains one of these, or matches it when written as `/pattern/`. |
+| `roots` | The directories of the test files, with the command | The directories that contain the tests. Tests are recognized by being in a file in one of these. |
+| `testPathIgnorePatterns` | | Skip tests in files whose path contains one of these, or matches it when written as `/pattern/`. |
 | `testNamePattern` | | Only run tests whose full name (describe names and test name, joined by spaces) matches this Lua pattern. |
 | `bail` | `0` | Stop after this many failed tests. `0` or `false` runs all tests, `true` is the same as `1`. |
 | `testTimeout` | `5000` | Timeout in milliseconds for tests and hooks that take `done`. |
 | `eventLoop` | | How to wait for `done`, see [Testing asynchronous code](#testing-asynchronous-code). |
 | `exitOnFailure` | `true` | Exit the process with status code 1 when a test fails (where `os.exit` exists). |
-| `passWithNoTests` | `false` | Pass when no tests are found, instead of failing. |
+| `passWithNoTests` | `false` | Pass when there are no tests, instead of failing. |
 | `verbose` | `false` | Show every test. |
 | `silent` | `false` | Hide what tests print. Otherwise it is shown after the run. |
 | `ci` | `true` when `CI` is set | Print a plain log instead of redrawing the output. |

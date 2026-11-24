@@ -4,7 +4,6 @@ local environmentLib = require "jestronaut/environment"
 local coverageLib = require "jestronaut/coverage"
 local asyncLib = require "jestronaut/environment/async"
 local testLib = require "jestronaut/environment/test"
-local discoveryLib = require "jestronaut/discovery"
 local fakeTimersLib = require "jestronaut/faketimers"
 local expectLib = require "jestronaut/expect"
 local mockLib = require "jestronaut/mock"
@@ -44,13 +43,9 @@ function JESTRONAUT:configure(runnerOptions)
     return self
 end
 
---- Registers the tests, by one of:
---- - calling the given function, which loads the test files (e.g. by requiring them);
---- - loading the given list of test files;
---- - finding the test files in the roots, when nothing is given (see the testMatch option). This requires
----   LuaFileSystem.
---- Test files that fail to load are reported as failing tests.
---- @param testRegistrar? function|string[]
+--- Registers the tests, by calling the given function, which loads the test files (e.g. by requiring them), or by
+--- loading the given list of test files. Test files in the list that fail to load are reported as failing tests.
+--- @param testRegistrar function|string[]
 --- @return Jestronaut
 function JESTRONAUT:registerTests(testRegistrar)
     if not self.runnerOptions then
@@ -66,13 +61,11 @@ function JESTRONAUT:registerTests(testRegistrar)
 
     local testFiles = testRegistrar
 
-    if testFiles == nil then
-        testFiles = discoveryLib.findTestFiles(self.runnerOptions)
-    elseif type(testFiles) == "string" then
+    if type(testFiles) == "string" then
         testFiles = { testFiles }
     elseif type(testFiles) ~= "table" then
-        error("registerTests expects a function that loads the tests, a list of test files, or nothing to find the " ..
-            "test files in the roots. Got " .. type(testFiles), 2)
+        error("registerTests expects a function that loads the tests, or a list of test files. Got " ..
+            type(testFiles), 2)
     end
 
     environmentLib.registerTests(function()
