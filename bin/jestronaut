@@ -1,2 +1,7 @@
 #!/usr/bin/env lua
-os.exit(require "jestronaut/cli".run(arg))
+local exitCode = require "jestronaut/cli".run(arg)
+
+-- os.exit is looked up after the run, since LuaCov (the coverage option) replaces it to save its stats on exit
+if exitCode ~= 0 then
+    os.exit(exitCode)
+end
