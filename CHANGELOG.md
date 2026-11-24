@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6-1 (unreleased)
+## 0.6-1 (2026-11-24)
 
 This release makes Jestronaut behave like Jest in many places where it didn't before. Some of those changes can make
 tests that used to pass fail, see the breaking changes below.
