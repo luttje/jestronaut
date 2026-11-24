@@ -382,7 +382,7 @@ To wait for `done`, Jestronaut needs to know how your code runs its callbacks. S
     ```lua
     jestronaut
       :configure({
-        roots = { "addons/my_addon/lua/tests/" },
+        roots = { "lua/tests/" },
         eventLoop = { external = true, now = SysTime },
       })
       :registerTests(function() --[[ ... ]] end)

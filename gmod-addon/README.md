@@ -53,7 +53,8 @@ This addon provides a way to run [Jestronaut](https://github.com/luttje/jestrona
     jestronaut
       :configure({
         roots = {
-          -- Where your tests are located, needed for the reporter to find the source files:
+          -- Where your tests are located. Use the start of the path that Garry's Mod shows for your test files in
+          -- error messages, like "lua/tests/" or "addons/my_addon/lua/tests/":
           "lua/tests/",
         },
 
