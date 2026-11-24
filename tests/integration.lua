@@ -498,6 +498,33 @@ do
     end
 end
 
+-- Roots
+do
+    local isInRoot = require "jestronaut/environment/state".isInRoot
+
+    check("files in a root are in it", isInRoot("./tests/a_test.lua", "./tests"), true)
+    check("files in a subdirectory of a root are in it", isInRoot("./tests/unit/a_test.lua", "./tests"), true)
+    check("roots match whole directory names", isInRoot("./tests_old/a_test.lua", "./tests"), false)
+    check("files in the lua directory of a Garry's Mod addon are in the matching lua/ root",
+        isInRoot("./addons/my_addon/lua/tests/a_test.lua", "./lua/tests"), true)
+    check("files in the lua directory of a Garry's Mod addon are in a root with the addon path",
+        isInRoot("./addons/my_addon/lua/tests/a_test.lua", "./addons/my_addon/lua/tests"), true)
+    check("everything relative is in the ./ root", isInRoot("./tests/a_test.lua", "./"), true)
+
+    local success, err = pcall(function()
+        jestronaut
+            :configure({ roots = { "./tests/fixtures/cli/" }, reporter = newRecordingReporter(), exitOnFailure = false })
+            :registerTests(function()
+                dofile("./tests/fixtures/names.lua")
+            end)
+    end)
+
+    check("registering a test outside the roots fails", success, false)
+    check("the error names the file of the test and the roots",
+        tostring(err):find("called from ./tests/fixtures/names.lua, which is not in one of the roots " ..
+            "(./tests/fixtures/cli)", 1, true) ~= nil, true)
+end
+
 -- Counts (issue #10)
 do
     local expectedCounts = { totalCount = 8, passedCount = 4, failedCount = 1, skippedCount = 2, todoCount = 1 }

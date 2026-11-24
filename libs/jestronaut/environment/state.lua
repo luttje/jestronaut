@@ -113,11 +113,41 @@ local function isLibraryPath(path, libraryPathSuffixes)
     return false
 end
 
+--- Checks whether a (normalized) path is inside a (normalized) root directory.
+---
+--- In Garry's Mod, the lua directories of addons are mounted as lua/, so addons/my_addon/lua/tests/a.lua is also
+--- lua/tests/a.lua. Such paths are inside a root like lua/tests too.
+--- @param path string
+--- @param root string
+--- @return boolean
+local function isInRoot(path, root)
+    local candidates = { path }
+    local pathInLuaDirectory = path:match("^%./addons/[^/]+/(lua/.*)$")
+
+    if pathInLuaDirectory then
+        table.insert(candidates, "./" .. pathInLuaDirectory)
+    end
+
+    for _, candidate in ipairs(candidates) do
+        -- The root has to match whole directory names, so lua/tests doesn't contain lua/tests_old/a.lua
+        if root:sub(-1) == "/" then
+            if candidate:sub(1, #root) == root then
+                return true
+            end
+        elseif candidate == root or candidate:sub(1, #root + 1) == root .. "/" then
+            return true
+        end
+    end
+
+    return false
+end
+
 --- Gets the file path and line number of the test: the first frame in the stack trace that is inside one of the roots,
 --- skipping Jestronaut's own files (which can be inside a root too, e.g. in a project's lua_modules).
 --- @return string, number
 local function getTestFilePath()
     local filePath, lineNumber
+    local firstOtherFilePath
     local libraryPathSuffixes = getLibraryPathSuffixes()
     local i = 1
 
@@ -125,9 +155,16 @@ local function getTestFilePath()
         local info = debug.getinfo(i, "Sl")
 
         if (not info) then
-            error(
-            "Could not find the test file path. Please make sure options.roots is set to the directories where your tests are located.")
-            break
+            local message = "Could not find which test file this is in. "
+
+            if firstOtherFilePath then
+                message = message .. "It is called from " .. firstOtherFilePath .. ", which is not in "
+            else
+                message = message .. "It is not called from a file in "
+            end
+
+            error(message .. "one of the roots (" .. table.concat(rootFilePaths or {}, ", ") .. "). Set the roots " ..
+                "option to the directories that contain your test files.", 0)
         end
 
         -- Files have a source starting with @. Also accept sources that look like the path of a Lua file, in case an
@@ -141,19 +178,17 @@ local function getTestFilePath()
             -- Only files are test files, not C functions, tail calls ("=(tail call)" in Lua 5.1) or strings loaded
             -- as code. Jestronaut's own files never are.
         elseif rootFilePaths ~= nil then
-            local found = false
+            firstOtherFilePath = firstOtherFilePath or path
 
-            -- Check if the file path contains the root file path. If it does, then we've found the test
             for _, rootFilePath in ipairs(rootFilePaths) do
-                if path:sub(1, rootFilePath:len()) == rootFilePath then
+                if isInRoot(path, rootFilePath) then
                     filePath = path
                     lineNumber = info.currentline
-                    found = true
                     break
                 end
             end
 
-            if found then
+            if filePath then
                 break
             end
         else
@@ -1450,6 +1485,7 @@ return {
 
     getCurrentDescribeOrTest = getCurrentDescribeOrTest,
     getFullName = getFullName,
+    isInRoot = isInRoot,
 
     registerDescribeOrTest = registerDescribeOrTest,
     setRoots = setRoots,

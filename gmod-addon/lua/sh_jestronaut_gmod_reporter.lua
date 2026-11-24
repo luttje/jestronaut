@@ -229,7 +229,7 @@ function REPORTER:printEnd(rootDescribe, failedTestCount, skippedTestCount, dura
 
     self:printNewline()
 
-    if failedTestCount == 0 then
+    if failedTestCount == 0 and totalTestCount > 0 then
         self:printCentered("🎉 All tests passed. Great job!")
         self:printNewline()
     end
